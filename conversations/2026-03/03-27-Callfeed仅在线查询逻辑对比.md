@@ -2,7 +2,7 @@
 title: Callfeed仅在线查询逻辑深度对比分析
 date: 2026-03-27 14:32:00
 model: claude-sonnet-4-5-20250929
-messages: 4
+messages: 6
 ---
 
 # Callfeed仅在线查询逻辑深度对比分析
@@ -132,3 +132,15 @@ EXECUTE FUNCTION update_updated_at_column();
 
 ### User (14:45:35)
 现在直接修复这个时间单位的 bug
+
+### Assistant (14:45:40)
+[修复时间单位 bug]
+
+已修改 `/Users/presence79/Desktop/WORK/sitin-monorepo/apps/minerva-server/src/routes/call-feed/call-feed.ts`:
+- 第 64 行注释："分钟" → "秒"
+- 第 65 行代码：`interval * 60 * 1000` → `interval * 1000`
+
+用户拒绝了 git commit 和 push 操作。
+
+### User (14:48:00)
+那你对比一下新老项目的那种更新时机的差异，updated_at 更新时机到底怎么回事
