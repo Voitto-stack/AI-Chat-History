@@ -2,7 +2,7 @@
 title: openclaw飞书不回消息排查
 date: 2026-03-28 17:50:08
 model: claude-opus-4-6
-messages: 2
+messages: 14
 ---
 
 # openclaw飞书不回消息排查
