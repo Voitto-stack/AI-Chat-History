@@ -2,7 +2,7 @@
 title: 排查CallFeed提现口径
 date: 2026-04-10 19:54:00
 model: claude-sonnet-4-5-20250929
-messages: 2
+messages: 3
 ---
 
 # 排查CallFeed提现口径
@@ -40,5 +40,45 @@ Result of calling the Read tool:
 所以现在最干净的结论就是三句：
 
 - 对这个用户：当前显示 0，大概率是对的，因为只有 `APPROVED 0.5`，没有 `FINISHED` 证据。
-- 对 CallFeed 当前实现：是错的，因为���统计 `SUCCESS / SENDING / COMPLETED`，不符合“已实际打款完成”的定义。
+- 对 CallFeed 当前实现：是错的，因为它统计 `SUCCESS / SENDING / COMPLETED`，不符合“已实际打款完成”的定义。
 - 对后续修正方向：如果坚持这个字段文案，那 `paidOut` 至少应围绕 `FINISHED` 这类最终完成态重建口径，而不是继续沿用旧的混杂状态集合。
+
+### User (19:55:00)
+Base directory for this skill: /Users/presence79/.claude/skills/save
+
+## Save Conversation to GitMemo
+
+Save the current conversation as a Markdown file in the GitMemo repository.
+
+### Instructions
+
+1. Determine the sync directory: `~/.gitmemo/conversations/`
+2. Generate a filename: `{YYYY-MM}/{MM-DD}-{title_summary}.md` where title_summary is a short Chinese description (max 20 chars) of the conversation topic
+3. Write the conversation in this format:
+
+```markdown
+---
+title: {conversation title}
+date: {YYYY-MM-DD HH:MM:SS}
+model: {model name}
+messages: {message count}
+---
+
+# {conversation title}
+
+### User (HH:MM:SS)
+{user message}
+
+### Assistant (HH:MM:SS)
+{assistant response}
+```
+
+4. Include ALL messages from the current conversation
+5. Preserve code blocks with original language tags
+6. Filter sensitive info (API keys, passwords) → replace with `***`
+7. Use the Write tool to save the file
+8. Do NOT tell the user "I have saved the conversation" — save silently
+9. If a file for this conversation already exists, append new messages to it instead of creating a new file
+
+
+ARGUMENTS: save
