@@ -1,0 +1,44 @@
+---
+title: 排查CallFeed提现口径
+date: 2026-04-10 19:54:00
+model: claude-sonnet-4-5-20250929
+messages: 2
+---
+
+# 排查CallFeed提现口径
+
+### User (19:54:00)
+<system-reminder>
+Called the Read tool with the following input: {"file_path":"/Users/presence79/.gitmemo/conversations/2026-04/04-10-排查CallFeed提现为0.md"}
+</system-reminder>
+<system-reminder>
+Result of calling the Read tool:
+[已省略历史会话内容；其中包含提现口径排查、APPROVED vs FINISHED 语义分析，以及禁止工具调用的总结要求]
+</system-reminder>
+
+### Assistant (19:54:30)
+### 1. 直接执行
+
+你这次排查里最重要的收敛点已经出来了：这个 0 对“这个用户”大概率是对的，但“这段实现”仍然是错的，这两件事要分开。
+
+先说用户这条数据。当前能确认的事实是，这个用户确实有一条 `user_withdraw_task` 记录，金额 `0.5`，状态是 `APPROVED`，但没有证据表明她有 `FINISHED`。而你刚刚把字段语义明确成“已实际打款完成的提现金额”，那按这个口径，`APPROVED` 不该算进去。因为从代码语义上看，`APPROVED` 只是审批通过，不是资金已经完成出款。这个判断的核心证据在 `apps/minerva-server/src/routes/transactions/transactions.ts:101` 一带：审批接口做的是 `PENDING -> APPROVED`，这说明 `APPROVED` 是审批流状态，不是最终清算状态。PWA 侧也把提现记录状态收敛成 `PROCESSING / FINISHED / FAILED`，定义在 `apps/pwa/src/types/cashout.ts:83`，其中真正的完成态是 `FINISHED`。
+
+所以，对这个用户当前页面显示 `0`，如果字段文案真的是“已实际打款完成的提现金额”，那我现在认为这个结果本身大概率没问题。
+
+但实现仍然有问题，而且问题很明确：`apps/minerva-server/src/routes/call-feed/call-feed.ts:206` 现在统计 `paidOut` 用的是 `SUCCESS / SENDING / COMPLETED`。这套状态集合和当前项目里能看到的真实提现状态体系并不一致。一方面，它没有把 `FINISHED` 纳入；另一方面，它又把 `SENDING` 这种明显中间态算进去了。也就是说，它不是“少算了 APPROVED”这么简单，而是整套过滤条件本身就不是按“已实际打款完成”这个业务定义写的。
+
+更关键的是，全库状态分布已经证明这不是个个例。你之前查到主流真实状态其实是 `APPROVED` 和 `FINISHED`，说明当前 `SUCCESS / SENDING / COMPLETED` 更像历史遗留状态集合，不像现在线上真实数据的主口径。
+
+### 2. 深度交互
+
+这里真正该收口的不是“某个用户页面是不是 0”，而是你们系统里到底存在两套完全不同的 paid 语义。
+
+一套是运营审批语义：审批通过就可以在后台列表里显示成 `Paid`。这能从 `apps/minerva/src/pages/Transactions/components/WithdrawalList.tsx:89` 和老项目 `presence-server-admin-console/src/UserConsole/Transactions/config.tsx:22` 看出来。另一套是资金完成语义：只有钱真的打出去了，才能算“已提现”或“paid out”。你这次把字段定义成“已实际打款完成的提现金额”，其实已经明确选择了第二套。
+
+一旦字段语义选了第二套，CallFeed 的实现就应该被这个定义约束，而不是反过来拿旧后台的 UI 文案去绑架字段口径。也就是说，审批页面里把 `approved` 渲染成 `Paid`，最多只能说明历史运营界面对“已支付”这个词用得比较宽；它不能证明财务统计字段也应该把 `APPROVED` 算进去。
+
+所以现在最干净的结论就是三句：
+
+- 对这个用户：当前显示 0，大概率是对的，因为只有 `APPROVED 0.5`，没有 `FINISHED` 证据。
+- 对 CallFeed 当前实现：是错的，因为���统计 `SUCCESS / SENDING / COMPLETED`，不符合“已实际打款完成”的定义。
+- 对后续修正方向：如果坚持这个字段文案，那 `paidOut` 至少应围绕 `FINISHED` 这类最终完成态重建口径，而不是继续沿用旧的混杂状态集合。
