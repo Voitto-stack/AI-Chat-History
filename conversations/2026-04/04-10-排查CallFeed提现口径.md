@@ -2,7 +2,7 @@
 title: 排查CallFeed提现口径
 date: 2026-04-10 19:54:00
 model: claude-sonnet-4-5-20250929
-messages: 7
+messages: 8
 ---
 
 # 排查CallFeed提现口径
@@ -27,7 +27,7 @@ Result of calling the Read tool:
 
 但实现仍然有问题，而且问题很明确：`apps/minerva-server/src/routes/call-feed/call-feed.ts:206` 现在统计 `paidOut` 用的是 `SUCCESS / SENDING / COMPLETED`。这套状态集合和当前项目里能看到的真实提现状态体系并不一致。一方面，它没有把 `FINISHED` 纳入；另一方面，它又把 `SENDING` 这种明显中间态算进去了。也就是说，它不是“少算了 APPROVED”这么简单，而是整套过滤条件本身就不是按“已实际打款完成”这个业务定义写的。
 
-更关键的是，全库状态分布已经证明这不是个个例。你之前查到主流真实状态其实是 `APPROVED` 和 `FINISHED`，说明当前 `SUCCESS / SENDING / COMPLETED` 更像历史遗留状态集合，不像现在线上真实数据的主口径。
+更关键的是，全库状态分布已经证明这不是个例。你之前查到主流真实状态其实是 `APPROVED` 和 `FINISHED`，说明当前 `SUCCESS / SENDING / COMPLETED` 更像历史遗留状态集合，不像现在线上真实数据的主口径。
 
 ### 2. 深度交互
 
@@ -150,3 +150,27 @@ ARGUMENTS: save
 你这次要的是第三件事，所以真正应该盯住的是最终资金状态，而不是后台审批页上的 `Paid` 文案。那个文案更像运营视角，不是财务口径。
 
 也就是说，这次不是“查不到”，而是**之前看错地方了**。真正该看的地方已经确定，就是 `user_withdraw_task` 的最终状态记录。
+
+### User (20:36:59)
+好了吗
+
+### Assistant (20:37:00)
+### 1. 直接执行
+
+好了。根因已经找到了：老项目和新项目不是同一套口径，所以同一用户数据不同是正常的。
+
+- 老项目不是本地算的，它只是嵌了远端 athena-view 页面，见 `presence-server-admin-console/src/CallFeed/live.tsx:244`。
+- 这个 athena-view 对应的是 `react-haven/src/prod/athena/AthenaPage.tsx:124-128`。里面：
+  - `Earnings` 实际拿的是 `QueryUserBalance` 返回的余额，不是通话收入，见 `react-haven/src/prod/athena/AthenaPage.tsx:46-52,141-159`
+  - `Paid Out` 只累计 `FINISHED`，见 `react-haven/src/prod/athena/AthenaPage.tsx:72-77`
+  - `Total Call Duration` 用的是从 `2025-01-01` 到现在的 `onlineTime`，见 `react-haven/src/prod/athena/AthenaPage.tsx:54-69`
+- 新项目是本地 BFF 重新聚合，见 `apps/minerva-server/src/routes/call-feed/call-feed.ts:179-261`。里面：
+  - `earnings` = 最近30天、最多20条通话订单里，用户作为 female 且 `status === "PAID"` 的金额和，见 `apps/minerva-server/src/routes/call-feed/call-feed.ts:197-229`
+  - `paidOut` = `user_withdraw_task.status = "FINISHED"` 的金额和，见 `apps/minerva-server/src/routes/call-feed/call-feed.ts:206-219`
+  - `totalCallDuration` = 同一批最近30天/20条订单的通话时长，见 `apps/minerva-server/src/routes/call-feed/call-feed.ts:224-261`
+
+一句话：老项目显示的是“远端 Athena 页自己的历史累计口径”，新项目显示的是“本地 BFF 最近30天且最多20条订单的重算口径”，字段名一样，实际不是一回事。
+
+### 2. 深度交互
+
+这不是单纯的数据 bug，更像“把旧页面文案照搬了，但没把旧页面统计语义一起迁过来”。现在最离谱的是 `Earnings`：老项目其实更像余额，新项目才像收入，所以你看到不同不是偶发偏差，是定义就变了。要彻底对齐，不能只修某个状态过滤，得先决定这几张卡片到底要复刻老项目，还是按新的业务定义重做。
