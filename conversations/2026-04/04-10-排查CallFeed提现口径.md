@@ -94,3 +94,59 @@ ARGUMENTS: save
 
 ### User (19:57:00)
 你解决了吗，你看看有没有什么地方能查到用户已提现的金额啊！！！
+
+### Assistant (19:58:00)
+### 1. 直接执行
+
+还没把代码改掉，但已经定位到哪里能查，而且现在可以明确告诉你：**能查，最可信的来源就是 `user_withdraw_task` 表。**
+
+如果你说的“已提现金额”指的是“已实际打款完成的提现金额”，那就不要看审批页面文案，也不要直接信 `CallFeed` 现在的 `paidOut`。应该直接看提现表里的最终状态。
+
+这条链路里目前最可靠的判断方式是：
+
+- **权威数据源**：`user_withdraw_task`
+- **用户维度字段**：`user_id`
+- **金额字段**：`amount`
+- **状态字段**：`status`
+
+而且从你们项目现有代码语义看，真正接近“已实际打款完成”的状态，不是 `APPROVED`，而是 `FINISHED`。依据有两个：
+
+1. `apps/minerva-server/src/routes/transactions/transactions.ts:101` 一带说明审批接口只是把状态从 `PENDING -> APPROVED`，所以 `APPROVED` 更像审核通过，不是实际打款完成。
+2. `apps/pwa/src/types/cashout.ts:83` 把提现记录状态定义成 `PROCESSING / FINISHED / FAILED`，这里明显 `FINISHED` 才是完成态。
+
+所以你现在要查“用户已提现金额”，最靠谱的口径就是：
+
+- **实际打款完成金额** = `user_withdraw_task` 里这个用户所有 `status = FINISHED` 的 `amount` 求和
+
+按我们前面已经查到的那个目标用户结果，她只有一条：
+
+- `amount = 0.5`
+- `status = APPROVED`
+
+**没有证据表明她有 `FINISHED` 记录。**
+
+所以按“已实际打款完成”的口径，这个用户现在查出来就是 **0**。
+
+你也可以把几个“可查位置”分开理解：
+
+- **数据库权威来源**：`user_withdraw_task` 表，这是最准的
+- **当前错误实现**：`apps/minerva-server/src/routes/call-feed/call-feed.ts:206`，这里的 `paidOut` 现在按 `SUCCESS / SENDING / COMPLETED` 算，不可靠
+- **另一个历史口径**：`apps/minerva-server/src/routes/data-analysis/data-analysis.ts` 里只认 `SUCCESS`，也不适合直接当这次字段定义
+
+所以这件事我现在可以明确收口成一句话：
+
+**能查，去 `user_withdraw_task` 查；如果字段定义是“已实际打款完成”，就只该认 `FINISHED`，而你这个用户目前查到的是 `APPROVED 0.5`，不算实际已提现。**
+
+### 2. 深度交互
+
+你现在最容易被绕进去的地方，是把“用户发起过提现吗”“审批通过了吗”“钱真的打出去了吗”混成一个字段。
+
+其实这是三件不同的事：
+
+- 有提现申请
+- 审批通过（`APPROVED`）
+- 实际打款完成（更像 `FINISHED`）
+
+你这次要的是第三件事，所以真正应该盯住的是最终资金状态，而不是后台审批页上的 `Paid` 文案。那个文案更像运营视角，不是财务口径。
+
+也就是说，这次不是“查不到”，而是**之前看错地方了**。真正该看的地方已经确定，就是 `user_withdraw_task` 的最终状态记录。
