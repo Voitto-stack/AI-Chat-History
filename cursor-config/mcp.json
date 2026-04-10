@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "gitmemo": {
+      "args": [
+        "mcp-serve"
+      ],
+      "command": "/usr/local/bin/gitmemo"
+    }
+  }
+}
