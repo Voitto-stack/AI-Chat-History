@@ -3,7 +3,7 @@
 - [user_model_preference.md](user_model_preference.md) - 用户默认使用 Opus 4.6 模型
 - [project_morning_brief.md](project_morning_brief.md) - 每日早报自动推送系统（股市行情+新闻，飞书推送，每天8:03）
 - [project_investing_analysis.md](project_investing_analysis.md) - 每日使用 Chrome MCP 分析 investing.com 美股数据
-- [project_self_improving.md](project_self_improving.md) - Self-Improving Agent 系统，从每次交互学习优化工作流程
+- [project_metabot_mobile_goal.md](project_metabot_mobile_goal.md) - 用户要通过 MetaBot 在手机飞书私聊中操作本机 Claude
 - [feedback_morning_brief.md](feedback_morning_brief.md) - 早报系统开发中的用户偏好和决策反馈
 - [reference_feishu.md](reference_feishu.md) - 飞书 Webhook 和 MCP 配置位置
 - [reference_feishu_send_tool.md](reference_feishu_send_tool.md) - 通用飞书推送工具（feishu-send），快速发送卡片消息
