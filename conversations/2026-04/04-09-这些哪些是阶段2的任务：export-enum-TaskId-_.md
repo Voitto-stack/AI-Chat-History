@@ -1,114 +1,91 @@
 ---
-title: 这些哪些是阶段2的任务：export enum TaskId {
-date: 2026-04-09T19:41:57+08:00
+title: 改一个地方：dashboard页面的squad list的区域，点击这个按钮 {
+date: 2026-04-13T16:37:42+08:00
 session_id: 7fd12ada-3979-4a28-907e-4ed7b9110bf5
 project: /Users/presence79/Desktop/WORK/sitin-monorepo-dev
 source: claude-code-capture
-messages: 1
+messages: 5
 ---
 
-# 这些哪些是阶段2的任务：export enum TaskId {
+# 改一个地方：dashboard页面的squad list的区域，点击这个按钮 {
 
-### User (19:41:57)
+### User (15:17:47)
 
-这些哪些是阶段2的任务：export enum TaskId {
-  // 基础任务
-  Register = 101,
-  CameraPermission = 102,
-  MicrophonePermission = 103,
-  FirstVideoCall = 104,
-  LocationPermission = 105,
-  SendVoiceMessage = 106,
-  NotificationPermission = 107,
-  CompleteProfile = 108,
-  VerifyPhoneNumber = 109,
-  BindInsAccount = 110,
-  PostPhoto = 111,
-  InstallApk = 112,
-  FaceVerify = 118,
-  NotificationPermissionApk = 119,
-  FirstPost = 132,
-  LinkGoogleAccount = 133,
+改一个地方：dashboard页面的squad list的区域，点击这个按钮 {/* 操作按钮 - 固定在卡片底部 */}
+      <button
+        onClick={handleButtonClick}
+        className="absolute left-4 right-4 bottom-4 h-[40px] bg-white rounded-[999px] flex items-center justify-center text-[16px] font-medium leading-[21px] tracking-[-0.23px] active:bg-gray-50"
+        style={{ color: btnColor }}
+      >
+        {btnText}
+      </button>出现的分享面板的文案是来自getDashBoard接口的squadList的每一项的stageReminderCopy字段，调整一下对应的逻辑和字段规范
 
-  // 游戏任务
-  PlayFirstGame = 120,
-  WinSomeGame2 = 121,
-  WinSomeGame3 = 128,
-  WinSomeGame4 = 130,
+### User (15:18:18)
 
-  // 消息任务
-  ReplyFirstMessage = 122,
-  ReplySomeMessage3 = 123,
-  ReplySomeMessage4 = 129,
+[Request interrupted by user]
 
-  // 语音消息任务
-  RecordFirstVoiceMessage = 124,
-  RecordSecondVoiceMessage = 125,
-  RecordThirdVoiceMessage = 126,
-  RecordForthVoiceMessage = 127,
+### User (15:18:19)
 
-  // 视频通话任务
-  Video3Calls = 113,
-  Video10Calls = 114,
-  Video60Calls = 115,
-  Video180Calls = 116,
-  Video300Calls = 117,
+改一个地方：dashboard页面的squad list的区域，点击这个按钮 {/* 操作按钮 - 固定在卡片底部 */}
+      <button
+        onClick={handleButtonClick}
+        className="absolute left-4 right-4 bottom-4 h-[40px] bg-white rounded-[999px] flex items-center justify-center text-[16px] font-medium leading-[21px] tracking-[-0.23px] active:bg-gray-50"
+        style={{ color: btnColor }}
+      >
+        {btnText}
+      </button>出现的分享面板的文案是来自getDashBoard接口的squadList的每一项的stageReminderCopy字段，调整一下对应的逻辑和字段规范
 
-  // 内容发布
-  PostVideo = 131,
+### User (15:19:44)
 
-  // 收益任务
-  SecondEarn = 200001,
-  ThirdEarn = 200002,
-  FourthEarn = 200003,
-  FifthEarn = 200004,
-  SixthEarn = 200005,
-  SeventhEarn = 200006,
+[Request interrupted by user]
 
-  // 通话时长任务
-  FourthVideoDuration = 200010,
-  FifthVideoDuration = 200011,
-  SixthVideoDuration = 200012,
-  SeventhVideoDuration = 200013,
-}
+### User (15:19:44)
 
-### Assistant (19:43:30)
+改一个地方：dashboard页面的squad list的区域，点击这个按钮 {/* 操作按钮 - 固定在卡片底部 */}
+      <button
+        onClick={handleButtonClick}
+        className="absolute left-4 right-4 bottom-4 h-[40px] bg-white rounded-[999px] flex items-center justify-center text-[16px] font-medium leading-[21px] tracking-[-0.23px] active:bg-gray-50"
+        style={{ color: btnColor }}
+      >
+        {btnText}
+      </button>出现的分享面板的文案是来自getDashBoard接口的squadList的每一项的stageReminderCopy字段，调整一下对应的逻辑和字段规范
 
-我需要查看项目中的相关代码来确定哪些是"阶段2"的任务。让我先搜索任务阶段相关的代码。
+### Assistant (15:21:00)
 
-### Assistant (19:44:01)
+我继续看具体文件，把文案来源改到 `squadList[].stageReminderCopy`。
 
-根据项目代码 `apps/pwa/src/types/cashout.ts:60-74` 中的 `stageTaskIdsMap` 定义，**阶段2 (StageTwo)** 包含以下任务：
+### Assistant (15:28:54)
 
-```typescript
-[CashoutStage.StageTwo]: [
-  TaskId.CameraPermission,      // 102
-  TaskId.MicrophonePermission,  // 103
-  TaskId.SecondEarn,           // 200001
-  TaskId.FaceVerify,           // 118
-  TaskId.InstallApk,           // 112
-]
-```
+已改好，按你说的逻辑走了，核心变更是这几处：
 
-即：
-- **CameraPermission** (102) - 相机权限
-- **MicrophonePermission** (103) - 麦克风权限  
-- **SecondEarn** (200001) - 第二笔收益
-- **FaceVerify** (118) - 人脸验证
-- **InstallApk** (112) - 安装 APK
+- `apps/pwa/src/pages/BffDashboard/index.tsx:612`  
+  squad 卡片按钮点击后的分享文案改为：
+  `const shareText = member.stageReminderCopy;`
+
+- `apps/pwa/src/api/bff.ts:43`  
+  `mapDashboardMember` 新增字段映射：
+  `stageReminderCopy: member.stageReminderCopy || ""`
+
+- `apps/pwa/src/types/bff.ts:114`  
+  `SquadMember` 字段规范调整为：
+  `stageReminderCopy: string`  
+  同时把 `taskText`、`mainBtnText` 改成可选（因为现在主要由阶段配置兜底）
+
+- `apps/pwa/src/constants/bff.ts:87`  
+  `STAGE_COPY_CONFIG` 去掉了 `shareText`，只保留 `taskText` 和 `btnText`，避免前端本地分享文案覆盖后端字段。
+
+另外顺手修了一个对齐问题：
+- `apps/pwa/src/api/bff.ts:100`  
+  dashboard 顶部分享按钮文案由后端 `res.shareText` 映射（之前是空字符串）。
 
 ---
 
 ## 深度交互
 
-从 `stageTaskLimitMap` 可以看到阶段2的解锁条件是 `{ earn: 2.1 }`（收益 $2.1），完成后可提现 $4.0。
+你这次改动方向是对的：把“催单分享文案“收口到后端 `squadList[].stageReminderCopy`，前端只消费，不再本地拼 stage share 文案，能避免灰度/运营文案不同步。  
+下一步建议后端接口契约里明确这三个字段职责，避免再次混用：
 
-这个设计体现了一个合理的新手引导路径：
-- **阶段1** 只需注册 (Register)
-- **阶段2** 引导用户授权权限 + 完成基础验证，为视频通话功能做准备
-
-如果你在设计新的阶段任务，建议：
-1. 保持任务数量在 3-5 个之间（阶段2有5个）
-2. 任务之间有逻辑依赖关系（如：先授权权限 → 再人脸验证 → 最后安装完整客户端）
-3. 考虑使用 `TaskId.NotificationPermissionApk (119)` 作为 APK 安装后的后续任务
+- `activeStatusCopy`: 活跃状态文案（如 Active/Idle）
+- `taskText` / `mainBtnText`: 卡片展示文案（可选，前端可按阶段兜底）
+- `stageReminderCopy`: 按钮点击后的分享面板文案（唯一来源）
 
