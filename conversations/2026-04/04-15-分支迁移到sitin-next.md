@@ -30,3 +30,9 @@ messages: 6
 
 ### Assistant (11:12:00)
 提供基于 release/online-pwa 创建同名分支并迁移到 packages/app-pwa 的完整步骤：在旧仓库先 subtree split apps/pwa，再在新仓库 checkout feat/web/pwa-liebian from release/online-pwa，最后 subtree add/pull 到 packages/app-pwa 并 push。并强调该方式只迁移 apps/pwa 相关历史，其他目录改动不会带过去。
+
+### User (19:08:00)
+你在当前的分支里找到自这个分支创建以来提交者为cjkunwang 和presence79的所有cherry-pick然后列出来
+
+### Assistant (19:11:00)
+检查后发现当前所在分支已变为 feat/web/pwa-referral。按该分支从创建点 0b84e98533fcafac4a5cf8ae632ff68629d4c4b6 以来，未找到带标准 cherry-pick 痕迹（"cherry picked from commit"）的提交；确认该分支是通过 fast-forward 合并 feat/web/pwa-liebian 得到。另提示：之前的 32222ff1 提交仍被 feat/web/pwa-liebian 包含。
