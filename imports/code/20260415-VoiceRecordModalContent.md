@@ -1,6 +1,6 @@
 ---
 title: VoiceRecordModalContent
-date: 2026-04-15T17:04:50+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: tsx
 original: VoiceRecordModalContent.tsx
@@ -15,8 +15,10 @@ import { toast } from "@/utils/toast";
 import { useLoading } from "@/hooks/useLoading";
 import { useTask } from "@/hooks/useTask";
 import { uploadVoiceGreeting } from "@/http/api";
-import { UserServiceCommonCode } from "@sitin/api-proto/gen/archat_api/user_api";
+import { UserServiceCommonCode } from "@heyhru/business-pwa-proto/gen/archat_api/user_api";
 import { convertWebMToWav, getAudioDuration } from "@/utils/audioUtils";
+import { bpTrack } from "@/tracking";
+import { EventName } from "@/tracking/events";
 
 const MAX_RECORDING_DURATION = 45000; // 45秒
 const AUDIO_BAR_COUNT = 20;
@@ -41,17 +43,17 @@ enum RecordingState {
 export const VOICE_TYPE_CONFIG = {
   first: {
     title: "Scenario 1",
-    text: "You matched with someone you really like on a dating app. How would you greet them?",
+    text: "You matched with someone you like on a dating app. How would you greet them?",
     taskId: TaskId.RecordFirstVoiceMessage,
   },
   second: {
     title: "Scenario 2",
-    text: "Sing a couple of lines from your favorite song (must include clear vocals).",
+    text: "Sing a few lines from your favorite song (vocals must be clear).",
     taskId: TaskId.RecordSecondVoiceMessage,
   },
   third: {
     title: "Scenario 3",
-    text: "Complain to a friend about something that upset you today.",
+    text: "Tell a friend about something that bothered you today.",
     taskId: TaskId.RecordThirdVoiceMessage,
   },
   forth: {
@@ -145,6 +147,12 @@ export default function VoiceRecordModalContent({ onClose, voiceType, onTaskClos
   const onStart = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // 埋点：语音转写初始化
+      bpTrack(EventName.pwa_voice_transcript_init, {
+        voice_type: voiceType,
+        task_id: currentScenario.taskId,
+      });
+
       // 设置音频分析
       audioContextRef.current = new AudioContext();
       // 确保 AudioContext 处于运行状态
@@ -181,6 +189,13 @@ export default function VoiceRecordModalContent({ onClose, voiceType, onTaskClos
           const duration = await getAudioDuration(audio);
           URL.revokeObjectURL(url);
           // 步骤3: 上传音频到服务器（后端会自动进行语音转文本和内容审核）
+          // 埋点：语音转写上传尝试
+          bpTrack(EventName.pwa_voice_transcript_upload_attempt, {
+            voice_type: voiceType,
+            task_id: currentScenario.taskId,
+            duration: duration,
+          });
+
           const uploadResponse = await uploadVoiceGreeting({
             audioBlob: wavBlob,
             duration,
@@ -188,15 +203,40 @@ export default function VoiceRecordModalContent({ onClose, voiceType, onTaskClos
           // 检查上传结果
           if (uploadResponse.code !== UserServiceCommonCode.Success) {
             // 上传失败
+            // 埋点：语音转写上传失败
+            bpTrack(EventName.pwa_voice_transcript_upload_failed, {
+              voice_type: voiceType,
+              task_id: currentScenario.taskId,
+              error: uploadResponse.message,
+            });
             hideLoading();
             toast.error(uploadResponse.message || "Failed to upload voice recording. Please try again.");
             return;
           }
+
+          // 埋点：语音转写上传成功
+          bpTrack(EventName.pwa_voice_transcript_upload_success, {
+            voice_type: voiceType,
+            task_id: currentScenario.taskId,
+            duration: duration,
+          });
           // 步骤4: 完成任务
           await finishTaskRef.current(currentScenario.taskId);
+          // 埋点：录音完成
+          bpTrack(EventName.pwa_earnings_record_audio_complete, {
+            voice_type: voiceType,
+            task_id: currentScenario.taskId,
+            duration: duration,
+          });
           hideLoading();
           onTaskCloseRef.current?.();
         } catch (error) {
+          // 埋点：语音转写上传错误
+          bpTrack(EventName.pwa_voice_transcript_upload_error, {
+            voice_type: voiceType,
+            task_id: currentScenario.taskId,
+            error: error instanceof Error ? error.message : "unknown_error",
+          });
           hideLoading();
           toast.error(error instanceof Error ? error.message : "Failed to process audio recording");
         }
@@ -217,16 +257,26 @@ export default function VoiceRecordModalContent({ onClose, voiceType, onTaskClos
 
   // 停止录音
   const onStop = () => {
+    // 埋点：语音转写停止
+    bpTrack(EventName.pwa_voice_transcript_stop, {
+      voice_type: voiceType,
+      task_id: currentScenario.taskId,
+    });
     stopAndCleanup();
   };
 
   // 组件卸载时清理
   useEffect(() => {
     return () => {
+      // 埋点：语音转写清理
+      bpTrack(EventName.pwa_voice_transcript_cleanup, {
+        voice_type: voiceType,
+        task_id: currentScenario.taskId,
+      });
       cleanup();
       stopAndCleanup();
     };
-  }, [cleanup, stopAndCleanup]);
+  }, [cleanup, stopAndCleanup, voiceType]);
 
   return (
     <>

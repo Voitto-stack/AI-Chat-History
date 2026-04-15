@@ -1,6 +1,6 @@
 ---
 title: DeclineDialogModal
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: tsx
 original: DeclineDialogModal.tsx
@@ -29,11 +29,8 @@ interface DeclineDialogModalProps {
   onDecline: () => void;
 }
 
-const DeclineDialogModalContent: React.FC<DeclineDialogModalProps> = ({
-  rejectedCount,
-  onAccept,
-  onDecline,
-}) => {
+// eslint-disable-next-line react-refresh/only-export-components
+const DeclineDialogModalContent: React.FC<DeclineDialogModalProps> = ({ rejectedCount, onAccept, onDecline }) => {
   const { releasePrice } = useCall();
   const hourlyRate = formatNumber(releasePrice * 60);
 
@@ -41,7 +38,7 @@ const DeclineDialogModalContent: React.FC<DeclineDialogModalProps> = ({
     <div className="flex w-[300px] flex-col items-center gap-5 rounded-[20px] bg-[#f8fcff] px-4 py-5">
       <div className="flex w-full flex-col items-center gap-2 p-2">
         <div className="w-full text-center text-[18px] font-medium leading-[1.22em] tracking-[-0.23px] text-black">
-          {rejectedCount === 0 ? `Give up ${hourlyRate}💲/h？` : "Again? Your rank is dropping"}
+          {rejectedCount === 0 ? `Decline $${hourlyRate}/hour?` : "Declining frequently lowers your rank"}
         </div>
         <div className="w-[252px] text-center text-[15px] font-normal leading-[1.33em] tracking-[-0.23px] text-[rgba(60,60,67,0.6)]">
           {rejectedCount === 0
@@ -60,13 +57,13 @@ const DeclineDialogModalContent: React.FC<DeclineDialogModalProps> = ({
               fill="currentColor"
             />
           </svg>
-          {rejectedCount === 0 ? "Answer & Earn" : "Keep My Rank"}
+          {rejectedCount === 0 ? "Answer Call" : "Answer Call"}
         </button>
         <button
           className="flex w-[260px] items-center justify-center rounded-full border-none bg-[#f2f2f7] px-4 py-4 text-[14px] font-medium leading-[1.14em] text-[rgba(60,60,67,0.6)] transition-opacity active:opacity-80"
           onClick={onDecline}
         >
-          {rejectedCount === 0 ? "Decline away" : "I don't care"}
+          {rejectedCount === 0 ? "Decline" : "Decline"}
         </button>
       </div>
     </div>

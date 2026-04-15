@@ -1,6 +1,6 @@
 ---
 title: EarningFailedModal
-date: 2026-04-15T17:04:50+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: tsx
 original: EarningFailedModal.tsx
@@ -9,6 +9,7 @@ original: EarningFailedModal.tsx
 # EarningFailedModal
 
 ```tsx
+/* eslint-disable react-refresh/only-export-components */
 import { useModal } from "@/hooks/useModal";
 
 /**
@@ -39,10 +40,12 @@ export const EarningFailedModalContent: React.FC<EarningFailedModalContentProps>
           ✕
         </button>
       )}
-      <div className={`mx-6 ${showClose ? "mt-[42px]" : "mt-6"} mb-3 text-center text-[22px] font-bold text-[#012269]`}>
+      <div
+        className={`mx-6 ${showClose ? "mt-[42px]" : "mt-6"} mb-3 text-center text-[22px] font-bold text-brand-dark`}
+      >
         No Earnings This Time
       </div>
-      <div className="mx-6 mt-1.5 text-center text-[15px] font-normal text-[#012269b2]">
+      <div className="mx-6 mt-1.5 text-center text-[15px] font-normal text-brand-dark/70">
         {content || "Just Chat for over 30 seconds next time to qualify for rewards!"}
       </div>
       <div className="mx-6 mt-6 mb-6">

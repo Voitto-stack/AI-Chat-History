@@ -1,6 +1,6 @@
 ---
 title: useGoogleAuth
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: ts
 original: useGoogleAuth.ts
@@ -10,17 +10,12 @@ original: useGoogleAuth.ts
 
 ```ts
 /**
- * 第三方账号 OAuth 统一处理 Hook
+ * Google OAuth 登录处理 Hook
  *
  * 功能概述：
  * - 自动检测并处理 OAuth 回调（通过 URL hash 中的 id_token）
- * - 根据 mode 参数决定是登录还是绑定
  * - 统一的错误处理（通过 console.error 记录）
  * - 自动清理 URL hash 参数
- *
- * 使用场景：
- * - mode='login': 未登录用户的登录流程
- * - mode='bind': 已登录用户的账号绑定
  *
  * 注意事项：
  * - 使用 hasProcessed 防止重复处理同一个 OAuth 回调
@@ -30,33 +25,31 @@ original: useGoogleAuth.ts
 
 import { useCallback, useEffect, useRef } from "react";
 import { clearGoogleOAuthHash, getGoogleToken } from "@/utils/googleAuth";
-import { login, bind, getThirdPartyLoginOldUser } from "@/http/api";
+import { login } from "@/http/api";
 import { useUserStore } from "@/stores/userStore";
 import { useLoading } from "@/hooks/useLoading";
-import { FastLoginResponse } from "@sitin/api-proto/gen/archat_api/user_api";
-import { getDeviceId } from "@/utils/device";
-import { showConfirmDialog } from "@/components/ConfirmDialog";
+import { FastLoginResponse } from "@heyhru/business-pwa-proto/gen/archat_api/user_api";
 import { STORAGE_KEYS } from "@/constants/storageKeys";
-import { eventBus, EventNames } from "@/utils/eventBus";
 import { toast } from "@/utils/toast";
-import { getReferralCodeForRegistration } from "@/utils/referral";
+import { bpTrack } from "@/tracking";
+import { EventName } from "@/tracking/events";
 
 const OAUTH_PROCESSING_TIMEOUT = 30000; // 30秒超时
 
 interface UseGoogleAuthOptions {
-  mode: "login" | "bind"; // login-登录，bind-绑定
   onSuccess?: () => void; // 成功回调
 }
 
 /**
- * 统一的第三方账号 OAuth 处理 hook
- * 处理 OAuth 回调、登录、绑定等逻辑
+ * Google OAuth 登录处理 hook
+ * 处理 OAuth 回调和登录逻辑
  */
-export const useGoogleAuth = (options: UseGoogleAuthOptions) => {
-  const { mode, onSuccess } = options;
+export const useGoogleAuth = (options?: UseGoogleAuthOptions) => {
+  const onSuccess = options?.onSuccess;
   const hasProcessed = useRef(false);
-  const { userInfo, setToken, setUserInfo, setTimUsersig } = useUserStore();
+  const { setToken, setUserInfo, setTimUsersig } = useUserStore();
   const { hideLoading } = useLoading();
+
   const handleOAuthCallback = useCallback(async () => {
     // 如果已处理，则跳过
     if (hasProcessed.current) return;
@@ -97,74 +90,40 @@ export const useGoogleAuth = (options: UseGoogleAuthOptions) => {
 
       if (error) {
         console.error("Google OAuth error:", error);
-        toast.error("Google login failed, please try again.");
+        toast.error("Unable to sign in with Google. Please try again.");
+        bpTrack(EventName.pwa_conv_google_login_fail, { error: error, success: false });
         return;
       }
 
       if (!idToken) {
         console.error("No id_token in OAuth callback");
-        toast.error("Google login failed, please try again.");
+        toast.error("Unable to sign in with Google. Please try again.");
         return;
       }
 
-      // 解析 token 获取第三方用户ID
+      // 解析 token 获取第三方用户ID和邮箱
       let thirdPartyUserId: string;
+      let googleEmail: string | undefined;
       try {
         const user = getGoogleToken(idToken);
         thirdPartyUserId = user.id;
+        googleEmail = user.email;
       } catch (error) {
         console.error("Failed to parse token:", error);
-        toast.error("Google login failed, please try again.");
+        toast.error("Unable to sign in with Google. Please try again.");
+        bpTrack(EventName.pwa_login_failed, { error_reason: "parse_token_failed" });
+        bpTrack(EventName.web_login_page_google_failed, { error_reason: "parse_token_failed" });
         return;
       }
 
       if (!thirdPartyUserId) {
         console.error("No thirdPartyUserId in parsed token");
-        toast.error("Google login failed, please try again.");
+        toast.error("Unable to sign in with Google. Please try again.");
         return;
       }
 
-      let response: FastLoginResponse;
-      if (mode === "bind") {
-        // 绑定前先检查是否存在旧账号余额
-        try {
-          const oldUserResponse = await getThirdPartyLoginOldUser(thirdPartyUserId);
-
-          // 如果老用户存在余额，弹出确认弹窗
-          if (oldUserResponse.oldUserId) {
-            const confirmed = await showConfirmDialog({
-              title: "Account Conflict",
-              content: `The Google account you selected already has a balance of $${oldUserResponse.oldUserBalance}. Linking it will overwrite your current account data.`,
-              confirmText: "Link & Overwrite",
-              cancelText: "Cancel",
-            });
-
-            // 用户取消，不继续执行
-            if (!confirmed) {
-              console.log("User cancelled account linking");
-              return;
-            }
-          }
-        } catch (error) {
-          console.error("Failed to check old user:", error);
-        }
-
-        // 执行绑定（无论是用户同意覆盖旧账号，还是没有旧账号）
-        const deviceId = await getDeviceId();
-        const userId = userInfo?.userId || 0;
-
-        if (!userId) {
-          console.error("User info not found for binding");
-          return;
-        }
-
-        const inviteCode = getReferralCodeForRegistration();
-        response = await bind(userId, deviceId, thirdPartyUserId, inviteCode);
-      } else {
-        // 登录
-        const inviteCode = getReferralCodeForRegistration();
-        response = await login(thirdPartyUserId, undefined, inviteCode);
-      }
+      // 登录
+      const response: FastLoginResponse = await login(thirdPartyUserId, undefined, googleEmail);
 
       if (response.userInfo) {
         // 保存 token 和 userInfo
@@ -172,25 +131,47 @@ export const useGoogleAuth = (options: UseGoogleAuthOptions) => {
         setToken(token);
         setUserInfo(response.userInfo);
         setTimUsersig(response.timUsersig);
-        // 发送登录成功事件（任务监听器会处理任务完成逻辑）
-        eventBus.emit(EventNames.GOOGLE_AUTH_SUCCESS);
+
+        // 埋点：登录成功
+        const mode = "login";
+        bpTrack(EventName.pwa_login_success, {
+          mode,
+          user_id: response.userInfo.userId,
+        });
+        bpTrack(EventName.web_login_page_google_success, {
+          mode,
+          user_id: response.userInfo.userId,
+        });
+        bpTrack(EventName.pwa_conv_google_login_success, {
+          mode,
+          userId: response.userInfo.userId,
+          success: true,
+        }); // 转化埋点
 
         // 成功回调
         onSuccess?.();
       } else {
         console.error("No userInfo in response");
         toast.error("Login failed, please try again.");
+        bpTrack(EventName.pwa_login_failed, { error_reason: "no_userinfo" });
+        bpTrack(EventName.web_login_page_google_failed, { error_reason: "no_userinfo" });
       }
     } catch (error) {
       console.error("Google OAuth error:", error);
       toast.error("Login failed, please try again.");
+      bpTrack(EventName.pwa_login_failed, {
+        error_reason: error instanceof Error ? error.message : "unknown_error",
+      });
+      bpTrack(EventName.web_login_page_google_failed, {
+        error_reason: error instanceof Error ? error.message : "unknown_error",
+      });
     } finally {
       hideLoading();
       hasProcessed.current = false;
       // 清除 localStorage 标识
       localStorage.removeItem(STORAGE_KEYS.OAUTH_PROCESSING);
     }
-  }, [mode, userInfo, setToken, setUserInfo, setTimUsersig, onSuccess, hideLoading]);
+  }, [setToken, setUserInfo, setTimUsersig, onSuccess, hideLoading]);
 
   // 自动处理OAuth回调
   useEffect(() => {

@@ -1,6 +1,6 @@
 ---
 title: callStore
-date: 2026-04-15T17:04:50+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: ts
 original: callStore.ts
@@ -11,7 +11,7 @@ original: callStore.ts
 ```ts
 import { create } from "zustand";
 import { CallState } from "@/types/call";
-import { UserInfo } from "@sitin/api-proto/gen/archat_api/user_api";
+import { UserInfo } from "@heyhru/business-pwa-proto/gen/archat_api/user_api";
 
 export const DEFAULT_RELEASE_PRICE = 1.5;
 

@@ -48,7 +48,7 @@ if (!config) {
 }
 
 const { hostName: HOST_NAME, bucketName: BUCKET_NAME } = config;
-const BUILD_DIR = "build/pwa";
+const BUILD_DIR = "packages/app-pwa/dist";
 
 /**
  * 检查 gcloud 是否安装

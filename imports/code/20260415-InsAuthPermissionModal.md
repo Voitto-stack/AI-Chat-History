@@ -1,6 +1,6 @@
 ---
 title: InsAuthPermissionModal
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: tsx
 original: InsAuthPermissionModal.tsx
@@ -15,12 +15,14 @@ original: InsAuthPermissionModal.tsx
  * 首次使用 INS 机器人时弹出，24h 节流
  */
 
-import { FC } from "react";
+import { FC, useEffect } from "react";
 import { useModal } from "@/hooks/useModal";
 import { useUserStore } from "@/stores/userStore";
 import { getCachedAvatar } from "@/utils/avatarCache";
 import aiAvatarPlaceholder from "@/assets/images/common/ai_avatar_placeholder.webp";
 import insAuthPermissionImg from "@/assets/images/ins/ins_auth_permission.webp";
+import { bpTrack } from "@/tracking";
+import { EventName } from "@/tracking/events";
 
 const MODAL_ID = "ins-auth-permission-modal";
 const THROTTLE_KEY = "ins_permission_last_shown";
@@ -32,9 +34,15 @@ interface Props {
   onConfirm: () => void;
 }
 
-const Content: FC<Props> = ({ avatar, onClose, onConfirm }) => (
-  <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60">
-    <div className="w-[350px]">
+const Content: FC<Props> = ({ avatar, onClose, onConfirm }) => {
+  // 埋点：AFK 系统请求弹窗显示
+  useEffect(() => {
+    bpTrack(EventName.pwa_afk_sys_request_pop_up_show);
+  }, []);
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60">
+      <div className="w-[350px]">
       {/* 上方：头像 + 气泡 */}
       <div className="flex items-center justify-between h-[100px] px-2.5">
         <div className="w-[100px] h-[100px] overflow-hidden shrink-0">
@@ -47,30 +55,34 @@ const Content: FC<Props> = ({ avatar, onClose, onConfirm }) => (
             }}
           />
         </div>
-        <div className="shrink-0 w-[230px] h-16 px-3.5 py-4 rounded-[20px] bg-[#47aeef] text-white text-[13px]">
-          Enable this feature so your AI Avatar can help you earn.
+        <div className="shrink-0 w-[230px] h-16 px-3.5 py-4 rounded-[20px] bg-brand text-white text-[13px]">
+          Enable this feature to let your AI assistant help you earn.
         </div>
       </div>
 
       {/* 下方：白色卡片 */}
       <div className="flex flex-col p-5 gap-[18px] rounded-[30px] bg-white">
         <div className="flex flex-col gap-2 text-center">
-          <h2 className="m-0 text-xl font-bold text-black">Allow access to system features.</h2>
+          <h2 className="m-0 text-xl font-bold text-black">Allow System Access</h2>
           <p className="m-0 text-[15px] text-[rgba(60,60,67,0.6)]">
-            Go to your system settings, find GraceLive, and turn it on.
+            Go to Settings &gt; GraceLive and enable system access.
           </p>
         </div>
         <img src={insAuthPermissionImg} alt="" className="w-full h-[180px] object-contain" />
         <div className="flex flex-col items-center gap-3">
           <button
             type="button"
-            className="w-full py-2.5 rounded-full bg-[#47aeef] border-none text-white font-bold text-[17px] cursor-pointer"
+            className="w-full py-2.5 rounded-full bg-brand border-none text-white font-bold text-[17px] cursor-pointer"
             onClick={() => {
+              // 埋点：AFK 系统请求弹窗点击
+              bpTrack(EventName.pwa_afk_sys_request_pop_up_click, {
+                action: "go_and_enable",
+              });
               onClose();
               onConfirm();
             }}
           >
-            Go and Enable
+            Open Settings
           </button>
           <p className="m-0 px-3 text-xs text-[rgba(60,60,67,0.6)] text-center">
             Enable access in settings, then return to the app to boost your earnings!
@@ -78,8 +90,9 @@ const Content: FC<Props> = ({ avatar, onClose, onConfirm }) => (
         </div>
       </div>
     </div>
-  </div>
-);
+    </div>
+  );
+};
 
 export function showInsAuthPermissionModalAsync(onConfirm: () => void): Promise<void> {
   const lastShown = localStorage.getItem(THROTTLE_KEY);

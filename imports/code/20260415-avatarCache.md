@@ -1,6 +1,6 @@
 ---
 title: avatarCache
-date: 2026-04-15T17:04:50+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: ts
 original: avatarCache.ts
@@ -11,7 +11,7 @@ original: avatarCache.ts
 ```ts
 // AI 头像本地缓存，避免弹窗每次都请求远程图片
 
-import type { UserInfo } from "@sitin/api-proto/gen/archat_api/user_api";
+import type { UserInfo } from "@heyhru/business-pwa-proto/gen/archat_api/user_api";
 
 const CACHE_KEY_PREFIX = "avatar_cache_";
 const CACHE_EXPIRY = 7 * 24 * 60 * 60 * 1000; // 7 天

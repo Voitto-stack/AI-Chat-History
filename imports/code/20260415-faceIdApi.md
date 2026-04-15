@@ -1,6 +1,6 @@
 ---
 title: faceIdApi
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: ts
 original: faceIdApi.ts
@@ -18,7 +18,7 @@ import {
   GetFaceIdTokenResponse,
   CheckFaceIdResultRequest,
   CheckFaceIdResultResponse,
-} from "@sitin/api-proto/gen/archat_api/user_api";
+} from "@heyhru/business-pwa-proto/gen/archat_api/user_api";
 
 import httpClient from "./httpClient";
 import { buildReturnUrl } from "@/utils/faceId";

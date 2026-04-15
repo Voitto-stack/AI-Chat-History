@@ -1,6 +1,6 @@
 ---
 title: CommonUpTip
-date: 2026-04-15T17:04:50+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: tsx
 original: CommonUpTip.tsx
@@ -48,7 +48,7 @@ const CommonUpTip = ({ targetRect, content, marginTop, marginLeft }: CommonUpTip
         <img src={icTipUpWhite} className="absolute top-0 left-0 h-full w-full" alt="" />
         <div className="absolute top-0 left-0 flex h-[54px] w-full items-center px-[13px] py-[10px]">
           <img src={icWarningOrangeSmall} className="mr-[10px] h-6 w-6" alt="" />
-          <span className="flex-1 text-sm font-normal leading-none text-black" style={{ fontFamily: "SFProDisplay" }}>
+          <span className="flex-1 text-sm font-normal leading-none text-black" style={{ fontFamily: "Pangram" }}>
             {content}
           </span>
         </div>

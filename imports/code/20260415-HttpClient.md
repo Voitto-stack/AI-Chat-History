@@ -1,6 +1,6 @@
 ---
 title: httpClient
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: ts
 original: httpClient.ts
@@ -10,8 +10,8 @@ original: httpClient.ts
 
 ```ts
 import * as Sentry from "@sentry/react";
-import { HttpClient, MonitorAdapter } from "@sitin/http-client";
-import protoMap from "@sitin/api-proto/gen/protoIdMapping.json";
+import { HttpClient, MonitorAdapter } from "@heyhru/web-util-http";
+import protoMap from "@heyhru/business-pwa-proto/gen/protoIdMapping.json";
 import { STORAGE_KEYS, clearUserLocalStorage } from "@/constants/storageKeys";
 // eslint-disable-next-line no-restricted-imports -- 非 React 组件，需要用 getState() 静态访问
 import { useUserStore } from "@/stores/userStore";
@@ -117,7 +117,7 @@ const sentryMonitor: MonitorAdapter = {
 // Initialize HTTP client
 export const httpClient = new HttpClient({
   apiHost: API_HOST,
-  protoMap,
+  protoMap: protoMap as Record<string, number>,
   getToken: () => {
     return localStorage.getItem(STORAGE_KEYS.HAVEN_TOKEN) || "";
   },

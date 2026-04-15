@@ -1,6 +1,6 @@
 ---
 title: InsExchangeModal
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: tsx
 original: InsExchangeModal.tsx
@@ -12,13 +12,15 @@ original: InsExchangeModal.tsx
 /* eslint-disable react-refresh/only-export-components */
 /** InsExchangeModal - INS 交换请求弹窗 */
 
-import { FC, useCallback, useState } from "react";
+import { FC, useCallback, useState, useEffect } from "react";
 import { useModal } from "@/hooks/useModal";
 import { useInsExchangeStore, type InsExchangePendingMessage } from "@/stores/insExchangeStore";
 import { useUserStore } from "@/stores/userStore";
 import Avatar from "@/components/Avatar";
 import { getCachedAvatar } from "@/utils/avatarCache";
 import aiAvatarPlaceholder from "@/assets/images/common/ai_avatar_placeholder.webp";
+import { bpTrack } from "@/tracking";
+import { EventName } from "@/tracking/events";
 
 const MODAL_ID = "ins-exchange-modal";
 const EARNINGS_PER_USER = 3;
@@ -35,9 +37,22 @@ const InsExchangeModalContent: FC<Props> = ({ onClose, onAccept }) => {
   const [claimingIds, setClaimingIds] = useState<Set<number>>(new Set());
   const [acceptAllLoading, setAcceptAllLoading] = useState(false);
 
+  // 埋点：Instagram 请求弹窗显示
+  useEffect(() => {
+    bpTrack(EventName.pwa_ins_request_pop_up_show, {
+      request_count: pendingMessages.length,
+    });
+  }, [pendingMessages.length]);
+
   const handleClaim = useCallback(
     async (msg: InsExchangePendingMessage) => {
       if (claimingIds.has(msg.orderId)) return;
+      // 埋点：Instagram 请求弹窗点击 - 单个接受
+      bpTrack(EventName.pwa_ins_request_pop_up_click, {
+        action: "accept_single",
+        order_id: msg.orderId,
+        ins_account: msg.insAccount,
+      });
       setClaimingIds((prev) => new Set(prev).add(msg.orderId));
       try {
         await onAccept([msg]);
@@ -54,6 +69,12 @@ const InsExchangeModalContent: FC<Props> = ({ onClose, onAccept }) => {
 
   const handleAcceptAll = useCallback(async () => {
     if (acceptAllLoading) return;
+    // 埋点：Instagram 请求弹窗点击 - 全部接受
+    bpTrack(EventName.pwa_ins_request_pop_up_click, {
+      action: "accept_all",
+      request_count: pendingMessages.length,
+      total_earnings: pendingMessages.length * EARNINGS_PER_USER,
+    });
     setAcceptAllLoading(true);
     try {
       await onAccept([...pendingMessages]);
@@ -114,7 +135,7 @@ const InsExchangeModalContent: FC<Props> = ({ onClose, onAccept }) => {
 
           {/* 全部接受 */}
           <button
-            className="flex items-center justify-center w-full py-2.5 gap-1 rounded-full bg-[#47aeef] border-none cursor-pointer shrink-0"
+            className="flex items-center justify-center w-full py-2.5 gap-1 rounded-full bg-brand border-none cursor-pointer shrink-0"
             disabled={acceptAllLoading}
             onClick={handleAcceptAll}
           >

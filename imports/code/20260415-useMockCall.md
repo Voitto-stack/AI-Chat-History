@@ -1,6 +1,6 @@
 ---
 title: useMockCall
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: tsx
 original: useMockCall.tsx
@@ -22,7 +22,7 @@ import { VideoOrCanvasElement } from "@/hooks/useFaceDetect/FaceDetectService";
 import { useSpeechDetect } from "@/hooks/useSpeechDetect";
 import useCheckFreeCallDuration from "@/hooks/useCheckFreeCallDuration";
 import { closeCallRecordModal, showCallRecordModalAsync } from "@/components/CallRecordModal";
-import { showReceiveCallModal, closeReceiveCallModal } from "@/components/ReceiveCallModal";
+import { showReceiveCallModal, closeReceiveCallModal } from "@/components/receiveCallModalHelpers";
 import { useUser } from "@/hooks/useUser";
 import { getAvatarUrl } from "@/utils/userUtil";
 import { formatInTimeZone, processCallRecord } from "@/utils/callUtils";
@@ -35,6 +35,8 @@ import { toast } from "@/utils/toast";
 import { showRewardModalAsync } from "../components/showRewardModal";
 import { showEarningFailedModalAsync } from "../components/EarningFailedModal";
 import { showGoLiveModal } from "@/components/GoLiveModal";
+import { bpTrack } from "@/tracking";
+import { EventName } from "@/tracking/events";
 import { CashoutStage } from "@/types/cashout";
 import { useLive, LiveState } from "@/hooks/useLive";
 import { useVibration } from "@/hooks/useVibration";
@@ -46,6 +48,15 @@ import { STORAGE_KEYS } from "../constants/storageKeys";
 import { saveReturnPath, getReturnPath } from "@/utils/callReturnPath";
 
 const TAG = "useMockCall";
+
+/**
+ * 获取当前 mock 通话序号（1 或 2），用于 conv_call 漏斗埋点
+ * call1 = 第二阶段的第一个 mock（count=0），call2 = 第二阶段的第二个 mock（count=1）
+ */
+function getMockCallIndex(): 1 | 2 {
+  const count = Number(localStorage.getItem(STORAGE_KEYS.STAGE_TWO_MOCK_COUNT) || "0");
+  return count === 0 ? 1 : 2;
+}
 
 /** CallRecordModal 自动关闭延迟（毫秒） */
 const CALL_RECORD_AUTO_CLOSE_DELAY = 20000;
@@ -96,17 +107,37 @@ export function useMockCall() {
    * 显示响铃弹窗（Normal / Guide 共用）
    */
   const showRingModal = useCallback(() => {
+    // 埋点：来电页面展示
+    const callIdx = getMockCallIndex();
+    if (callIdx === 1) {
+      bpTrack(EventName.pwa_conv_call1_invited_page_show);
+    } else {
+      bpTrack(EventName.pwa_conv_call2_invited_page_show);
+    }
+
     showReceiveCallModal({
       callType: "video",
       price: mockCallManager.connectSession?.price,
       onAccept: () => {
         clearTimeoutTimer();
         stopVibration();
+        // 埋点：接听点击
+        if (callIdx === 1) {
+          bpTrack(EventName.pwa_conv_call1_video_click);
+        } else {
+          bpTrack(EventName.pwa_conv_call2_video_click);
+        }
         navigate("/mock-call");
       },
       onDecline: () => {
         clearTimeoutTimer();
         stopVibration();
+        // 埋点：拒接点击
+        if (callIdx === 1) {
+          bpTrack(EventName.pwa_conv_call1_cancel_click);
+        } else {
+          bpTrack(EventName.pwa_conv_call2_cancel_click);
+        }
         mockCallManager.cancelMockCall();
         // 场景：mock 通话主动拒接，记录违规
         processCallRecord({
@@ -223,6 +254,14 @@ export function useMockCall() {
     async (session: MockConnectSession) => {
       console.log(TAG, "Mock 通话已连接，启动基础检测");
 
+      // 埋点：视频播放成功
+      const callIdx = getMockCallIndex();
+      if (callIdx === 1) {
+        bpTrack(EventName.pwa_conv_call1_play_success);
+      } else {
+        bpTrack(EventName.pwa_conv_call2_play_success);
+      }
+
       // 记录通话开始时的余额
       try {
         const balanceRes = await queryUserBalance();
@@ -325,10 +364,31 @@ export function useMockCall() {
       const isPassed = callDuration >= 30 && faceRate >= 0.75 && hasSpoken;
       console.log(TAG, "Mock 通话完成判定:", { callDuration, faceRate, hasSpoken, isPassed });
 
+      // 埋点：违规类型
+      if (!isPassed) {
+        if (faceRate < 0.75) {
+          bpTrack(EventName.pwa_conv_settle_fail_no_face_show);
+        } else if (!hasSpoken) {
+          bpTrack(EventName.pwa_conv_settle_fail_no_voice_show);
+        }
+      }
+
       // 结束通话订单
       if (orderId) {
+        // 埋点：通话结算
+        bpTrack(EventName.pwa_call_settle, {
+          order_id: orderId,
+          duration: callDuration,
+          is_passed: isPassed,
+        });
         try {
           await finishCallOrder(orderId, callDuration, isPassed ? price || 0 : 0);
+          // 埋点：通话结算成功
+          bpTrack(EventName.pwa_call_settle_success, {
+            order_id: orderId,
+            duration: callDuration,
+            price: isPassed ? price || 0 : 0,
+          });
           console.log(
             TAG,
             "结束订单成功, orderId:",
@@ -339,6 +399,12 @@ export function useMockCall() {
             isPassed ? price : 0,
           );
         } catch (orderError) {
+          // 埋点：通话结算失败
+          bpTrack(EventName.pwa_call_settle_failed, {
+            order_id: orderId,
+            duration: callDuration,
+            error: String(orderError),
+          });
           console.error(TAG, "结束订单失败:", orderError);
         }
       }
@@ -349,6 +415,17 @@ export function useMockCall() {
         orderId: orderId || 0,
         source,
         pass: isPassed,
+      });
+
+      // 埋点：测试视频结果
+      bpTrack(EventName.pwa_test_video_result, {
+        video_id: mockVideoId,
+        order_id: orderId,
+        result: isPassed ? "pass" : "fail",
+        duration: callDuration,
+        face_rate: faceRate,
+        has_spoken: hasSpoken,
+        source: source,
       });
 
       // 后台上传录制视频（不阻塞主流程）
@@ -365,6 +442,12 @@ export function useMockCall() {
       if (isPassed) {
         eventBus.emit(EventNames.MOCK_CALL_PASSED);
         updatePwaType(true);
+        // 广告埋点：Mock 订单完成
+        bpTrack(EventName.ad_MockOrderComplete, {
+          order_id: orderId,
+          duration: callDuration,
+          price: price || 0,
+        });
       }
 
       eventBus.emit(EventNames.MOCK_CALL_PROCESSED);
@@ -373,6 +456,28 @@ export function useMockCall() {
       navigate(getReturnPath(), { replace: true });
 
       const callRecordParams = getCallRecordPrams(isPassed);
+
+      // 埋点：通話結算頁展示
+      const callIdx = getMockCallIndex();
+      if (callIdx === 1) {
+        bpTrack(EventName.pwa_conv_call1_settle_page_show);
+      } else {
+        bpTrack(EventName.pwa_conv_call2_settle_page_show);
+      }
+
+      // 显示通话记录弹窗
+      await showCallRecordModalAsync({
+        ...callRecordParams,
+        onContinue: () => {
+          // 埋点：结算页按钮点击
+          if (callIdx === 1) {
+            bpTrack(EventName.pwa_conv_call1_settle_clickButton);
+          } else {
+            bpTrack(EventName.pwa_conv_call2_settle_clickButton);
+          }
+          closeCallRecordModal();
+        },
+      });
 
       // 自动关闭 CallRecordModal
       setTimeout(() => {
@@ -393,12 +498,23 @@ export function useMockCall() {
           'You violated the rule of "no talking" in this video and won\'t receive earnings.',
         );
       } else if (isPassed) {
-        // 显示通话记录弹窗
-        await showCallRecordModalAsync({
-          ...callRecordParams,
-          onContinue: () => closeCallRecordModal(),
+        // 埋点：恭喜弹窗展示
+        if (callIdx === 1) {
+          bpTrack(EventName.pwa_conv_call1_congrats_pop_show);
+        } else {
+          bpTrack(EventName.pwa_conv_call2_congrats_pop_show);
+        }
+        await showRewardModalAsync(originBalanceRef.current, callRecordParams.earned, {
+          target_user_id: mockCallManager.connectSession?.remoteUserInfo?.userId?.toString(),
+          target_user_type: "dh",
+          source: "mock_call",
         });
-        await showRewardModalAsync(originBalanceRef.current, callRecordParams.earned);
+        // 埋点：恭喜弹窗按钮点击
+        if (callIdx === 1) {
+          bpTrack(EventName.pwa_conv_call1_congrats_pop_clickButton);
+        } else {
+          bpTrack(EventName.pwa_conv_call2_congrats_pop_clickButton);
+        }
       }
 
       // 第二阶段第一个 mock 视频完成后，所有弹窗关闭后弹出 GoLiveModal

@@ -1,6 +1,6 @@
 ---
 title: WeeklyEarningsChart
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:31+08:00
 source: import
 language: tsx
 original: WeeklyEarningsChart.tsx
@@ -97,7 +97,7 @@ export default function WeeklyEarningsChart({ list, currentIndex, onSelectDay, o
               position: "top" as const,
               fontSize: 12,
               color: "#012269",
-              fontFamily: "SFProDisplay, sans-serif",
+              fontFamily: "Pangram, sans-serif",
               formatter: (params: { value: number }) => `$${params.value.toFixed(2)}`,
             },
             data: values,

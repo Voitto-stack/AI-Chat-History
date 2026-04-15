@@ -1,6 +1,6 @@
 ---
 title: StageTaskContainer
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:31+08:00
 source: import
 language: tsx
 original: StageTaskContainer.tsx
@@ -20,6 +20,8 @@ import { TaskItem } from "./TaskItem";
 import Button from "@/components/Button";
 
 import { showCashoutModal } from "@/components/showCashoutModal";
+import { bpTrack } from "@/tracking";
+import { EventName } from "@/tracking/events";
 
 interface StageTaskContainerProps {
   stage: CashoutStage;
@@ -48,9 +50,27 @@ export function StageTaskContainer({ stage }: StageTaskContainerProps) {
       return;
     }
 
+    // 显示提现弹窗，跳过 REMINDER 步骤（cashout 页手动点击不需要弹提现确认弹窗）
+
+    // 埋点：提现按钮点击
+    bpTrack(EventName.pwa_conv_cash_out_clickButton, {
+      stage_amount: stageAmount,
+      current_cash: cash ?? 0,
+      ready_for_cashout: readyForCashout,
+    });
+    bpTrack(EventName.pwa_cashout_button_click, {
+      stage_amount: stageAmount,
+      source: "cashout_page",
+    });
+    bpTrack(EventName.pwa_cashout_click, {
+      stage_amount: stageAmount,
+      current_cash: cash ?? 0,
+    });
+
     // 显示提现弹窗
     showCashoutModal({
       amount: stageAmount.toFixed(2),
+      skipReminder: true,
       onConfirm: () => {
         console.log("[StageTaskContainer] Cashout flow completed");
       },
@@ -80,7 +100,7 @@ export function StageTaskContainer({ stage }: StageTaskContainerProps) {
         ))}
       </div>
 
-      <Button onClick={handleCashout} disabled={!canCashout} className="mt-6 text-sm font-[Poppins]">
+      <Button onClick={handleCashout} disabled={!canCashout} className="mt-6 text-sm font-[Pangram]">
         Cash Out
       </Button>
     </div>

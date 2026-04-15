@@ -1,6 +1,6 @@
 ---
 title: WithdrawRecord
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:31+08:00
 source: import
 language: tsx
 original: WithdrawRecord.tsx
@@ -30,8 +30,8 @@ export default function WithdrawRecord() {
   }, [fetchWithdrawList]);
 
   return (
-    <div className="flex flex-col min-h-screen bg-white">
-      <NavigationBar title="Record" showBorder={false} />
+    <div className="flex flex-col min-h-screen bg-surface">
+      <NavigationBar title="Record" />
 
       {withdrawList.length > 0 ? (
         <div className="flex flex-col gap-[10px] mx-5 mt-[30px]">

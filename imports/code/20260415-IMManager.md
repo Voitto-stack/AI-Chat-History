@@ -1,6 +1,6 @@
 ---
 title: IMManager
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:31+08:00
 source: import
 language: ts
 original: IMManager.ts
@@ -98,7 +98,7 @@ class IMManager {
 
     console.log(TAG, "初始化 TIM SDK");
     this.ChatSDK = _TencentCloudChat!.create({ SDKAppID: TIM_SDK_APP_ID });
-    this.ChatSDK.setLogLevel(import.meta.env.PROD ? 1 : 0);
+    this.ChatSDK.setLogLevel(import.meta.env.MODE === "production" ? 1 : 0);
 
     // 核心事件
     this.ChatSDK.on(_TencentCloudChat!.EVENT.SDK_READY, this.onSdkReady.bind(this));

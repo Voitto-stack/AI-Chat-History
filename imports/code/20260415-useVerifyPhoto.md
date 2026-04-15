@@ -1,6 +1,6 @@
 ---
 title: useVerifyPhoto
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: ts
 original: useVerifyPhoto.ts
@@ -24,6 +24,8 @@ import { TaskId } from "@/types/task";
 import { requestFaceIdToken, verifyFaceIdResult } from "@/http/faceIdApi";
 import { faceScore } from "@/http/api";
 import { redirectToFaceIdWeb, getBizIdFromUrl, parseTokenErrorType } from "@/utils/faceId";
+import { bpTrack } from "@/tracking";
+import { EventName } from "@/tracking/events";
 
 export function useVerifyPhoto() {
   const navigate = useNavigate();
@@ -62,13 +64,30 @@ export function useVerifyPhoto() {
       const result = await verifyFaceIdResult(bizId);
 
       if (result.verified) {
+        // 埋点：验证成功
+        bpTrack(EventName.pwa_conv_verify_success, {
+          verify_method: "web",
+          biz_id: bizId,
+        });
         setShowSuccessCard(true);
       } else {
+        // 埋点：验证失败
+        bpTrack(EventName.pwa_conv_verify_fail, {
+          verify_method: "web",
+          biz_id: bizId,
+          fail_reason: result.message || "unknown",
+        });
         toast.error(result.message || "Face verification failed. Please upload a different photo.");
         setHasPickedNewPhoto(true);
         setShowPhotoModal(true);
       }
-    } catch {
+    } catch (error) {
+      // 埋点：验证失败（异常）
+      bpTrack(EventName.pwa_conv_verify_fail, {
+        verify_method: "web",
+        biz_id: bizId,
+        fail_reason: error instanceof Error ? error.message : "exception",
+      });
       toast.error("Face verification failed. Please try again.");
       setHasPickedNewPhoto(true);
       setShowPhotoModal(true);
@@ -116,6 +135,11 @@ export function useVerifyPhoto() {
   };
 
   const triggerFileInput = (capture: boolean) => {
+    // 埋点：上传新照片点击
+    bpTrack(EventName.pwa_verify_photo_page_upload_new_photo_click, {
+      source: capture ? "camera" : "album",
+    });
+
     const input = fileInputRef.current;
     if (!input) return;
 
@@ -169,20 +193,35 @@ export function useVerifyPhoto() {
       });
 
       const appearance = response.beautyScore?.appearance ?? 0;
-      if (appearance < 60) {
-        toast.error("The profile picture does not meet the requirements.");
+      const pass = appearance >= 60;
+
+      // 埋点：颜值分检测结果
+      bpTrack(EventName.pwa_verify_photo_beauty_score, {
+        beauty_score: appearance,
+        pass,
+      });
+
+      if (!pass) {
+        toast.error("Photo doesn't meet requirements. Please upload a clear, well-lit photo of your face.");
         return false;
       }
 
       return true;
     } catch (error) {
       console.error("Beauty score check failed:", error);
-      toast.error("The profile picture does not meet the requirements.");
+      toast.error("Photo doesn't meet requirements. Please upload a clear, well-lit photo of your face.");
       return false;
     }
   };
 
   const handleVerify = async () => {
+    // 埋点：验证按钮点击
+    bpTrack(EventName.pwa_conv_verify_btn_click, {
+      verify_method: isApp() ? "app" : "web",
+      has_picked_new_photo: hasPickedNewPhoto,
+    });
+    bpTrack(EventName.pwa_verify_photo_page_verify_click);
+
     showLoading();
 
     try {
@@ -214,6 +253,13 @@ export function useVerifyPhoto() {
     const result = await redirectToFaceIdPage(imageSrc, uuid, bizNo);
 
     if (result.startsWith("error:NO_FACE_FOUND")) {
+      toast.error("No face detected. Please upload a clear photo showing your face.");
+
+      // 埋点：验证失败
+      bpTrack(EventName.pwa_conv_verify_fail, {
+        verify_method: "app",
+        fail_reason: "NO_FACE_FOUND",
+      });
       toast.error("No face detected in uploaded image");
       setHasPickedNewPhoto(true);
       setShowPhotoModal(true);
@@ -222,6 +268,13 @@ export function useVerifyPhoto() {
     }
 
     if (result.startsWith("error:MULTIPLE_FACES")) {
+      toast.error("Multiple faces detected. Please upload a photo of just yourself.");
+
+      // 埋点：验证失败
+      bpTrack(EventName.pwa_conv_verify_fail, {
+        verify_method: "app",
+        fail_reason: "MULTIPLE_FACES",
+      });
       toast.error("Multiple faces detected in uploaded image");
       setHasPickedNewPhoto(true);
       setShowPhotoModal(true);
@@ -230,9 +283,19 @@ export function useVerifyPhoto() {
     }
 
     if (result === "true") {
+      // 埋点：验证成功
+      bpTrack(EventName.pwa_conv_verify_success, {
+        verify_method: "app",
+        biz_no: bizNo,
+      });
       setShowSuccessCard(true);
       hideLoading();
     } else {
+      // 埋点：验证失败
+      bpTrack(EventName.pwa_conv_verify_fail, {
+        verify_method: "app",
+        fail_reason: result,
+      });
       toast.error("Face verification failed. Please try again.");
       setHasPickedNewPhoto(true);
       setShowPhotoModal(true);
@@ -251,11 +314,11 @@ export function useVerifyPhoto() {
       const errorType = parseTokenErrorType(result.message);
       switch (errorType) {
         case "NO_FACE_FOUND":
-          toast.error("No face detected in uploaded image");
+          toast.error("No face detected. Please upload a clear photo showing your face.");
           setShowPhotoModal(true);
           break;
         case "MULTIPLE_FACES":
-          toast.error("Multiple faces detected in uploaded image");
+          toast.error("Multiple faces detected. Please upload a photo of just yourself.");
           setShowPhotoModal(true);
           break;
         default:

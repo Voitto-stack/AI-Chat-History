@@ -1,6 +1,6 @@
 ---
 title: showInsModal
-date: 2026-04-15T17:04:50+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: tsx
 original: showInsModal.tsx
@@ -17,6 +17,7 @@ import { showApkDownloadModal } from "./showApkDownloadModal";
 import { useIns } from "@/hooks/useIns";
 import { useModal } from "@/hooks/useModal";
 import { useTask } from "@/hooks/useTask";
+import { useTaskStore } from "@/stores/taskStore";
 import { TaskId } from "@/types/task";
 import icLogoIns from "@/assets/images/ins/ic_logo_ins.webp";
 import icLogoInsRect from "@/assets/images/ins/ic_logo_ins_rect.webp";
@@ -24,6 +25,8 @@ import bgInsLogin from "@/assets/images/ins/bg_ins_login.webp";
 import bgInsAuth from "@/assets/images/ins/bg_ins_auth.webp";
 import aiAvatarWorkPlaceholder from "@/assets/images/ai_avatar_work_placeholder.webp";
 import icClose from "@/assets/images/common/ic_close.svg";
+import { bpTrack } from "@/tracking";
+import { EventName } from "@/tracking/events";
 
 const MODAL_ID = "ins-modal";
 
@@ -43,14 +46,38 @@ function InsModalContent({ onClose }: InsModalProps) {
   }, [insState]);
 
   const handlePrimaryAction = useCallback(() => {
+    // 埋点：Instagram 任务页面步骤1点击
+    bpTrack(EventName.pwa_earning_ins_task_page_one_click, { current_ins_task_step: 1 });
+    // 埋点：Instagram 授权任务状态 - 开始登录
+    bpTrack(EventName.pwa_ins_authorize_task_status, {
+      status: "login_instagram_clicked",
+      current_ins_task_step: 1,
+    });
+    // 埋点：Instagram 授权权限
+    bpTrack(EventName.pwa_perm_ig_authorization);
     openInsWebView();
   }, []);
 
   const handleComplete = useCallback(async () => {
     try {
+      // 埋点：Instagram 任务页面步骤2点击
+      bpTrack(EventName.pwa_earning_ins_task_page_two_click, { current_ins_task_step: 2 });
+      // 埋点：Instagram 授权任务状态 - 授权自动驾驶
+      bpTrack(EventName.pwa_ins_authorize_task_status, {
+        status: "authorize_autopilot_clicked",
+        current_ins_task_step: 2,
+      });
+
       // 如果任务已完成，说明是换绑场景，不需要再次完成任务
       if (!isTaskFinished(TaskId.BindInsAccount)) {
         await finishTask(TaskId.BindInsAccount);
+        // 埋点：Instagram 奖励
+        const insRewardAmount = parseFloat(useTaskStore.getState().getTask(TaskId.BindInsAccount)?.reward ?? "0") || 0;
+        bpTrack(EventName.pwa_instagram_reward, {
+          task_id: TaskId.BindInsAccount,
+          instagram_reward_type: "bind_task",
+          ins_reward_amount: insRewardAmount,
+        });
       }
       // 重置授权状态
       resetInsState();
@@ -85,7 +112,7 @@ function InsModalContent({ onClose }: InsModalProps) {
 
           <h2
             className="text-[#000] font-medium text-[22px] leading-[28px]"
-            style={{ fontFamily: "TT Fellows Trial, sans-serif" }}
+            style={{ fontFamily: "TTFellows, sans-serif" }}
           >
             Authorize Autopilot
           </h2>
@@ -164,7 +191,7 @@ function InsModalContent({ onClose }: InsModalProps) {
               <span className="text-[#1C3F7C] text-[15px] font-semibold leading-tight mt-1">
                 Login To Instagram And Authorize Autopilot
               </span>
-              <span className="inline-block mt-2 px-2.5 py-1 rounded-md bg-[#47AEEF] text-white text-[11px] font-semibold self-start">
+              <span className="inline-block mt-2 px-2.5 py-1 rounded-md bg-brand text-white text-[11px] font-semibold self-start">
                 In Progress
               </span>
             </div>
@@ -186,7 +213,7 @@ function InsModalContent({ onClose }: InsModalProps) {
             <button
               onClick={() => setActiveTab("instructions")}
               className={`pb-2.5 text-[15px] font-semibold transition-colors border-b-2 ${
-                activeTab === "instructions" ? "text-[#47AEEF] border-[#47AEEF]" : "text-[#8E8E93] border-transparent"
+                activeTab === "instructions" ? "text-brand border-brand" : "text-[#8E8E93] border-transparent"
               }`}
             >
               Instructions
@@ -194,7 +221,7 @@ function InsModalContent({ onClose }: InsModalProps) {
             <button
               onClick={() => setActiveTab("conditions")}
               className={`pb-2.5 text-[15px] font-semibold transition-colors border-b-2 ${
-                activeTab === "conditions" ? "text-[#47AEEF] border-[#47AEEF]" : "text-[#8E8E93] border-transparent"
+                activeTab === "conditions" ? "text-brand border-brand" : "text-[#8E8E93] border-transparent"
               }`}
             >
               Conditions
@@ -246,7 +273,7 @@ function InsModalContent({ onClose }: InsModalProps) {
 export function showInsModal(onClose?: () => void): void {
   // 如果不是 APK 环境，直接显示 APK 下载弹窗
   if (!isApp()) {
-    showApkDownloadModal();
+    showApkDownloadModal("ins_modal");
     onClose?.();
     return;
   }

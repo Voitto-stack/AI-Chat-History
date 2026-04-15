@@ -1,6 +1,6 @@
 ---
 title: pwaInstall
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:31+08:00
 source: import
 language: ts
 original: pwaInstall.ts
@@ -16,6 +16,8 @@ original: pwaInstall.ts
  */
 
 import { isApp } from "@/utils/bridge";
+import { bpTrack } from "@/tracking";
+import { EventName } from "@/tracking/events";
 
 const TAG = "PwaInstall";
 
@@ -73,6 +75,9 @@ export function initPwaInstall() {
   // 监听安装完成事件
   window.addEventListener("appinstalled", () => {
     console.log(TAG, "应用已安装");
+    bpTrack(EventName.web_install_success);
+    // 广告埋点：PWA 安装完成
+    bpTrack(EventName.ad_Installed);
     setState(InstallState.Installed);
     clearTimeout(timeoutId);
     deferredPrompt = null;
@@ -100,9 +105,11 @@ export async function triggerInstall(): Promise<string> {
       setState(InstallState.Installing);
       // 30 秒超时检测
       timeoutId = setTimeout(() => {
+        bpTrack(EventName.web_install_timeout);
         setState(InstallState.Timeout);
       }, 30_000);
     } else {
+      bpTrack(EventName.web_install_dismiss);
       setState(InstallState.UserCancel);
     }
 

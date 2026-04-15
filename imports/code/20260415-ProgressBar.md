@@ -1,6 +1,6 @@
 ---
 title: ProgressBar
-date: 2026-04-15T17:04:50+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: tsx
 original: ProgressBar.tsx
@@ -55,7 +55,7 @@ export default function ProgressBar({
           width: isVertical ? "100%" : "100%",
           height: isVertical ? "100%" : "100%",
           transform: isVertical ? `scaleY(${scale})` : `scaleX(${scale})`,
-          transformOrigin: isVertical ? "bottom" : "left",
+          transformOrigin: isVertical ? "top" : "left",
           transition: `transform ${animationDuration}ms ease-out`,
         }}
       />

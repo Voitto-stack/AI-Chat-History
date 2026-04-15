@@ -1,6 +1,6 @@
 ---
 title: useEarningDetail
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: ts
 original: useEarningDetail.ts
@@ -15,7 +15,7 @@ import { tzStartOfDay, tzDateKey } from "@/utils/timezone";
 import { buildRecordItem, isCallChangeType } from "../pages/Earning/utils";
 import { useEarningDetailStore } from "@/stores/earningDetailStore";
 import type { RecordItem } from "../pages/Earning/types";
-import type { CallOrderInfo } from "@sitin/api-proto/gen/archat_api/user_api";
+import type { CallOrderInfo } from "@heyhru/business-pwa-proto/gen/archat_api/user_api";
 
 const MAX_DAYS = 60;
 const MS_PER_DAY = 86_400_000;

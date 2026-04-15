@@ -1,6 +1,6 @@
 ---
 title: CallTooShortModal
-date: 2026-04-15T17:04:50+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: tsx
 original: CallTooShortModal.tsx
@@ -9,8 +9,12 @@ original: CallTooShortModal.tsx
 # CallTooShortModal
 
 ```tsx
+/* eslint-disable react-refresh/only-export-components */
 import { useModal } from "@/hooks/useModal";
 import { toast } from "@/utils/toast";
+import { useEffect } from "react";
+import { bpTrack } from "@/tracking";
+import { EventName } from "@/tracking/events";
 
 /**
  * CallTooShortModal - 通话时间过短弹窗
@@ -27,8 +31,14 @@ interface ResultProps {
   onClose: () => void;
 }
 
-const ResultContent: React.FC<ResultProps> = ({ onClose }) => (
-  <div className="flex w-[340px] flex-col items-center rounded-[32px] bg-white p-4 text-center shadow-[0_8px_32px_rgba(0,0,0,0.12)]">
+const ResultContent: React.FC<ResultProps> = ({ onClose }) => {
+  // 埋点：快���挂断提示展示
+  useEffect(() => {
+    bpTrack(EventName.pwa_conv_settle_fail_quick_hangup_show);
+  }, []);
+
+  return (
+    <div className="flex w-[340px] flex-col items-center rounded-[32px] bg-white p-4 text-center shadow-[0_8px_32px_rgba(0,0,0,0.12)]">
     <div className="mb-5 flex h-[88px] w-[88px] items-center justify-center rounded-full bg-[#ff3b30] text-[54px] font-bold text-white">
       !
     </div>
@@ -49,6 +59,7 @@ const ResultContent: React.FC<ResultProps> = ({ onClose }) => (
     </button>
   </div>
 );
+};
 
 // ==================== retention 类型（通话中挽留） ====================
 
@@ -58,11 +69,7 @@ interface RetentionProps {
   onContinue: () => void;
 }
 
-export const CallTooShortRetentionContent: React.FC<RetentionProps> = ({
-  countdownFinish,
-  onEndCall,
-  onContinue,
-}) => (
+export const CallTooShortRetentionContent: React.FC<RetentionProps> = ({ countdownFinish, onEndCall, onContinue }) => (
   <div className="relative w-[318px] rounded-2xl bg-white">
     <button
       className="absolute top-3 right-[18px] border-none bg-transparent p-1 text-xl text-[#999] active:opacity-60"
@@ -70,14 +77,14 @@ export const CallTooShortRetentionContent: React.FC<RetentionProps> = ({
     >
       ✕
     </button>
-    <div className="mx-6 mt-[42px] mb-3 text-center text-[22px] font-bold text-[#012269]">Call Too Short!</div>
-    <div className="mx-3 mt-1.5 text-center text-[15px] font-normal text-[#012269b2]">
+    <div className="mx-6 mt-[42px] mb-3 text-center text-[22px] font-bold text-brand-dark">Call Too Short!</div>
+    <div className="mx-3 mt-1.5 text-center text-[15px] font-normal text-brand-dark/70">
       Stick around for 30 sec and it&apos;s yours! Wanna miss it?
     </div>
     <div className="mx-6 mt-[50px] mb-6 flex gap-2">
       <div className="flex-1">
         <div
-          className="w-full cursor-pointer rounded-full bg-[#dae7f6] px-4 py-4 text-center text-[15px] font-medium text-[#012269] active:opacity-80"
+          className="w-full cursor-pointer rounded-full bg-[#dae7f6] px-4 py-4 text-center text-[15px] font-medium text-brand-dark active:opacity-80"
           onClick={() => {
             if (countdownFinish) {
               onEndCall();

@@ -1,6 +1,6 @@
 ---
 title: useNativeCall
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: tsx
 original: useNativeCall.tsx
@@ -43,7 +43,7 @@ import useTupu from "./useTupu";
 import { showRewardModalAsync } from "../components/showRewardModal";
 import { processCallRecord } from "@/utils/callUtils";
 import { useCashout } from "@/hooks/useCashout";
-import { ReportType } from "@sitin/api-proto/gen/archat_api/user_api";
+import { ReportType } from "@heyhru/business-pwa-proto/gen/archat_api/user_api";
 import { STORAGE_KEYS } from "../constants/storageKeys";
 import { saveReturnPath, getReturnPath } from "@/utils/callReturnPath";
 
@@ -236,7 +236,11 @@ export function useNativeCall() {
         }
         if (duration > 30) {
           //奖励弹窗
-          await showRewardModalAsync(originCashRef.current, callRecordParams.earned);
+          await showRewardModalAsync(originCashRef.current, callRecordParams.earned, {
+            target_user_id: remoteUserInfo?.userId?.toString(),
+            target_user_type: "real",
+            source: "call",
+          });
         }
         //Native 端视频通话结束，处理违规记录与降级
         if (isVideoCall) {
@@ -275,6 +279,7 @@ export function useNativeCall() {
       navigate,
       getCallRecordParams,
       updateVideoCallTime,
+      remoteUserInfo?.userId,
     ],
   );
 

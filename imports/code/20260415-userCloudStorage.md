@@ -1,6 +1,6 @@
 ---
 title: userCloudStorage
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:31+08:00
 source: import
 language: ts
 original: userCloudStorage.ts
@@ -21,7 +21,7 @@ import {
   StoreUserMiscRequest,
   StoreUserMiscResponse,
   UserServiceCommonCode,
-} from "@sitin/api-proto/gen/archat_api/user_api";
+} from "@heyhru/business-pwa-proto/gen/archat_api/user_api";
 import httpClient from "@/http/httpClient";
 
 /** 用户云存储键枚举 */

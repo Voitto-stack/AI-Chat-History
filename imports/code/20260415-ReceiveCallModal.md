@@ -1,6 +1,6 @@
 ---
 title: ReceiveCallModal
-date: 2026-04-15T17:04:50+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: tsx
 original: ReceiveCallModal.tsx
@@ -18,19 +18,18 @@ import IcEeceiveCallCoin from "@/assets/images/call/ic_receive_call_coin.webp";
 import CircularProgress from "./CircularProgress";
 import { getAvatarUrl } from "@/utils/userUtil";
 import { useCall } from "@/hooks/useCall";
-import { useModal } from "@/hooks/useModal";
 import { showFinalWarningModal } from "./FinalWarningModal";
 import { showViolationLimitModal } from "./ViolationLimitModal";
 import { showDeclineDialogModal } from "./DeclineDialogModal";
 import { useCash } from "@/hooks/useCash";
 import { STORAGE_KEYS } from "../constants/storageKeys";
+import { bpTrack } from "@/tracking";
+import { EventName } from "@/tracking/events";
 
 /**
  * 来电接听弹窗组件
  * 遵循 Vercel React 最佳实践，带视频背景和交互动画
  */
-
-const MODAL_ID = "receive-call-modal";
 
 interface ReceiveCallModalProps {
   /** 通话类型 */
@@ -47,7 +46,7 @@ interface ReceiveCallModalProps {
 
 // rendering-hoist-jsx: 提取静态样式对象到组件外部
 const titleStyle = { fontFamily: "Pangram, -apple-system, sans-serif" };
-const subtitleStyle = { fontFamily: '"SF Pro", -apple-system, sans-serif' };
+const subtitleStyle = { fontFamily: "Pangram, -apple-system, sans-serif" };
 
 export const ReceiveCallModalContent = ({
   callType = "video",
@@ -94,6 +93,11 @@ export const ReceiveCallModalContent = ({
   const remoteUserAvatar = useMemo(() => getAvatarUrl(remoteUserInfo), [remoteUserInfo]);
 
   const handleAccept = useCallback(() => {
+    // 埋点：全屏通话弹窗点击-接受（旧埋点名称，用于数据连续性）
+    bpTrack(EventName.pwa_call_fullscreen_popup_click, {
+      result: "accept",
+    });
+
     cleanupCamera();
     onAccept();
     onClose();
@@ -101,6 +105,11 @@ export const ReceiveCallModalContent = ({
 
   const handleDecline = useCallback(() => {
     if (!declineDisabled) {
+      // 埋点：全屏通话弹窗点击-拒绝（旧埋点名称，用于数据连续性）
+      bpTrack(EventName.pwa_call_fullscreen_popup_click, {
+        result: "reject",
+      });
+
       const history = JSON.parse(localStorage.getItem(STORAGE_KEYS.CALL_HISTORY) || "[]");
       const count = Math.min(history.length, 3);
 
@@ -161,6 +170,16 @@ export const ReceiveCallModalContent = ({
 
   // Effects
   useEffect(() => {
+    // 埋点：接收到通话请求
+    bpTrack(EventName.pwa_receive_call_request, {
+      call_type: callType,
+      price_per_minute: effectivePrice,
+      remote_user_id: remoteUserInfo?.userId,
+    });
+
+    // 埋点：全屏通话弹窗展示（旧埋点名称，用于数据连续性）
+    bpTrack(EventName.pwa_call_fullscreen_popup_show);
+
     // 获取摄像头
     navigator.mediaDevices
       .getUserMedia({ video: true, audio: true })
@@ -328,44 +347,6 @@ export const ReceiveCallModalContent = ({
         </Fragment>
       )}
     </div>
-  );
-};
-
-/**
- * 显示来电接听弹窗
- *
- * @param params - 弹窗参数
- * @param params.callType - 通话类型 ("video" | "audio")
- * @param params.price - 每分钟收益
- * @param params.onAccept - 接听回调
- * @param params.onDecline - 拒绝回调
- */
-export const closeReceiveCallModal = (): void => {
-  useModal.getState().close(MODAL_ID);
-};
-
-export const showReceiveCallModal = (params: {
-  callType?: "video" | "audio";
-  price?: number;
-  onAccept: () => void;
-  onDecline: () => void;
-}): void => {
-  const modalStore = useModal.getState();
-
-  const handleClose = () => {
-    modalStore.close(MODAL_ID);
-  };
-
-  modalStore.open(
-    MODAL_ID,
-    <ReceiveCallModalContent
-      callType={params.callType}
-      price={params.price}
-      onAccept={params.onAccept}
-      onDecline={params.onDecline}
-      onClose={handleClose}
-    />,
-    { variant: "fullscreen" },
   );
 };
 

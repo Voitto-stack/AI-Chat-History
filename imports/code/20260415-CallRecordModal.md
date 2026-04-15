@@ -1,6 +1,6 @@
 ---
 title: CallRecordModal
-date: 2026-04-15T17:04:50+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: tsx
 original: CallRecordModal.tsx
@@ -9,10 +9,13 @@ original: CallRecordModal.tsx
 # CallRecordModal
 
 ```tsx
-import { useCallback, useMemo } from "react";
-import { UserInfo } from "@sitin/api-proto/gen/archat_api/user_api";
+/* eslint-disable react-refresh/only-export-components */
+import { useCallback, useMemo, useEffect } from "react";
+import { UserInfo } from "@heyhru/business-pwa-proto/gen/archat_api/user_api";
 import { useModal } from "@/hooks/useModal";
 import { formatDuration } from "@/utils/timeFormat";
+import { bpTrack } from "@/tracking";
+import { EventName } from "@/tracking/events";
 
 /**
  * CallRecordModal - 通话记录弹窗
@@ -60,18 +63,10 @@ const UserInfoDisplay: React.FC<UserInfoDisplayProps> = ({ avatarUrl, username, 
         <img src={avatarUrl || ""} alt={username || altText} className="h-full w-full object-cover" />
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <p
-          className="m-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-medium leading-[18px] text-black"
-          style={{ fontFamily: '"Euclid Circular A", sans-serif' }}
-        >
+        <p className="m-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-medium leading-[18px] text-black">
           {username || "Unknown"}
         </p>
-        <p
-          className="m-0 break-all text-xs font-normal leading-4 text-[rgba(60,60,67,0.3)]"
-          style={{ fontFamily: '"Euclid Circular A", sans-serif' }}
-        >
-          ID: {userId || "N/A"}
-        </p>
+        <p className="m-0 break-all text-xs font-normal leading-4 text-[rgba(60,60,67,0.3)]">ID: {userId || "N/A"}</p>
       </div>
     </div>
   );
@@ -91,25 +86,12 @@ const TimeInfoRow: React.FC<TimeInfoRowProps> = ({ label, timezone, time }) => {
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-1.5">
-        <span
-          className="text-xs font-normal leading-4 tracking-[-0.23px] text-[rgba(60,60,67,0.6)]"
-          style={{ fontFamily: '"Euclid Circular A", sans-serif' }}
-        >
-          {label}
-        </span>
-        <span
-          className="flex h-4 items-center justify-center rounded-full bg-white px-[5px] py-px text-[10px] font-normal leading-[13px] tracking-[-0.23px] text-[rgba(60,60,67,0.6)]"
-          style={{ fontFamily: '"Euclid Circular A", sans-serif' }}
-        >
+        <span className="text-xs font-normal leading-4 tracking-[-0.23px] text-[rgba(60,60,67,0.6)]">{label}</span>
+        <span className="flex h-4 items-center justify-center rounded-full bg-white px-[5px] py-px text-[10px] font-normal leading-[13px] tracking-[-0.23px] text-[rgba(60,60,67,0.6)]">
           {timezone}
         </span>
       </div>
-      <span
-        className="text-xs font-normal leading-4 tracking-[-0.23px] text-black"
-        style={{ fontFamily: '"Euclid Circular A", sans-serif' }}
-      >
-        {time}
-      </span>
+      <span className="text-xs font-normal leading-4 tracking-[-0.23px] text-black">{time}</span>
     </div>
   );
 };
@@ -126,18 +108,10 @@ interface StatCardProps {
 const StatCard: React.FC<StatCardProps> = ({ label, value }) => {
   return (
     <div className="flex flex-col items-center gap-1">
-      <p
-        className="m-0 text-center text-[15px] font-normal leading-5 tracking-[-0.23px] text-[rgba(60,60,67,0.3)]"
-        style={{ fontFamily: '"Euclid Circular A", sans-serif' }}
-      >
+      <p className="m-0 text-center text-[15px] font-normal leading-5 tracking-[-0.23px] text-[rgba(60,60,67,0.3)]">
         {label}
       </p>
-      <p
-        className="m-0 text-center text-lg font-medium leading-[22px] tracking-[-0.23px] text-black"
-        style={{ fontFamily: '"Euclid Circular A", sans-serif' }}
-      >
-        {value}
-      </p>
+      <p className="m-0 text-center text-lg font-medium leading-[22px] tracking-[-0.23px] text-black">{value}</p>
     </div>
   );
 };
@@ -154,6 +128,19 @@ export const CallRecordModalContent: React.FC<CallRecordModalProps> = ({
   onContinue,
   onClose,
 }) => {
+  // 埋点：结算弹窗展示（旧埋点名称，用于数据连续性）
+  useEffect(() => {
+    bpTrack(EventName.pwa_settlement_popup_view, {
+      earnings: earned,
+      deducted_minutes: totalDuration - qualifiedMinutes,
+    });
+    // 埋点：收益窗口展示（旧埋点名称，用于数据连续性）
+    bpTrack(EventName.pwa_revenue_window_show, {
+      count: earned,
+      source: "call",
+    });
+  }, [earned, totalDuration, qualifiedMinutes]);
+
   // rerender-use-callback: 使用 useCallback 稳定回调引用
   const handleContinue = useCallback(() => {
     onContinue?.();
@@ -166,13 +153,13 @@ export const CallRecordModalContent: React.FC<CallRecordModalProps> = ({
   const formattedDuration = useMemo(() => formatDuration(totalDuration), [totalDuration]);
 
   return (
-    <div className="relative flex w-full max-w-[360px] flex-col gap-4 rounded-[18px] bg-white p-6 pb-[18px] shadow-[0px_0px_0px_1px_rgba(0,0,0,0.04),0px_3px_8px_0px_rgba(0,0,0,0.15),0px_3px_1px_0px_rgba(0,0,0,0.06)] sm:max-w-[320px] sm:p-5 sm:pb-4">
+    <div
+      className="relative flex w-full max-w-[360px] flex-col gap-4 rounded-[18px] bg-white p-6 pb-[18px] shadow-[0px_0px_0px_1px_rgba(0,0,0,0.04),0px_3px_8px_0px_rgba(0,0,0,0.15),0px_3px_1px_0px_rgba(0,0,0,0.06)] sm:max-w-[320px] sm:p-5 sm:pb-4"
+      style={{ fontFamily: '"Pangram", sans-serif' }}
+    >
       {/* Header */}
       <div className="w-full text-center">
-        <p
-          className="m-0 text-lg font-medium leading-[22px] tracking-[-0.23px] text-black sm:text-base sm:leading-5"
-          style={{ fontFamily: '"Euclid Circular A", sans-serif' }}
-        >
+        <p className="m-0 text-lg font-medium leading-[22px] tracking-[-0.23px] text-black sm:text-base sm:leading-5">
           Congrats!
         </p>
       </div>
@@ -182,15 +169,10 @@ export const CallRecordModalContent: React.FC<CallRecordModalProps> = ({
         <div className="flex flex-col gap-4">
           {/* You Earned */}
           <div className="flex flex-col items-center gap-1 text-center">
+            <p className="m-0 text-[15px] font-normal leading-5 tracking-[-0.23px] text-black">You Earned</p>
             <p
-              className="m-0 text-[15px] font-normal leading-5 tracking-[-0.23px] text-black"
-              style={{ fontFamily: '"Euclid Circular A", sans-serif' }}
-            >
-              You Earned
-            </p>
-            <p
-              className="m-0 text-[32px] font-semibold leading-normal text-[#47aeef] sm:text-[28px]"
-              style={{ fontFamily: '"Gilmer", sans-serif' }}
+              className="m-0 text-[32px] font-semibold leading-normal text-brand sm:text-[28px]"
+              style={{ fontFamily: '"Pangram", sans-serif' }}
             >
               ${formattedEarned}
             </p>
@@ -211,10 +193,7 @@ export const CallRecordModalContent: React.FC<CallRecordModalProps> = ({
 
         {/* Violations Note */}
         <div className="flex items-center justify-center rounded-lg px-2.5">
-          <p
-            className="m-0 text-center text-[10px] font-normal leading-4 tracking-[-0.23px] text-[rgba(60,60,67,0.6)]"
-            style={{ fontFamily: '"Euclid Circular A", sans-serif' }}
-          >
+          <p className="m-0 text-center text-[10px] font-normal leading-4 tracking-[-0.23px] text-[rgba(60,60,67,0.6)]">
             {VIOLATIONS_NOTE}
           </p>
         </div>
@@ -222,12 +201,7 @@ export const CallRecordModalContent: React.FC<CallRecordModalProps> = ({
 
       {/* Call Info Section */}
       <div className="flex flex-col gap-3.5 rounded-xl bg-[rgba(242,242,247,0.6)] p-3">
-        <div
-          className="text-center text-[15px] font-medium leading-5 tracking-[-0.23px] text-black"
-          style={{ fontFamily: '"Euclid Circular A", sans-serif' }}
-        >
-          Call Info
-        </div>
+        <div className="text-center text-[15px] font-medium leading-5 tracking-[-0.23px] text-black">Call Info</div>
 
         {/* Participants */}
         <div className="flex items-center justify-between gap-2.5">
@@ -254,8 +228,7 @@ export const CallRecordModalContent: React.FC<CallRecordModalProps> = ({
       {/* Action Buttons */}
       <div className="flex gap-[11px]">
         <button
-          className="flex h-[45px] flex-1 items-center justify-center rounded-full border-none bg-[#47aeef] text-center text-base font-normal leading-[21px] tracking-[-0.23px] text-white shadow-[0_4px_12px_rgba(71,174,239,0.3)] transition-all duration-300 ease-in-out hover:bg-[#3a9ed6] hover:shadow-[0_6px_16px_rgba(71,174,239,0.4)] active:scale-[0.98] sm:h-[42px] sm:text-[15px]"
-          style={{ fontFamily: '"Euclid Circular A", sans-serif' }}
+          className="flex h-[45px] flex-1 items-center justify-center rounded-full border-none bg-brand text-center text-base font-normal leading-[21px] tracking-[-0.23px] text-white shadow-[0_4px_12px_rgba(71,174,239,0.3)] transition-all duration-300 ease-in-out hover:bg-[#3a9ed6] hover:shadow-[0_6px_16px_rgba(71,174,239,0.4)] active:scale-[0.98] sm:h-[42px] sm:text-[15px]"
           onClick={handleContinue}
         >
           Continue

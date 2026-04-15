@@ -1,6 +1,6 @@
 ---
 title: missCallStore
-date: 2026-04-15T17:04:50+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: ts
 original: missCallStore.ts
@@ -16,7 +16,7 @@ original: missCallStore.ts
  */
 
 import { create } from "zustand";
-import { UserInfo, UserServiceCommonCode } from "@sitin/api-proto/gen/archat_api/user_api";
+import { UserInfo, UserServiceCommonCode } from "@heyhru/business-pwa-proto/gen/archat_api/user_api";
 // eslint-disable-next-line no-restricted-imports -- store 不能使用 hooks，需要直接访问 store
 import { useUserStore } from "@/stores/userStore";
 import { loadMissedCalls } from "@/http/api";

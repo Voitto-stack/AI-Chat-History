@@ -1,6 +1,6 @@
 ---
 title: CashoutTaskList
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:31+08:00
 source: import
 language: tsx
 original: CashoutTaskList.tsx
@@ -14,7 +14,7 @@ original: CashoutTaskList.tsx
  * 显示提现任务清单
  */
 
-import { FC, useMemo, useState, useLayoutEffect, useCallback } from "react";
+import { FC, useMemo, useState, useLayoutEffect, useCallback, useEffect } from "react";
 import { useTask } from "@/hooks/useTask";
 import { useCashout } from "@/hooks/useCashout";
 import { TaskId, ITask, TaskStatus } from "@/types/task";
@@ -23,27 +23,29 @@ import { CashoutTaskCard } from "./CashoutTaskCard";
 import Skeleton from "@/components/Skeleton";
 import bgInitialTask from "@/assets/images/task/bg_initial_task.webp";
 import bgTipTriangle from "@/assets/images/task/bg_tip_triangle.svg";
+import { bpTrack } from "@/tracking";
+import { EventName } from "@/tracking/events";
 
 // 任务配置
 const TASK_CONFIG: Partial<Record<TaskId, { title: string; buttonText: "Claim" | "Go" }>> = {
   // StageOne
-  [TaskId.Register]: { title: "On boarding 0.5$", buttonText: "Claim" },
+  [TaskId.Register]: { title: "Complete Onboarding — $0.50", buttonText: "Claim" },
 
   // StageTwo
-  [TaskId.CameraPermission]: { title: "Allow Camera Access on apk", buttonText: "Claim" },
+  [TaskId.CameraPermission]: { title: "Enable Camera Access", buttonText: "Claim" },
   [TaskId.MicrophonePermission]: { title: "Allow Microphone Access on apk", buttonText: "Claim" },
-  [TaskId.SecondEarn]: { title: "Earn $2.1 from video calls", buttonText: "Go" },
-  [TaskId.FaceVerify]: { title: "Verify your avatar $0.9", buttonText: "Claim" },
-  [TaskId.InstallApk]: { title: "Install Apk $1", buttonText: "Claim" },
+  [TaskId.SecondEarn]: { title: "Earn $2.10 from Video Calls", buttonText: "Go" },
+  [TaskId.FaceVerify]: { title: "Verify Your Photo — $0.90", buttonText: "Claim" },
+  [TaskId.InstallApk]: { title: "Install App — $1.00", buttonText: "Claim" },
 
   // StageThree
-  [TaskId.ThirdEarn]: { title: "Earn at least 7$ from video calls or exchange lG order", buttonText: "Go" },
-  [TaskId.BindInsAccount]: { title: "Authorize Instagram 3 $", buttonText: "Go" },
+  [TaskId.ThirdEarn]: { title: "Earn at Least $7.00 from Video Calls or Instagram Exchanges", buttonText: "Go" },
+  [TaskId.BindInsAccount]: { title: "Connect Instagram — $3.00", buttonText: "Go" },
   [TaskId.LocationPermission]: { title: "Authorize Location Access", buttonText: "Claim" },
 
   // StageFour
   [TaskId.FourthEarn]: { title: "Earn at least 10$ from video calls or exchange lG order", buttonText: "Go" },
-  [TaskId.FourthVideoDuration]: { title: "At least video calls 2min", buttonText: "Go" },
+  [TaskId.FourthVideoDuration]: { title: "Complete at Least 2 Minutes of Video Calls", buttonText: "Go" },
 
   // StageFive
   [TaskId.FifthEarn]: { title: "Earn at least 20$ from video calls or exchange lG order", buttonText: "Go" },
@@ -64,6 +66,12 @@ export const CashoutTaskList: FC = () => {
   const [tipTop, setTipTop] = useState<number | undefined>(undefined);
   const [tipRight, setTipRight] = useState<number | undefined>(undefined);
   const [showTip, setShowTip] = useState<boolean>(false);
+
+  // 埋点：任务列表页展示
+  useEffect(() => {
+    bpTrack(EventName.pwa_task_page_show, { stage: currentTaskStage });
+    bpTrack(EventName.pwa_home_cash_guided_task_show, { task_stage: currentTaskStage });
+  }, [currentTaskStage]);
 
   // 获取当前阶段的目标金额
   const targetAmount = stageAmountMap[currentTaskStage];
@@ -92,9 +100,12 @@ export const CashoutTaskList: FC = () => {
   const handleTaskClick = useCallback(
     (taskId: TaskId) => {
       setTipTop(undefined);
+      // 埋点：任务点击
+      bpTrack(EventName.pwa_task_click, { task_id: taskId });
+      bpTrack(EventName.pwa_home_cash_guided_task_click, { task_stage: currentTaskStage, task_name: String(taskId) });
       return handleTaskAction(taskId);
     },
-    [handleTaskAction],
+    [handleTaskAction, currentTaskStage],
   );
 
   // 计算提示位置
@@ -104,12 +115,12 @@ export const CashoutTaskList: FC = () => {
       const uncheckBtn = document.querySelector(".cashout-task-item-btn") as HTMLElement;
 
       if (uncheckBtn) {
-        const top = uncheckBtn.offsetTop + uncheckBtn.offsetHeight + 10;
         const btnRect = uncheckBtn.getBoundingClientRect();
 
-        // 获取父容器，计算相对于父容器的 right 值
+        // 获取父容器，用 getBoundingClientRect 计算相对位置（避免 offsetParent 兼容性问题）
         const parentElement = uncheckBtn.closest(".relative") as HTMLElement;
         const parentRect = parentElement.getBoundingClientRect();
+        const top = btnRect.bottom - parentRect.top + 10;
         const right = parentRect.right - btnRect.right;
 
         setTipRight(right);
@@ -133,15 +144,14 @@ export const CashoutTaskList: FC = () => {
       }}
     >
       {/* 标题 */}
-      <h2 className="m-0 text-white font-black text-[30px] leading-[28px] font-[Pangram]">
+      <h2 className="m-0 text-white font-black text-[30px] leading-[28px]">
         {currentTaskStage === CashoutStage.StageOne ? "Welcome Checklist" : "Earn your next cashout"}
       </h2>
 
       {/* 描述 */}
-      <p className="mt-[9px] mb-0 text-white font-normal text-[15px] leading-[20px] font-[Pangram]">
+      <p className="mt-[9px] mb-0 text-white font-normal text-[15px] leading-[20px]">
         {currentTaskStage === CashoutStage.StageOne ? "Complete tasks to get" : "First cash out"}
-        <span className="text-[#f7fe20] font-normal text-[15px] leading-[20px]">${targetAmount.toFixed(2)}</span> in a
-        few minutes
+        <span className="text-[#f7fe20]">${targetAmount.toFixed(2)}</span> in a few minutes
       </p>
 
       {/* 任务列表 */}
@@ -154,7 +164,7 @@ export const CashoutTaskList: FC = () => {
                 <Skeleton.Box width={56} height={27} rounded="rounded-[36px]" />
               </div>
             ))
-          : displayTasks.map((item) => {
+          : displayTasks.map((item, index) => {
               // InstallApk 任务在 StageTwo 且 SecondEarn 未完成时禁用
               const isDisabled =
                 currentTaskStage === CashoutStage.StageTwo &&
@@ -169,6 +179,7 @@ export const CashoutTaskList: FC = () => {
                   buttonText={item.buttonText}
                   onClick={handleTaskClick}
                   disabled={isDisabled}
+                  animationDelay={index * 60}
                 />
               );
             })}
@@ -192,7 +203,7 @@ const CashoutTaskTip: FC<{ top: number; right?: number }> = ({ top, right }) => 
       }}
     >
       <img src={bgTipTriangle} alt="" className="self-end w-[11px] h-[8px] mr-[20px] -mb-[1px]" />
-      <span className="p-[10px_8px] rounded-[8px] bg-[#ffaf4c] text-white font-normal text-[14px] leading-[20px] font-[SF_Pro]">
+      <span className="p-[10px_8px] rounded-[8px] bg-[#ffaf4c] text-white font-normal text-[14px] leading-[20px] font-[Pangram]">
         Click here to claim your cash
       </span>
       <style>

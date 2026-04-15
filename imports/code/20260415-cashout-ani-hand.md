@@ -1,6 +1,6 @@
 ---
 title: cashout-ani-hand
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:31+08:00
 source: import
 language: json
 original: cashout-ani-hand.json
@@ -11,7 +11,14 @@ original: cashout-ani-hand.json
 ```json
 {
   "assets": [
-    { "h": 270, "id": "image_0", "p": "cashout_ani_hand_img_0.webp", "u": "images/", "w": 270, "e": 0 },
+    {
+      "h": 270,
+      "id": "image_0",
+      "p": "cashout_ani_hand_img_0.webp",
+      "u": "images/",
+      "w": 270,
+      "e": 0
+    },
     {
       "id": "comp_0",
       "layers": [

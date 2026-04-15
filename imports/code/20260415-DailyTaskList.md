@@ -1,6 +1,6 @@
 ---
 title: DailyTaskList
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:31+08:00
 source: import
 language: tsx
 original: DailyTaskList.tsx
@@ -51,7 +51,7 @@ const DailyTaskCard: FC<DailyTaskCardProps> = ({ task, onClick }) => {
       onClick={() => onClick(task.id)}
     >
       {/* 左侧绿色奖励框 */}
-      <div className="flex items-center justify-center flex-shrink-0 w-[71px] h-[66px] rounded-[12px] bg-[#19e1a2]">
+      <div className="flex items-center justify-center flex-shrink-0 w-[71px] h-[66px] rounded-[12px] bg-success">
         <div className="text-[24px] font-black text-white" style={{ fontFamily: "TTFellows" }}>
           ${reward}
         </div>

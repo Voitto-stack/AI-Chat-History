@@ -1,6 +1,6 @@
 ---
 title: useApkPrompt
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: ts
 original: useApkPrompt.ts
@@ -38,7 +38,7 @@ export function useApkPrompt() {
     if (lastDate === today) return;
 
     localStorage.setItem(STORAGE_KEYS.APK_PROMPT_DAILY_LAST_DATE, today);
-    showApkDownloadModal();
+    showApkDownloadModal("auto_prompt");
   }, []);
 }
 

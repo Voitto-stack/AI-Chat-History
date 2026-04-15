@@ -1,6 +1,6 @@
 ---
 title: LiveRoomTopPanel
-date: 2026-04-15T17:04:50+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: tsx
 original: LiveRoomTopPanel.tsx
@@ -134,7 +134,7 @@ const LiveRoomTopPanel = ({ onClickClose, isAlwaysShow = true }: LiveRoomTopPane
                       fontSize: "10px",
                       lineHeight: "1.193359375em",
                       color: "rgba(255, 255, 255, 0.8)",
-                      fontFamily: "SF Pro Text, -apple-system, system-ui, sans-serif",
+                      fontFamily: "Pangram, -apple-system, system-ui, sans-serif",
                     }}
                   >
                     Earnings

@@ -1,6 +1,6 @@
 ---
 title: useEarningData
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: ts
 original: useEarningData.ts
@@ -12,7 +12,8 @@ original: useEarningData.ts
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { getPwaUserBalanceChangeHistory, listCallOrderByRange } from "@/http/earningApi";
 import { tzStartOfDay, tzWeekday, tzDateKey, tzShortDate } from "@/utils/timezone";
-import type { PwaUserBalanceChangeHistory, CallOrderInfo } from "@sitin/api-proto/gen/archat_api/user_api";
+import type { PwaUserBalanceChangeHistory, CallOrderInfo } from "@heyhru/business-pwa-proto/gen/archat_api/user_api";
+import { CallOrderType } from "@heyhru/business-pwa-proto/gen/archat_api/user_api";
 import type { WeeklyIncomeData, DailyIncomeData } from "../pages/Earning/types";
 import { RecordType, EMPTY_BREAKDOWN } from "../pages/Earning/types";
 import { CHANGE_TYPE_TO_RECORD_TYPE, isCallChangeType, buildRecordItem } from "../pages/Earning/utils";
@@ -90,6 +91,10 @@ function createEmptyDailyIncome(dayOfWeek: number, dateMs: number): DailyIncomeD
     liveDuration: 0,
     callDurationTotal: 0,
     freeCallDurationTotal: 0,
+    videoCallDurationTotal: 0,
+    freeVideoCallDurationTotal: 0,
+    voiceCallDurationTotal: 0,
+    freeVoiceCallDurationTotal: 0,
     ...EMPTY_BREAKDOWN,
     records: [],
   };
@@ -171,11 +176,23 @@ function buildWeeklyData(
     const record = buildRecordItem(h, matchedOrders, dateKey);
 
     if (isCall && matchedOrders.length > 0) {
-      const callDuration = matchedOrders[0].callDuration ?? 0;
-      const freeDuration = matchedOrders[0].freeCallDuration ?? 0;
+      const order = matchedOrders[0];
+      const callDuration = order.callDuration ?? 0;
+      const freeDuration = order.freeCallDuration ?? 0;
+      const orderType = order.orderType;
+
       daily.callDuration += callDuration;
       daily.callDurationTotal += callDuration;
       daily.freeCallDurationTotal += freeDuration;
+
+      // 根据通话类型分别统计视频和语音通话时长
+      if (orderType === CallOrderType.VIDEO_CALL || orderType === CallOrderType.MOCK_VIDEO) {
+        daily.videoCallDurationTotal += callDuration;
+        daily.freeVideoCallDurationTotal += freeDuration;
+      } else if (orderType === CallOrderType.VOICE_CALL) {
+        daily.voiceCallDurationTotal += callDuration;
+        daily.freeVoiceCallDurationTotal += freeDuration;
+      }
     }
 
     daily.records.push(record);
@@ -185,6 +202,10 @@ function buildWeeklyData(
   let totalEarned = 0;
   let callDurationTotal = 0;
   let freeCallDurationTotal = 0;
+  let videoCallDurationTotal = 0;
+  let freeVideoCallDurationTotal = 0;
+  let voiceCallDurationTotal = 0;
+  let freeVoiceCallDurationTotal = 0;
   const weekEarnings: Record<string, number> = {};
   for (const f of EARNING_FIELDS) weekEarnings[f] = 0;
 
@@ -197,6 +218,10 @@ function buildWeeklyData(
     totalEarned += daily.earned;
     callDurationTotal += daily.callDurationTotal;
     freeCallDurationTotal += daily.freeCallDurationTotal;
+    videoCallDurationTotal += daily.videoCallDurationTotal;
+    freeVideoCallDurationTotal += daily.freeVideoCallDurationTotal;
+    voiceCallDurationTotal += daily.voiceCallDurationTotal;
+    freeVoiceCallDurationTotal += daily.freeVoiceCallDurationTotal;
   }
 
   for (const f of EARNING_FIELDS) weekEarnings[f] = round2(weekEarnings[f]);
@@ -211,6 +236,10 @@ function buildWeeklyData(
     ...weekEarnings,
     callDurationTotal,
     freeCallDurationTotal,
+    videoCallDurationTotal,
+    freeVideoCallDurationTotal,
+    voiceCallDurationTotal,
+    freeVoiceCallDurationTotal,
   } as WeeklyIncomeData;
 }
 
@@ -230,13 +259,17 @@ function createEmptyWeekly(range: WeekRange): WeeklyIncomeData {
     ...EMPTY_BREAKDOWN,
     callDurationTotal: 0,
     freeCallDurationTotal: 0,
+    videoCallDurationTotal: 0,
+    freeVideoCallDurationTotal: 0,
+    voiceCallDurationTotal: 0,
+    freeVoiceCallDurationTotal: 0,
   };
 }
 
 export interface UseEarningDataReturn {
   weekList: WeeklyIncomeData[];
   loading: boolean;
-  refreshWeek: (weekIndex: number) => Promise<void>;
+  refreshWeek: (weekIndex: number, force?: boolean) => Promise<void>;
 }
 
 export function useEarningData(): UseEarningDataReturn {
@@ -299,8 +332,8 @@ export function useEarningData(): UseEarningDataReturn {
   }, [weekRanges, weekDataMap]);
 
   const refreshWeek = useCallback(
-    async (weekIndex: number) => {
-      if (!weekDataMap.has(weekIndex)) {
+    async (weekIndex: number, force?: boolean) => {
+      if (force || !weekDataMap.has(weekIndex)) {
         await fetchWeekData(weekIndex);
       }
     },

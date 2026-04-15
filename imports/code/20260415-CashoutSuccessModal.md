@@ -1,6 +1,6 @@
 ---
 title: CashoutSuccessModal
-date: 2026-04-15T17:04:50+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: tsx
 original: CashoutSuccessModal.tsx
@@ -13,8 +13,11 @@ original: CashoutSuccessModal.tsx
  * 提现成功弹窗组件
  */
 
+import { useEffect } from "react";
 import Lottie from "lottie-react";
 import { NumberRoll } from "@/components/NumberRoll";
+import { bpTrack } from "@/tracking";
+import { EventName } from "@/tracking/events";
 
 // 导入动画资源
 import handSuccess from "@/assets/animation/cashout_success.json";
@@ -28,6 +31,11 @@ export interface CashoutSuccessModalProps {
 }
 
 export const CashoutSuccessModal: React.FC<CashoutSuccessModalProps> = ({ amount, onClose }) => {
+  useEffect(() => {
+    bpTrack(EventName.pwa_conv_cash_success_page_show);
+    bpTrack(EventName.pwa_conv_cash_success_pop_show);
+  }, []);
+
   return (
     <div
       className="flex flex-col items-center w-full h-full overflow-hidden bg-center bg-cover bg-no-repeat py-25 text-white text-center"
@@ -50,16 +58,19 @@ export const CashoutSuccessModal: React.FC<CashoutSuccessModalProps> = ({ amount
         </h2>
         {/* 描述 */}
         <p className="mt-[15px] font-normal text-[15px] leading-[1.5] whitespace-pre-line opacity-90">
-          You should see money in your PayPalaccount within 15 minutes.
+          Funds will appear in your PayPal account within 15 minutes.
         </p>
       </div>
 
       {/* 底部按钮 */}
       <button
         className="w-[90vw] h-[60px] bg-white text-[#47aeef] font-[590] text-base border-none rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.15)] cursor-pointer"
-        onClick={onClose}
+        onClick={() => {
+          bpTrack(EventName.pwa_conv_keep_earning_clickButton);
+          onClose?.();
+        }}
       >
-        Keep Earning
+        Got It
       </button>
     </div>
   );

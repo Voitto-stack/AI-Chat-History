@@ -1,6 +1,6 @@
 ---
 title: CircleTimer
-date: 2026-04-15T17:04:50+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: tsx
 original: CircleTimer.tsx
@@ -18,6 +18,7 @@ import { queryUserBalance } from "@/http/api";
 import circleTimerAnim from "@/assets/animation/circle-timer.json";
 import bgCircleTimerFill from "@/assets/images/live/bg_circle_timer_fill.svg";
 import bgCircleTimerCircle from "@/assets/images/live/bg_circle_timer_circle.svg";
+import { formatNumber } from "@/utils/format";
 
 export const CircleTimer = () => {
   const [progress, setProgress] = useState(0);
@@ -28,6 +29,7 @@ export const CircleTimer = () => {
   const [moneyTextAnimateStep, setMoneyTextAnimateStep] = useState("");
   const lottieRef = useRef<LottieRefCurrentProps>(null);
   const callState = useCallStore((s) => s.callState);
+  const releasePrice = useCallStore((s) => s.releasePrice);
   const durationRef = useRef(35_000);
 
   useEffect(() => {
@@ -132,7 +134,7 @@ export const CircleTimer = () => {
                 }
               }}
             >
-              $1
+              ${formatNumber(releasePrice)}
             </div>
 
             <Lottie

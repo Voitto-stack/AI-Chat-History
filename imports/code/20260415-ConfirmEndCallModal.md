@@ -1,6 +1,6 @@
 ---
 title: ConfirmEndCallModal
-date: 2026-04-15T17:04:50+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: tsx
 original: ConfirmEndCallModal.tsx
@@ -67,8 +67,8 @@ export const ConfirmEndCallContent: React.FC<ConfirmEndCallContentProps> = ({
 
   return (
     <div className="w-[318px] overflow-hidden rounded-2xl bg-white shadow-[0_8px_32px_rgba(0,0,0,0.12)]">
-      <div className="mx-6 mt-6 mb-3 text-center text-[22px] font-bold text-[#012269]">
-        Are you sure you want to end this {callTypeLabel} call?
+      <div className="mx-6 mt-6 mb-3 text-center text-[22px] font-bold text-brand-dark">
+        End this {callTypeLabel} call?
       </div>
       <div className="mx-5 mt-4 mb-5 flex flex-col gap-2.5">
         <div
@@ -81,10 +81,10 @@ export const ConfirmEndCallContent: React.FC<ConfirmEndCallContentProps> = ({
           {countdownTime > 0 && <CountdownText time={countdownTime} onFinish={() => setCountdownFinish(true)} />}
         </div>
         <div
-          className="cursor-pointer rounded-full bg-[#6bc4ff] px-4 py-4 text-center text-[14px] font-medium text-[#012269] active:opacity-80"
+          className="cursor-pointer rounded-full bg-[#6bc4ff] px-4 py-4 text-center text-[14px] font-medium text-brand-dark active:opacity-80"
           onClick={onContinue}
         >
-          Remain on the Call
+          Stay on Call
         </div>
         <span className="text-center text-[10px] font-normal text-[rgba(60,60,67,0.6)]">Keep earning $1/Min</span>
       </div>
@@ -101,6 +101,7 @@ export interface ShowConfirmEndCallParams {
   onContinue: () => void;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const showConfirmEndCallModal = (params: ShowConfirmEndCallParams): void => {
   const modalStore = useModal.getState();
 
@@ -126,6 +127,7 @@ export const showConfirmEndCallModal = (params: ShowConfirmEndCallParams): void 
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const closeConfirmEndCallModal = (): void => {
   useModal.getState().close(MODAL_ID);
 };

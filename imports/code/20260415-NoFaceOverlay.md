@@ -1,6 +1,6 @@
 ---
 title: NoFaceOverlay
-date: 2026-04-15T17:04:50+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: tsx
 original: NoFaceOverlay.tsx
@@ -32,21 +32,26 @@ export const NoFaceOverlay: FC = () => {
             <circle cx="12" cy="12" r="9" stroke="white" strokeWidth="1.5" />
             <circle cx="9" cy="10" r="1.2" fill="white" />
             <circle cx="15" cy="10" r="1.2" fill="white" />
-            <path d="M8.5 15.5C9.5 16.5 10.5 17 12 17C13.5 17 14.5 16.5 15.5 15.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+            <path
+              d="M8.5 15.5C9.5 16.5 10.5 17 12 17C13.5 17 14.5 16.5 15.5 15.5"
+              stroke="white"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+            />
             <line x1="4" y1="20" x2="20" y2="4" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
           </svg>
         </div>
 
         <h3
           className="self-stretch m-0 text-white text-center font-bold text-[18px] leading-[1.2] tracking-[-0.23px]"
-          style={{ fontFamily: "'Pangram', -apple-system, BlinkMacSystemFont, 'SF Pro', sans-serif" }}
+          style={{ fontFamily: "'Pangram', -apple-system, BlinkMacSystemFont, sans-serif" }}
         >
           No Face Detected
         </h3>
 
         <div
           className="flex items-center justify-center px-[14px] py-[6px] gap-1 rounded-full bg-black/[0.39] text-[#ff3b30] text-[15px] leading-[1.33] tracking-[-0.23px]"
-          style={{ fontFamily: "'Pangram', -apple-system, BlinkMacSystemFont, 'SF Pro', sans-serif" }}
+          style={{ fontFamily: "'Pangram', -apple-system, BlinkMacSystemFont, sans-serif" }}
         >
           ⚠️ Earnings Paused
         </div>

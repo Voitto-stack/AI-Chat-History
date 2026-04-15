@@ -1,6 +1,6 @@
 ---
 title: InsExchangeBubble
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:31+08:00
 source: import
 language: tsx
 original: InsExchangeBubble.tsx
@@ -17,6 +17,8 @@ import { isApp } from "@/utils/bridge";
 import { rejectInsExchangeOrder } from "@/http/insApi";
 import { toast } from "@/utils/toast";
 import Avatar from "@/components/Avatar";
+import { bpTrack } from "@/tracking";
+import { EventName } from "@/tracking/events";
 
 // ---- 共享 ----
 
@@ -108,11 +110,18 @@ const ReceivedRequest: FC<{ message: InsExchangeRequestMessage; onAccept?: (id: 
         toast.info("Please use the APK version");
         return;
       }
+      // 埋点：Instagram 交换请求点击 - 被动接受（旧埋点名称，用于数据连续性）
+      bpTrack(EventName.pwa_instagram_request_message_passive_click, {
+        order_id: orderId ?? 0,
+        target_user_id: parseInt(message.raw.from ?? "0", 10),
+        requested_amount: Math.round(parseFloat(String(pwafollowReward ?? "0"))),
+        click_button: "accept",
+      });
       setBtnDisabled(true);
       setStatus("agreed");
       onAccept?.(orderId ?? 0);
       setTimeout(() => setBtnDisabled(false), 2000);
-    }, [active, btnDisabled, orderId, onAccept]);
+    }, [active, btnDisabled, orderId, onAccept, message.raw.from, pwafollowReward]);
 
     const handleReject = useCallback(async () => {
       if (!active || btnDisabled) return;
@@ -148,7 +157,7 @@ const ReceivedRequest: FC<{ message: InsExchangeRequestMessage; onAccept?: (id: 
           </button>
           <button
             type="button"
-            className={`${BTN} ${active ? "bg-[#47aeef] hover:bg-[#3a9cde]" : "bg-[rgba(60,60,67,0.6)]"}`}
+            className={`${BTN} ${active ? "bg-brand hover:bg-[#3a9cde]" : "bg-[rgba(60,60,67,0.6)]"}`}
             onClick={handleAccept}
             disabled={!active}
           >
@@ -200,7 +209,7 @@ export const InsFollowBubble: FC<{
     <CardBase avatar={insAvatar} account={insAccount} desc="Requests to connect on Instagram">
       <button
         type="button"
-        className={`w-full h-9 rounded-full text-[13px] font-medium text-white border-none cursor-pointer transition-all duration-200 hover:-translate-y-px disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 ${active ? "bg-[#47aeef] hover:bg-[#3a9cde]" : "bg-[rgba(60,60,67,0.6)]"}`}
+        className={`w-full h-9 rounded-full text-[13px] font-medium text-white border-none cursor-pointer transition-all duration-200 hover:-translate-y-px disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 ${active ? "bg-brand hover:bg-[#3a9cde]" : "bg-[rgba(60,60,67,0.6)]"}`}
         onClick={handleFollow}
         disabled={!active}
       >

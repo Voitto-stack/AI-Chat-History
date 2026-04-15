@@ -1,6 +1,6 @@
 ---
 title: useVoiceModeration
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: ts
 original: useVoiceModeration.ts
@@ -16,14 +16,16 @@ original: useVoiceModeration.ts
  */
 
 import { type RefObject, useCallback, useRef } from "react";
-import { VideoCallTranscriptContent } from "@sitin/api-proto/gen/archat_api/user_api";
+import { VideoCallTranscriptContent } from "@heyhru/business-pwa-proto/gen/archat_api/user_api";
 import { getCallStoreState } from "@/hooks/useCall";
 
 const TAG = "useVoiceModeration";
 const DETECTION_LOG = "🔍[CALL-DETECTION]";
 
-// 静音提示时间（毫秒）
-const NO_VOICE_TIMEOUT = 5000; // 5秒显示 NoVoice 弹窗
+// 分段静音检测阈值（毫秒）
+const CALL_PHASE_THRESHOLD = 15000; // 15秒为通话前后期分界点
+const NO_VOICE_TIMEOUT_EARLY = 5000; // 通话前15秒内：5秒无声触发 NoVoice 弹窗
+const NO_VOICE_TIMEOUT_LATE = 15000; // 通话15秒后：15秒无声触发 NoVoice 弹窗
 // 违规超时时间（毫秒）
 const SILENT_TIMEOUT = 18000; // 18秒记录违规
 
@@ -226,6 +228,8 @@ export function useVoiceModeration(options: UseVoiceModerationOptions): UseVoice
 
   // 状态 refs
   const startTimeRef = useRef<number>(0);
+  const callBeginTimeRef = useRef<number>(0); // 本轮通话实际开始时间（跨越多次 start() 调用）
+  const lastRoomIdRef = useRef<number>(0); // 上次通话的 roomId，用于判断是否新通话
   const whichMinuteRef = useRef(1);
   const violationsRef = useRef<Violation[]>([]);
   const textHistoryRef = useRef<VideoCallTranscriptContent[]>([]);
@@ -324,18 +328,26 @@ export function useVoiceModeration(options: UseVoiceModerationOptions): UseVoice
 
   /**
    * 启动静音检测循环
+   * 分段策略：通话前15秒内5秒触发，15秒后15秒触发
    */
   const startSilentLoop = useCallback(() => {
     clearSilentTimer();
 
-    // 5秒后显示 NoVoice 弹窗
+    // 根据通话已进行时长动态选择 NoVoice 弹窗触发阈值
+    const callElapsed = Date.now() - (callBeginTimeRef.current || startTimeRef.current);
+    const noVoiceTimeout = callElapsed < CALL_PHASE_THRESHOLD ? NO_VOICE_TIMEOUT_EARLY : NO_VOICE_TIMEOUT_LATE;
+
+    // 动态时长后显示 NoVoice 弹窗
     noVoiceTimerRef.current = setTimeout(() => {
       if (isStoppedRef.current) return;
       if (!getCallStoreState().noVoiceVisible) {
         onVoiceSilent(true);
-        console.log(TAG, `${DETECTION_LOG} [静音检测] 显示 NoVoice 弹窗`);
+        console.log(
+          TAG,
+          `${DETECTION_LOG} [静音检测] 显示 NoVoice 弹窗（通话已${Math.round(callElapsed / 1000)}s，阈值${noVoiceTimeout / 1000}s）`,
+        );
       }
-    }, NO_VOICE_TIMEOUT);
+    }, noVoiceTimeout);
 
     // 18秒后记录违规
     silentTimerRef.current = setTimeout(() => {
@@ -479,6 +491,12 @@ export function useVoiceModeration(options: UseVoiceModerationOptions): UseVoice
       roomIdRef.current = params.roomId;
       userIdRef.current = params.userId;
       callerRef.current = params.caller ?? "pwa";
+
+      // 新通话（roomId 变化）时重置通话开始时间
+      if (params.roomId !== lastRoomIdRef.current) {
+        callBeginTimeRef.current = Date.now();
+        lastRoomIdRef.current = params.roomId;
+      }
 
       // 重置状态
       startTimeRef.current = Date.now();

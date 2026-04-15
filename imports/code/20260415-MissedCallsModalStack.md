@@ -1,6 +1,6 @@
 ---
 title: MissedCallsModalStack
-date: 2026-04-15T17:04:50+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: tsx
 original: MissedCallsModalStack.tsx
@@ -21,7 +21,7 @@ original: MissedCallsModalStack.tsx
  */
 
 import { FC, useCallback, useEffect, useRef, useState } from "react";
-import { UserInfo } from "@sitin/api-proto/gen/archat_api/user_api";
+import { UserInfo } from "@heyhru/business-pwa-proto/gen/archat_api/user_api";
 import { removeQueueUser } from "@/http/api";
 import { bpTrack } from "@/tracking/api/byteplus";
 import { EventName } from "@/tracking/events";
@@ -154,7 +154,7 @@ export const MissedCallsModalStack: FC<MissedCallsModalStackProps> = ({
     async (userId?: number) => {
       try {
         if (userId) {
-          bpTrack(EventName.pwa_fake_call_back_popup_dislike_click);
+          bpTrack(EventName.pwa_fake_call_back_popup_dislike_click, { maleUserId: userId });
           await removeQueueUser(userId);
         }
       } catch (error) {
@@ -243,7 +243,9 @@ export const MissedCallsModalStack: FC<MissedCallsModalStackProps> = ({
       ? {} // CSS 动画类接管
       : {
           transform: "translateX(-50%)",
-          transition: !isTransitioning ? "transform 0.4s cubic-bezier(0.25,0.46,0.45,0.94), opacity 0.4s ease-out" : "none",
+          transition: !isTransitioning
+            ? "transform 0.4s cubic-bezier(0.25,0.46,0.45,0.94), opacity 0.4s ease-out"
+            : "none",
         };
 
   return (
@@ -299,9 +301,7 @@ export const MissedCallsModalStack: FC<MissedCallsModalStackProps> = ({
       {/* 分页指示器 */}
       {total > 1 && (
         <div className="mt-3.5 z-10">
-          <span className="min-w-[40px] px-2.5 py-1 rounded-xl bg-white/20 text-white text-xs">
-            1/{total}
-          </span>
+          <span className="min-w-[40px] px-2.5 py-1 rounded-xl bg-white/20 text-white text-xs">1/{total}</span>
         </div>
       )}
     </div>

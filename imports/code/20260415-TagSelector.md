@@ -1,6 +1,6 @@
 ---
 title: TagSelector
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:31+08:00
 source: import
 language: tsx
 original: TagSelector.tsx
@@ -9,8 +9,9 @@ original: TagSelector.tsx
 # TagSelector
 
 ```tsx
+/* eslint-disable react-refresh/only-export-components */
 import "react";
-import type { InterestTab as TagTab, InterestTag as TagItem } from "@sitin/api-proto/gen/archat_api/user_api";
+import type { InterestTab as TagTab, InterestTag as TagItem } from "@heyhru/business-pwa-proto/gen/archat_api/user_api";
 
 export interface TagGroup {
   key: string;
@@ -56,12 +57,7 @@ function mapToSelectedTabs(map: Map<string, Set<string>>): TagTab[] {
     .filter((tab) => (tab.tags?.length || 0) > 0);
 }
 
-export default function TagSelector({
-  list,
-  selectedList,
-  onChange,
-  maxSelected = 5,
-}: TagSelectorProps) {
+export default function TagSelector({ list, selectedList, onChange, maxSelected = 5 }: TagSelectorProps) {
   const selectedCount = countSelectedTags(selectedList);
   const selectedMap = buildSelectedMap(selectedList);
 
@@ -92,7 +88,7 @@ export default function TagSelector({
     <div className="mx-3 flex flex-col gap-10 pb-[150px]">
       {list.map((item) => (
         <div key={item.key} className="flex flex-col">
-          <h2 className="text-[15px] font-semibold text-[#012269]">{item.name}</h2>
+          <h2 className="text-[15px] font-semibold text-brand-dark">{item.name}</h2>
           <div className="mt-4 flex flex-wrap gap-2">
             {item.tags.map((tag) => {
               const tagKey = tag.key ?? "";
@@ -107,9 +103,7 @@ export default function TagSelector({
                   disabled={isDisabled}
                   onClick={() => handleTagClick(groupKey, tagKey)}
                   className={`flex h-10 items-center justify-center rounded-[30px] px-4 text-[13px] capitalize transition-colors ${
-                    isSelected
-                      ? "bg-[#6bc4ff] text-[#012269]"
-                      : "bg-[rgba(107,196,255,0.12)] text-[rgba(1,34,105,0.5)]"
+                    isSelected ? "bg-[#6bc4ff] text-brand-dark" : "bg-[rgba(107,196,255,0.12)] text-brand-dark/50"
                   } ${isDisabled ? "cursor-not-allowed opacity-50" : ""}`}
                 >
                   {tagKey || "Unknown"}

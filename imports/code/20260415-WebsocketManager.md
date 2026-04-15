@@ -1,6 +1,6 @@
 ---
 title: WebsocketManager
-date: 2026-04-15T17:04:50+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: ts
 original: WebsocketManager.ts
@@ -9,9 +9,9 @@ original: WebsocketManager.ts
 # WebsocketManager
 
 ```ts
-import { MessageFns } from "@sitin/api-proto/baseType";
-import protoMap from "@sitin/api-proto/gen/protoIdMapping.json";
-import { C2SHeartBeat, S2CHeartBeat } from "@sitin/api-proto/gen/ai_tcp/chat_match";
+import { MessageFns } from "@heyhru/business-pwa-proto/baseType";
+import protoMap from "@heyhru/business-pwa-proto/gen/protoIdMapping.json";
+import { C2SHeartBeat, S2CHeartBeat } from "@heyhru/business-pwa-proto/gen/ai_tcp/chat_match";
 import { NetworkConstants } from "../NetworkConstant";
 import { useUserStore } from "@/stores/userStore";
 import { WebSocketConfig, WsState, WsStateListener, OnWsMessageListener } from "./WebSocketConfig";
@@ -29,7 +29,9 @@ const TAG = "WebsocketManager";
 export default class WebsocketManager {
   private static instance: WebsocketManager;
 
-  private constructor() {}
+  private constructor() {
+    document.addEventListener("visibilitychange", this.handleVisibilityChange.bind(this));
+  }
 
   public static getInstance(): WebsocketManager {
     if (!WebsocketManager.instance) {
@@ -59,6 +61,7 @@ export default class WebsocketManager {
 
   // ========== 重连管理 ==========
   private reconnectAttempts = 0;
+  private _intentionalClose = false; // 标记是否主动关闭（非服务端关闭）
 
   /**
    * 获取当前 WebSocket 状态
@@ -150,6 +153,7 @@ export default class WebsocketManager {
   // 关闭 WebSocket 连接
   public close(): void {
     console.log(TAG, "Closing WebSocket connection...");
+    this._intentionalClose = true;
     this.setWsState(WsState.CLOSING);
     this.stopHeartbeat();
 
@@ -250,11 +254,7 @@ export default class WebsocketManager {
       this.initReject = null;
       this.initPromise = null;
     }
-
-    // 错误后也尝试重连
-    if (this.reconnectAttempts < WebSocketConfig.MAX_RECONNECT_ATTEMPTS) {
-      this.reconnect();
-    }
+    // 重连由 handleClose 统一处理（error 后 close 事件必定触发）
   }
 
   private handleClose(closeEvent: CloseEvent): void {
@@ -265,20 +265,33 @@ export default class WebsocketManager {
     });
 
     this.setWsState(WsState.CLOSED);
+    const wasIntentional = this._intentionalClose;
+    this._intentionalClose = false;
     this.stopHeartbeat();
 
-    // 判断是否需要重连
-    const shouldReconnect =
-      this.reconnectAttempts < WebSocketConfig.MAX_RECONNECT_ATTEMPTS && // 未超过最大重试次数
-      (!closeEvent.wasClean || // 非正常关闭
-        closeEvent.code === 1006); // 异常断开（没有收到关闭帧）
+    // 判断是否需要重连：仅在服务端关闭（非主动关闭）且未超过最大重试次数时重连
+    const shouldReconnect = !wasIntentional && this.reconnectAttempts < WebSocketConfig.MAX_RECONNECT_ATTEMPTS;
 
     if (shouldReconnect) {
-      console.log(TAG, "Connection closed, will reconnect...");
+      console.log(TAG, "Connection closed by server, will reconnect...");
       this.reconnect();
     } else {
       console.log(TAG, "Connection closed, will not reconnect");
       this.reconnectAttempts = 0; // 重置重连计数
+    }
+  }
+
+  private handleVisibilityChange(): void {
+    if (document.visibilityState === "visible") {
+      const needsReconnect = this._wsState === WsState.ERROR || this._wsState === WsState.CLOSED;
+      if (needsReconnect) {
+        console.log(TAG, "App returned to foreground, reconnecting...");
+        this.reconnectAttempts = 0;
+        this._intentionalClose = false;
+        this.open().catch((error) => {
+          console.error(TAG, "Foreground reconnect failed:", error);
+        });
+      }
     }
   }
 
@@ -435,7 +448,7 @@ export default class WebsocketManager {
     }
 
     this.clientHeartbeatIndex++;
-    this.sendMessage(C2SHeartBeat, { index: this.clientHeartbeatIndex }, "C2S_HeartBeat");
+    this.sendMessage(C2SHeartBeat, { $type: "Match.C2S_HeartBeat", index: this.clientHeartbeatIndex, status: 0, isCalling: false }, "C2S_HeartBeat");
   }
 }
 

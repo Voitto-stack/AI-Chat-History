@@ -1,6 +1,6 @@
 ---
 title: ImageGrid
-date: 2026-04-15T17:04:50+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: tsx
 original: ImageGrid.tsx
@@ -10,7 +10,7 @@ original: ImageGrid.tsx
 
 ```tsx
 import { useState, useCallback } from "react";
-import { PostPictureInQuery } from "@sitin/api-proto/gen/archat_api/post_api";
+import { PostPictureInQuery } from "@heyhru/business-pwa-proto/gen/archat_api/post_api";
 import ImagePreview from "@/components/ImagePreview";
 
 interface ImageGridProps {

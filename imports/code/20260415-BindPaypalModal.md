@@ -1,6 +1,6 @@
 ---
 title: BindPaypalModal
-date: 2026-04-15T17:04:50+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: tsx
 original: BindPaypalModal.tsx
@@ -18,13 +18,15 @@ original: BindPaypalModal.tsx
  * 2. 在其他流程中：直接渲染此组件
  */
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useModal } from "@/hooks/useModal";
 import { toast } from "@/utils/toast";
 import { validateEmail } from "@/utils/validate";
 import NavigationBar from "@/components/NavigationBar";
 import Button from "@/components/Button";
 import icPaypal from "@/assets/images/cash/icon_paypal_cashoutani.svg";
+import { bpTrack } from "@/tracking";
+import { EventName } from "@/tracking/events";
 
 export interface BindPaypalModalProps {
   amount: string;
@@ -37,6 +39,26 @@ const BIND_PAYPAL_MODAL_ID = "bind-paypal-modal";
 export const BindPaypalModal = ({ amount, onBack, onSubmit }: BindPaypalModalProps) => {
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // 键盘弹起时强制滚动到底部，确保 input 和按钮可见
+  useEffect(() => {
+    const vp = window.visualViewport;
+    if (!vp) return;
+    const onResize = () => {
+      setTimeout(() => {
+        scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "instant" });
+      }, 100);
+    };
+    vp.addEventListener("resize", onResize);
+    return () => vp.removeEventListener("resize", onResize);
+  }, []);
+
+  // 埋点：账户页面显示
+  useEffect(() => {
+    bpTrack(EventName.pwa_cashout_accountpage_show, { amount });
+    bpTrack(EventName.pwa_conv_paypal_page_show);
+  }, [amount]);
 
   const handleSubmit = async () => {
     const validateResult = validateEmail(email);
@@ -45,10 +67,29 @@ export const BindPaypalModal = ({ amount, onBack, onSubmit }: BindPaypalModalPro
       return;
     }
 
+    // 埋点：账户页面确认
+    bpTrack(EventName.pwa_cashout_accountpage_confirm, {
+      email,
+    });
+    bpTrack(EventName.pwa_conv_paypal_page_clickButton);
+
     setIsLoading(true);
     try {
       await onSubmit?.(email);
-    } catch {
+
+      // 埋点：PayPal 绑定成功
+      bpTrack(EventName.pwa_paypal_bind_success, {
+        paypal_account: email,
+        amount: amount,
+      });
+    } catch (error) {
+      // 埋点：PayPal 绑定失败
+      bpTrack(EventName.pwa_paypal_bind_failed, {
+        paypal_account: email,
+        amount: amount,
+        error_message: error instanceof Error ? error.message : "Unknown error",
+      });
+
       toast.error("Failed to bind PayPal account");
     } finally {
       setIsLoading(false);
@@ -56,37 +97,35 @@ export const BindPaypalModal = ({ amount, onBack, onSubmit }: BindPaypalModalPro
   };
 
   return (
-    <div className="flex flex-col w-full h-dvh bg-white">
-      <NavigationBar title="Cash Out" onBack={onBack} sticky={false} showBorder={false} />
-      {/* 内容区域 - 可滚动，键盘弹起时按钮可见 */}
-      <div className="flex-1 flex flex-col overflow-y-auto px-6 pt-6 pb-6">
-        {/* 顶部蓝色区域 - PayPal 图标和金额 */}
-        <div className="flex flex-col items-center justify-center w-full h-[140px] shrink-0 rounded-[10px] bg-[#47aeef]">
-          <img src={icPaypal} alt="PayPal" />
-          <div className="text-white font-[800] text-[30px] leading-normal">${amount}</div>
+    <div className="flex flex-col w-full h-full bg-white">
+      <NavigationBar title="Cash Out" onBack={onBack} sticky={false} />
+      <div ref={scrollRef} className="flex-1 flex flex-col p-6 overflow-y-auto">
+        <div className="flex-1 flex flex-col">
+          {/* 顶部蓝色区域 - PayPal 图标和金额 */}
+          <div className="flex flex-col items-center justify-center w-full h-[140px] shrink-0 rounded-[10px] bg-brand">
+            <img src={icPaypal} alt="PayPal" />
+            <div className="text-white font-[800] text-[30px] leading-normal">${amount}</div>
+          </div>
+          <h3 className="mt-[40px] text-black font-semibold text-xl leading-none">Enter your PayPal email</h3>
+
+          <p className="mt-4 text-[rgba(60,60,67,0.6)] font-normal text-[15px] leading-5 tracking-[-0.23px]">
+            Make sure your PayPal email is correct.
+          </p>
+
+          <input
+            type="email"
+            autoComplete="off"
+            placeholder="Enter your PayPal email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full h-[58px] mt-5 px-4 py-[11px] border border-[#e5e5ea] rounded-[10px] bg-[#f2f2f7] text-black font-normal text-[15px] leading-[29px] outline-none disabled:opacity-50"
+            disabled={isLoading}
+          />
         </div>
-        <h3 className="mt-[40px] text-black font-semibold text-xl leading-none">Enter Your PayPal Email Account</h3>
 
-        <p className="mt-4 text-[rgba(60,60,67,0.6)] font-normal text-[15px] leading-5 tracking-[-0.23px]">
-          Please make sure the PayPal email is correct.
-        </p>
-
-        <input
-          type="email"
-          placeholder="Enter your PayPal email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="w-full h-[58px] mt-5 px-4 py-[11px] border border-[#e5e5ea] rounded-[10px] bg-[#f2f2f7] text-black font-normal text-[15px] leading-[29px] outline-none disabled:opacity-50"
-          disabled={isLoading}
-        />
-
-        <div className="flex-grow min-h-[30px]" />
-
-        <div className="w-full shrink-0">
-          <Button onClick={handleSubmit} disabled={isLoading}>
-            {isLoading ? "Binding..." : "Next"}
-          </Button>
-        </div>
+        <Button onClick={handleSubmit} disabled={isLoading} className="shrink-0 mt-6">
+          {isLoading ? "Linking..." : "Next"}
+        </Button>
       </div>
     </div>
   );

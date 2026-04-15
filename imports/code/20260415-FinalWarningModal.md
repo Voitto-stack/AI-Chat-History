@@ -1,6 +1,6 @@
 ---
 title: FinalWarningModal
-date: 2026-04-15T17:04:50+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: tsx
 original: FinalWarningModal.tsx
@@ -9,7 +9,11 @@ original: FinalWarningModal.tsx
 # FinalWarningModal
 
 ```tsx
+/* eslint-disable react-refresh/only-export-components */
 import { useModal } from "@/hooks/useModal";
+import { useEffect } from "react";
+import { bpTrack } from "@/tracking";
+import { EventName } from "@/tracking/events";
 
 /**
  * FinalWarningModal - 最终警告弹窗
@@ -27,6 +31,14 @@ interface FinalWarningModalProps {
 }
 
 export const FinalWarningModalContent: React.FC<FinalWarningModalProps> = ({ type, endText, onAnswer, onDecline }) => {
+  // 埋点：保留弹窗显示
+  useEffect(() => {
+    bpTrack(EventName.pwa_call_retain_popup_show, {
+      type: type || "unknown",
+      popup_name: "final_warning",
+    });
+  }, [type]);
+
   return (
     <div className="relative w-[340px] overflow-hidden rounded-[18px] bg-white text-center shadow-[0_8px_32px_rgba(0,0,0,0.12)]">
       {/* 红色警告区域 */}
@@ -70,15 +82,31 @@ export const FinalWarningModalContent: React.FC<FinalWarningModalProps> = ({ typ
       <div className="p-4">
         <button
           className={`mt-2 w-full rounded-full border-none px-0 py-3.5 text-base font-medium text-white active:opacity-80 ${
-            type === "shortCall" ? "bg-[#47aeef]" : "bg-[#34c759]"
+            type === "shortCall" ? "bg-brand" : "bg-[#34c759]"
           }`}
-          onClick={onAnswer}
+          onClick={() => {
+            // 埋点：保留弹窗 - 继续在线点击
+            bpTrack(EventName.pwa_call_retain_popup_click, {
+              action: "answer",
+              type: type || "unknown",
+              result: "answer",
+            });
+            onAnswer();
+          }}
         >
           {type === "shortCall" ? "Stay Online" : "Answer & Stay Online"}
         </button>
         <button
           className="mt-2 w-full rounded-full border-none bg-[#f2f2f7] px-0 py-3.5 text-base font-medium text-[rgba(60,60,67,0.6)] active:opacity-80"
-          onClick={onDecline}
+          onClick={() => {
+            // 埋点：保留弹窗 - 接受暂停点击
+            bpTrack(EventName.pwa_call_retain_popup_click, {
+              action: "decline",
+              type: type || "unknown",
+              result: "decline",
+            });
+            onDecline();
+          }}
         >
           {endText ? endText() : "Accept Suspension (3min)"}
         </button>

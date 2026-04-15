@@ -1,6 +1,6 @@
 ---
 title: FaceIdContext
-date: 2026-04-15T17:04:50+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: tsx
 original: FaceIdContext.tsx
@@ -120,6 +120,7 @@ export function FaceIdProvider({ children }: { children: ReactNode }) {
       const endTime = Date.now();
       const duration = (endTime - startTime) / 1000;
       bpTrack(EventName.pwa_avatar_get_face_id_token, { time: duration });
+      bpTrack(EventName.pwa_face_get_face_id_token, { time: duration });
 
       // 处理错误响应
       if ("error_message" in result) {
@@ -138,11 +139,11 @@ export function FaceIdProvider({ children }: { children: ReactNode }) {
         switch (errorResponse.error_message) {
           case "NO_FACE_FOUND":
             console.error("拒绝原因: 上传的图片中未检测到人脸");
-            toast.error("No face detected in uploaded image");
+            toast.error("No face detected. Please upload a clear photo showing your face.");
             break;
           case "MULTIPLE_FACES":
             console.error("拒绝原因: 上传的图片中检测到多张人脸");
-            toast.error("Multiple faces detected in uploaded image");
+            toast.error("Multiple faces detected. Please upload a photo of just yourself.");
             break;
           default:
             console.error("拒绝原因: 未知错误 -", errorResponse.error_message);
@@ -159,6 +160,7 @@ export function FaceIdProvider({ children }: { children: ReactNode }) {
 
       // 埋点：跳转到人脸识别页面
       bpTrack(EventName.pwa_avatar_face_liveness_page_show);
+      bpTrack(EventName.pwa_face_liveness_detection_page_show);
 
       // 跳转到 FaceId 页面
       redirectToFaceIdPage(successResponse.token);
@@ -204,9 +206,12 @@ export function FaceIdProvider({ children }: { children: ReactNode }) {
           reason: "用户未通过活体检测，可能是照片、视频或其他非真人操作",
         });
         bpTrack(EventName.pwa_avatar_liveness_result, {
-          result: "liveness_failure",
+          result: "liveness failure",
           liveness_result: livenessResult,
           confidence,
+        });
+        bpTrack(EventName.pwa_liveness_detection_result, {
+          result: "liveness failure",
         });
         return {
           passed: false,
@@ -229,6 +234,14 @@ export function FaceIdProvider({ children }: { children: ReactNode }) {
           result: "success",
           confidence,
         });
+        bpTrack(EventName.pwa_liveness_detection_result, {
+          result: "success",
+        });
+        // 广告埋点：人脸验证完成
+        bpTrack(EventName.ad_FaceVerifyComplete, {
+          confidence,
+          biz_id: bizId,
+        });
       } else {
         const confidence = result.verify_result?.result_ref1?.confidence;
         const threshold = result.verify_result?.result_ref1?.thresholds?.["1e-4"];
@@ -240,9 +253,12 @@ export function FaceIdProvider({ children }: { children: ReactNode }) {
           liveness: result.liveness_result?.result,
         });
         bpTrack(EventName.pwa_avatar_liveness_result, {
-          result: "verify_failure",
+          result: "verify failure",
           confidence,
           threshold,
+        });
+        bpTrack(EventName.pwa_liveness_detection_result, {
+          result: "verify failure",
         });
       }
 

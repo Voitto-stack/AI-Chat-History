@@ -1,6 +1,6 @@
 ---
 title: chatMessage
-date: 2026-04-15T17:04:50+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: ts
 original: chatMessage.ts
@@ -510,7 +510,7 @@ class InsExchangeSystemMessage extends TimMessage {
 class UnknownMessage extends TimMessage {
   // 未知消息：开发环境显示，生产环境不显示
   type = MessageType.Unknown;
-  belongsToChatMsg = !import.meta.env.PROD;
+  belongsToChatMsg = import.meta.env.MODE !== "production";
 
   content(): string {
     // 在会话列表中显示空串，避免显示 [Unknown Message]

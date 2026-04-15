@@ -1,6 +1,6 @@
 ---
 title: storageKeys
-date: 2026-04-15T17:04:50+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: ts
 original: storageKeys.ts
@@ -29,12 +29,11 @@ export const STORAGE_KEYS = {
   MOCK_TASK_RUNNING: "MockTaskRunning", // Mock 任务运行状态
   STAGE_TWO_MOCK_COUNT: "StageTwoMockCount", // 第二阶段 Mock 完成计数
   MOCK_TASK_PAUSED: "MockTaskPaused", // Mock 任务暂停状态
+  STAGE_TWO_MOCK_CALL_TASK_COMPLETED: "StageTwoMockCallTaskCompleted", // 第二阶段 Mock 视频任务已完成（本地快速判断，避免依赖 API）
   APK_PROMPT_SECOND_EARN_SHOWN: "apk_prompt_second_earn_shown", // SecondEarn 完成后 APK 弹窗已弹过
   APK_PROMPT_DAILY_LAST_DATE: "apk_prompt_daily_last_date", // StageTwo 完成后每日 APK 弹窗上次日期
   DEBUG_DISABLE_AUTO_MOCK: "debug_disable_auto_mock", // 调试模式：禁用自动弹出 Mock 视频
   DEBUG_VCONSOLE: "debug_vconsole", // vConsole 开关（"1" 开启 / "0" 关闭，未设置时 dev 默认开、prod 默认关）
-  BFF_INVITE_CODE: "bff_invite_code", // 被邀请者落地页存入的邀请码（设备级，登出不清除）
-  REFERRAL_CODE_USED: "referral_code_used", // 是否已使用过邀请码注册（防止老用户重复算邀请，设备级）
 } as const;
 
 // 类型安全的 storage keys
@@ -56,6 +55,7 @@ export function clearUserLocalStorage() {
     STORAGE_KEYS.LAST_POST_TIME,
     //通话相关
     STORAGE_KEYS.STAGE_TWO_MOCK_COUNT,
+    STORAGE_KEYS.STAGE_TWO_MOCK_CALL_TASK_COMPLETED,
     STORAGE_KEYS.MOCK_TASK_RUNNING,
     STORAGE_KEYS.MOCK_TASK_PAUSED,
     STORAGE_KEYS.CALL_HISTORY,

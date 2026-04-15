@@ -1,6 +1,6 @@
 ---
 title: Profession
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:31+08:00
 source: import
 language: tsx
 original: Profession.tsx
@@ -9,12 +9,11 @@ original: Profession.tsx
 # Profession
 
 ```tsx
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
 import NavigationBar from "@/components/NavigationBar";
 import Button from "@/components/Button";
-import FormErrorMessage from "@/components/FormErrorMessage";
 import { useUser } from "@/hooks/useUser";
 import { useLoading } from "@/hooks/useLoading";
 import { useLockFn } from "@/hooks/useLockFn";
@@ -23,7 +22,12 @@ import { goBack } from "@/utils/navigation";
 import { useAutoFocus } from "@/hooks/useAutoFocus";
 import { useTask } from "@/hooks/useTask";
 import { TaskId } from "@/types/task";
+import { bpTrack } from "@/tracking";
+import { EventName } from "@/tracking/events";
 import SkipTaskButton from "@/pages/ProfileTask/SkipTaskButton";
+import { showRewardModalAsync } from "@/components/showRewardModal";
+import { finishUserTutorialTaskOne, claimUserTutorialTask } from "@/http/api";
+import Input from "@/pages/Onboarding/Input";
 import {
   PERCENT_BY_STEP,
   getTaskNextPath,
@@ -43,13 +47,20 @@ export default function Profession() {
   const prevPath = getTaskPrevPath(location.pathname);
   const { userInfo, updateProfile, refreshUserInfo } = useUser();
   const { showLoading, hideLoading } = useLoading();
-  const { finishTask } = useTask();
+  const { finishTask, tasks } = useTask();
 
   const [value, setValue] = useState(userInfo?.profession || "");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useAutoFocus(inputRef);
+
+  // 埋点：Profession 页面展示
+  useEffect(() => {
+    if (taskMode) {
+      bpTrack(EventName.pwa_profile_task_profession_show);
+    }
+  }, [taskMode]);
 
   const isValid = value.trim().length > 0 && value.length <= MAX_LENGTH;
 
@@ -63,13 +74,55 @@ export default function Profession() {
     showLoading();
     try {
       await updateProfile({ profession: value.trim() });
+      if (taskMode) {
+        bpTrack(EventName.pwa_profile_task_profession_continue, { profession: value.trim() });
+      }
+      bpTrack(EventName.pwa_profile_update_success, { field: "profession" });
 
       if (taskMode) {
         // 刷新用户信息以检查是否完成所有资料
-        await refreshUserInfo();
-        if (isCompleteProfileDone(userInfo)) {
-          await finishTask(TaskId.CompleteProfile);
+        const latestUserInfo = await refreshUserInfo();
+        const isProfileComplete = isCompleteProfileDone(latestUserInfo);
+
+        if (isProfileComplete) {
+          try {
+            // 第一阶段：调用完成API，标记任务完成但不发放奖励
+            await finishUserTutorialTaskOne();
+
+            // 获取当前余额和任务奖励金额
+            const currentCash = userInfo?.balance || 0;
+            const task = tasks.get(TaskId.CompleteProfile);
+            const earnedAmount = parseFloat(task?.reward || "0");
+
+            // 埋点：完成profile任务
+            bpTrack(EventName.pwa_earnings_finish_profile_complete);
+
+            // 第二阶段：调用领取API，真正发放奖励
+            await claimUserTutorialTask();
+
+            // 完成任务（更新本地状态）
+            await finishTask(TaskId.CompleteProfile);
+
+            // 刷新余额
+            await refreshUserInfo();
+
+            hideLoading();
+
+            // 先导航回首页，再弹奖励弹窗
+            navigate("/", { replace: true });
+
+            // 埋点：完成页面展示（奖励弹窗）
+            bpTrack(EventName.pwa_profile_task_finish_show);
+
+            // 退出任务页面后显示奖励弹窗
+            await showRewardModalAsync(currentCash, earnedAmount);
+          } catch (error) {
+            console.error("Profile task completion failed:", error);
+            toast.error("Failed to complete profile task");
+          }
+          return;
         }
+
         navigate(nextPath, nextPath === "/" ? { replace: true } : { state: { taskMode: true } });
       } else {
         goBack(navigate);
@@ -83,10 +136,8 @@ export default function Profession() {
 
   return (
     <Layout showTabBar={false}>
-      <div className="flex flex-col h-full bg-[#eff8ff]">
+      <div className="flex flex-col h-full bg-surface">
         <NavigationBar
-          bgColor="bg-[#eff8ff]"
-          showBorder={false}
           onBack={() =>
             taskMode
               ? navigate(prevPath, prevPath === "/" ? { replace: true } : { state: { taskMode: true } })
@@ -103,29 +154,28 @@ export default function Profession() {
           </div>
         ) : null}
 
-        <div className="flex-1 flex flex-col items-center pb-6">
-          <h1 className="mt-[30px] text-[#012269] text-xl font-bold text-center">Your Profession</h1>
-          <p className="mt-1 text-[#159cd7] text-[15px] font-normal text-center">
-            so AI won't make mistakes when chatting on your behalf
-          </p>
-
-          <input
+        <div className="flex-1 flex flex-col p-6">
+          <Input
             ref={inputRef}
-            type="text"
-            value={value}
-            onChange={(e) => handleChange(e.target.value)}
-            className="h-14 mt-[50px] mx-[37px] w-[calc(100%-74px)] border-0 border-b-[0.5px] border-b-[rgba(0,0,0,0.1)] text-center text-lg font-medium text-[#012269] bg-transparent outline-none caret-[#159cd7]"
+            title="Your Profession"
+            titleClassName="text-xl font-bold text-brand-dark"
+            error={errorMessage}
+            subtitle={
+              <p className="text-[#159cd7] text-[15px] font-normal text-center">
+                so AI won't make mistakes when chatting on your behalf
+              </p>
+            }
+            inputProps={{
+              type: "text",
+              autoComplete: "off",
+              value,
+              onChange: (e) => handleChange(e.target.value),
+            }}
           />
 
-          {errorMessage && <FormErrorMessage message={errorMessage} className="mt-[14px]" />}
-
-          <div className="flex-grow" />
-
-          <div className="w-full shrink-0 px-6">
-            <Button onClick={handleSave} disabled={!isValid} variant="primary">
-              {taskMode ? "Next" : "Save"}
-            </Button>
-          </div>
+          <Button onClick={handleSave} disabled={!isValid} variant="primary" className="shrink-0">
+            {taskMode ? "Next" : "Save"}
+          </Button>
         </div>
       </div>
     </Layout>

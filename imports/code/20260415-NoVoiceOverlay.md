@@ -1,6 +1,6 @@
 ---
 title: NoVoiceOverlay
-date: 2026-04-15T17:04:50+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: tsx
 original: NoVoiceOverlay.tsx
@@ -46,14 +46,14 @@ export const NoVoiceOverlay: FC = () => {
 
         <h3
           className="m-0 text-white text-center font-bold text-[18px] leading-[1.2] tracking-[-0.23px]"
-          style={{ fontFamily: "'Pangram', -apple-system, BlinkMacSystemFont, 'SF Pro', sans-serif" }}
+          style={{ fontFamily: "'Pangram', -apple-system, BlinkMacSystemFont, sans-serif" }}
         >
           No voice detected
         </h3>
 
         <p
           className="m-0 text-white/80 text-center text-[15px] leading-[1.33] tracking-[-0.23px]"
-          style={{ fontFamily: "'Pangram', -apple-system, BlinkMacSystemFont, 'SF Pro', sans-serif" }}
+          style={{ fontFamily: "'Pangram', -apple-system, BlinkMacSystemFont, sans-serif" }}
         >
           Don't be shy, say something to activate earnings.
         </p>

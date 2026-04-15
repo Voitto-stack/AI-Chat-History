@@ -1,6 +1,6 @@
 ---
 title: PreLiveView
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:31+08:00
 source: import
 language: tsx
 original: PreLiveView.tsx
@@ -25,6 +25,8 @@ import { isApp } from "@/utils/bridge";
 import { checkCameraPermission, checkMicrophonePermission } from "@/utils/permissions";
 import CommonUpTip from "@/components/CommonUpTip";
 import { showApkDownloadModal } from "@/components/showApkDownloadModal";
+import { bpTrack } from "@/tracking";
+import { EventName } from "@/tracking/events";
 
 const PreLiveView = () => {
   const navigate = useNavigate();
@@ -35,7 +37,17 @@ const PreLiveView = () => {
   const [buttonRect, setButtonRect] = useState<DOMRect | undefined>(undefined);
   const [localPermissionDenied, setLocalPermissionDenied] = useState(false);
 
+  // 埋点：进入 GoLive 页面
+  useEffect(() => {
+    bpTrack(EventName.pwa_golive_enter, {
+      is_app: isApp(),
+      cashout_stage: willCashoutStage,
+    });
+  }, [willCashoutStage]);
+
   const handleClickEarning = () => {
+    // 埋点：Live 收益点击
+    bpTrack(EventName.pwa_live_earning_click, { tabId: "earnings" });
     navigate("/earnings");
   };
 
@@ -64,19 +76,33 @@ const PreLiveView = () => {
   }, []);
 
   const handleGoLive = useCallback(async () => {
+    // 埋点：开始 Live 点击
+    bpTrack(EventName.pwa_conv_live_start_click, {
+      is_app: isApp(),
+      permission_denied: localPermissionDenied,
+    });
+
     if (isApp()) {
       setShowCountdown(true);
       return;
     }
 
     if (localPermissionDenied) {
-      showApkDownloadModal();
+      // 埋点：下载 APK 点击（权限被拒）
+      bpTrack(EventName.pwa_golive_download_apk_click, {
+        trigger_reason: "permission_denied",
+      });
+      showApkDownloadModal("live_page");
     } else {
       const permissionGranted = await requestPermissions();
       if (permissionGranted) {
         setShowCountdown(true);
       } else {
-        showApkDownloadModal();
+        // 埋点：下载 APK 点击（权限检查失败）
+        bpTrack(EventName.pwa_golive_download_apk_click, {
+          trigger_reason: "permission_check_failed",
+        });
+        showApkDownloadModal("live_page");
       }
     }
   }, [localPermissionDenied, requestPermissions]);
@@ -87,11 +113,23 @@ const PreLiveView = () => {
     localStorage.setItem(STORAGE_KEYS.LIVE_START_UTC_TIME, Date.now().toString());
     changeDispatchStatus(true).catch(() => {});
 
-    // 二阶段：Go Live 后立即触发 mock 视频
+    // 埋点：Live 开始
+    bpTrack(EventName.pwa_live_start, { platform: "web" });
+
+    // 二阶段：Go Live 后立即触发 mock 视频（任务完成后不再触发）
     if (willCashoutStage === CashoutStage.StageTwo) {
-      const count = Number(localStorage.getItem(STORAGE_KEYS.STAGE_TWO_MOCK_COUNT) || "0");
-      const stagePrice = count === 0 ? 1.5 : 0.6;
-      mockCallManager.startMockCall(MockCallType.Normal, stagePrice);
+      if (localStorage.getItem(STORAGE_KEYS.STAGE_TWO_MOCK_CALL_TASK_COMPLETED) !== "true") {
+        const count = Number(localStorage.getItem(STORAGE_KEYS.STAGE_TWO_MOCK_COUNT) || "0");
+        const stagePrice = count === 0 ? 1.5 : 0.6;
+        // 埋点：GoLive Mock 触发
+        bpTrack(EventName.pwa_golive_mock_trigger, {
+          cashout_stage: willCashoutStage,
+          mock_count: count,
+          stage_price: stagePrice,
+          isShowGuide: count === 0,
+        });
+        mockCallManager.startMockCall(MockCallType.Normal, stagePrice);
+      }
     }
   };
 
@@ -125,13 +163,13 @@ const PreLiveView = () => {
           <>
             <span
               className="text-[16px] font-bold leading-[19.09px] text-white"
-              style={{ fontFamily: "SF Pro Display, -apple-system, system-ui, sans-serif" }}
+              style={{ fontFamily: "Pangram, -apple-system, system-ui, sans-serif" }}
             >
               Go LIVE
             </span>
             <span
               className="text-[10px] font-normal text-white"
-              style={{ fontFamily: "SF Pro Display, -apple-system, system-ui, sans-serif" }}
+              style={{ fontFamily: "Pangram, -apple-system, system-ui, sans-serif" }}
             >
               $40/hour guaranteed
             </span>

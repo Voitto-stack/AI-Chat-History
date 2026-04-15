@@ -1,6 +1,6 @@
 ---
 title: cashoutUtils
-date: 2026-04-15T17:04:50+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: ts
 original: cashoutUtils.ts
@@ -105,14 +105,6 @@ export async function checkTotalEarnDone(targetStage: CashoutStage, withdrawCoun
     console.error("Failed to check total earn:", error);
     return false;
   }
-}
-
-/**
- * 判断是否为 W3 及以上阶段（使用新版 BFF 奖励弹窗）
- */
-export function isW3PlusStage(stage: CashoutStage): boolean {
-  const w3PlusStages = [CashoutStage.StageThree, CashoutStage.StageFour, CashoutStage.StageFive];
-  return w3PlusStages.includes(stage);
 }
 
 ```

@@ -1,6 +1,6 @@
 ---
 title: ModalContainer
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: tsx
 original: ModalContainer.tsx
@@ -10,6 +10,8 @@ original: ModalContainer.tsx
 
 ```tsx
 import { ReactNode, MouseEvent, useRef, useState, useCallback, useEffect, TouchEvent, KeyboardEvent } from "react";
+import { bpTrack } from "@/tracking";
+import { EventName } from "@/tracking/events";
 
 interface ModalContainerProps {
   open: boolean;
@@ -44,9 +46,10 @@ export default function ModalContainer({ open, onClose, variant = "center", chil
     if (closing) {
       setClosing(false);
       setDragY(0);
+      bpTrack(EventName.pwa_modal_close, { variant });
       onClose();
     }
-  }, [closing, onClose]);
+  }, [closing, onClose, variant]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -82,7 +85,12 @@ export default function ModalContainer({ open, onClose, variant = "center", chil
   useEffect(() => {
     if (!open && !closing) return;
     dialogRef.current?.focus();
-  }, [open, closing]);
+
+    // 埋点：弹窗展示
+    if (open) {
+      bpTrack(EventName.pwa_modal_show, { variant });
+    }
+  }, [open, closing, variant]);
 
   if (!open && !closing) return null;
 

@@ -1,6 +1,6 @@
 ---
 title: MissCallBar
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: tsx
 original: MissCallBar.tsx
@@ -64,7 +64,7 @@ export const MissCallBar: FC<MissCallBarProps> = ({ onView }) => {
         {/* 右侧 View 按钮 */}
         <button
           onClick={onView}
-          className="rounded-[28px] bg-[#47aeef] px-[11px] py-1.5 text-sm font-medium leading-4 tracking-[-0.23px] text-white active:opacity-90"
+          className="rounded-[28px] bg-brand px-[11px] py-1.5 text-sm font-medium leading-4 tracking-[-0.23px] text-white active:opacity-90"
         >
           view
         </button>

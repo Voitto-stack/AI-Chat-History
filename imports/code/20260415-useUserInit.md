@@ -1,6 +1,6 @@
 ---
 title: useUserInit
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: ts
 original: useUserInit.ts
@@ -34,7 +34,7 @@ import { getCallStoreState } from "@/hooks/useCall";
 import { useInsStore } from "@/stores/insStore";
 import { useInsExchangeStore } from "@/stores/insExchangeStore";
 import { usePostStore } from "@/stores/postStore";
-import { useMockCallTask } from "@/hooks/useMockCallTask";
+import { useMockCallScheduler } from "@/hooks/useMockCallScheduler";
 import { useOnlineStatusStore } from "@/stores/onlineStatusStore";
 import { setupFirebaseMessaging } from "@/hooks/useFirebaseMessaging";
 import { useMissCall } from "@/hooks/useMissCall";
@@ -47,7 +47,7 @@ export const useUserInit = () => {
   const { refresh: refreshCash } = useCash();
   const { refreshUserInfo } = useUser();
   const { initCall } = useCallInit();
-  const { initTask } = useMockCallTask();
+  const { initTask } = useMockCallScheduler();
   const { updateMissCall, reset: resetMissCall } = useMissCall();
   const { init: initInsTask, cleanup: cleanupInsTask } = useInsTaskInit();
   // 全局挂载任务监听器和桥接方法

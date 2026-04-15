@@ -1,6 +1,6 @@
 ---
 title: MissedCallsModal
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: tsx
 original: MissedCallsModal.tsx
@@ -15,7 +15,7 @@ original: MissedCallsModal.tsx
  */
 
 import { FC, useCallback, useEffect, useMemo, useState } from "react";
-import { UserInfo, UserServiceCommonCode } from "@sitin/api-proto/gen/archat_api/user_api";
+import { UserInfo, UserServiceCommonCode } from "@heyhru/business-pwa-proto/gen/archat_api/user_api";
 import imManager from "@/services/IMManager";
 import { createChatMessage, MessageType, TextMessage, AVCallMessage, TimMessage } from "@/types/chatMessage";
 import { getAvatarUrl, DEFAULT_AVATAR } from "@/utils/userUtil";
@@ -112,9 +112,13 @@ export const MissedCallsModal: FC<MissedCallsModalProps> = ({ missedCall, onCall
   }, [missedCall.userId, onCallBack]);
 
   const handleClose = useCallback(() => {
+    bpTrack(EventName.pwa_fake_call_back_popup_dislike_click, {
+      user_id: missedCall.userId,
+      maleUserId: missedCall.userId,
+    });
     bpTrack(EventName.pwa_fake_call_back_result, { result: "false" });
     onClose?.();
-  }, [onClose]);
+  }, [onClose, missedCall.userId]);
 
   return (
     // 固定尺寸卡片：330x530，与骨架屏一致
@@ -128,7 +132,13 @@ export const MissedCallsModal: FC<MissedCallsModalProps> = ({ missedCall, onCall
           className="absolute top-3.5 right-3.5 z-[100] flex items-center justify-center w-6 h-6 rounded-full bg-black/[0.06] shadow-[0_1px_2px_rgba(0,0,0,0.08)] transition-[background-color,transform] duration-200 active:scale-[0.96] hover:bg-black/10"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M12 4L4 12M4 4L12 12" stroke="black" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            <path
+              d="M12 4L4 12M4 4L12 12"
+              stroke="black"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
           </svg>
         </button>
       )}
@@ -211,9 +221,7 @@ export const MissedCallsModal: FC<MissedCallsModalProps> = ({ missedCall, onCall
                         {isText && (
                           <div
                             className={`p-2 rounded-[7px] text-sm leading-4 break-words ${
-                              isMe
-                                ? "bg-[#47aeef] text-white self-end"
-                                : "bg-white text-black self-start"
+                              isMe ? "bg-[#47aeef] text-white self-end" : "bg-white text-black self-start"
                             }`}
                           >
                             {messageText}
@@ -222,12 +230,16 @@ export const MissedCallsModal: FC<MissedCallsModalProps> = ({ missedCall, onCall
                         {isAVCall && (
                           <div
                             className={`inline-flex items-center gap-1 p-2 rounded-[7px] text-sm ${
-                              isMe
-                                ? "bg-[#47aeef] text-white self-end"
-                                : "bg-white text-black self-start"
+                              isMe ? "bg-[#47aeef] text-white self-end" : "bg-white text-black self-start"
                             }`}
                           >
-                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className={isMe ? "brightness-0 invert" : ""}>
+                            <svg
+                              width="16"
+                              height="16"
+                              viewBox="0 0 16 16"
+                              fill="none"
+                              className={isMe ? "brightness-0 invert" : ""}
+                            >
                               <path
                                 d="M5.33 1.33h1.2c.23 0 .41.16.46.38l.53 2.67c.04.19-.04.39-.2.5L6 5.84a8.65 8.65 0 004.16 4.16l.96-1.37c.12-.16.31-.24.5-.2l2.67.53c.22.05.38.23.38.46v1.2a1.33 1.33 0 01-1.34 1.33A10.67 10.67 0 012.67 2.67 1.33 1.33 0 014 1.33h1.33z"
                                 stroke="currentColor"
@@ -250,7 +262,7 @@ export const MissedCallsModal: FC<MissedCallsModalProps> = ({ missedCall, onCall
 
         {/* Call Back 按钮 */}
         <button
-          className="relative z-10 shrink-0 w-full h-[50px] mb-4 rounded-[25px] bg-[#47aeef] text-white font-semibold border-none hover:bg-[#3aa8e6] active:bg-[#2e8bc0]"
+          className="relative z-10 shrink-0 w-full h-[50px] mb-4 rounded-[25px] bg-brand text-white font-semibold border-none hover:bg-[#3aa8e6] active:bg-[#2e8bc0]"
           onClick={handleCallBack}
           onMouseDown={(e) => e.stopPropagation()}
           onTouchStart={(e) => e.stopPropagation()}

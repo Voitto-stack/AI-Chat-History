@@ -1,6 +1,6 @@
 ---
 title: insExchangeStore
-date: 2026-04-15T17:04:50+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: ts
 original: insExchangeStore.ts
@@ -12,7 +12,7 @@ original: insExchangeStore.ts
 /** INS 交换状态管理 */
 
 import { create } from "zustand";
-import type { PwaFollowedUserinfo } from "@sitin/api-proto/gen/archat_api/user_api";
+import type { PwaFollowedUserinfo } from "@heyhru/business-pwa-proto/gen/archat_api/user_api";
 
 /** INS 交换请求消息 */
 export interface InsExchangePendingMessage {

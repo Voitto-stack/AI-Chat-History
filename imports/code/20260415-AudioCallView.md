@@ -1,6 +1,6 @@
 ---
 title: AudioCallView
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:31+08:00
 source: import
 language: tsx
 original: AudioCallView.tsx
@@ -78,7 +78,7 @@ const AudioCallView = () => {
           {/* 用户名和年龄 */}
           <p
             className="mt-6 text-white text-2xl font-normal"
-            style={{ fontFamily: "'SF Pro Display', -apple-system, sans-serif" }}
+            style={{ fontFamily: "Pangram, -apple-system, sans-serif" }}
           >
             {remoteUserInfo?.username || "User"}, {remoteUserInfo?.age || "24"}
           </p>

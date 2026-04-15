@@ -1,6 +1,6 @@
 ---
 title: showCashoutModal
-date: 2026-04-15T17:04:50+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: tsx
 original: showCashoutModal.tsx
@@ -19,8 +19,6 @@ import { useModal } from "@/hooks/useModal";
 import { AnimatedModalContainer } from "@/components/AnimatedModalContainer";
 import { CashoutReminderModal } from "@/components/CashoutReminderModal";
 import { CashoutSuccessModal } from "@/components/CashoutSuccessModal";
-import { BffW2RewardModal } from "@/components/BffW2RewardModal";
-import { BffRewardModal } from "@/components/BffRewardModal";
 import { BindPaypalModal } from "@/components/BindPaypalModal";
 import { PayPalBindResultModal } from "@/components/PayPalBindResultModal";
 import { CashoutProcessingModal } from "@/components/CashoutProcessingModal";
@@ -28,7 +26,6 @@ import { CashOutStatus, CashoutStage } from "@/types/cashout";
 import { useCashoutStore } from "@/stores/cashoutStore";
 import { useUser } from "@/hooks/useUser";
 import { useUserStore } from "@/stores/userStore";
-import { isW3PlusStage } from "@/utils/cashoutUtils";
 import {
   getPayPalAuthStatus,
   PayPalAuthStatus,
@@ -39,6 +36,8 @@ import {
 import { checkCameraPermission, checkMicrophonePermission } from "@/utils/permissions";
 import { toast } from "@/utils/toast";
 import { eventBus, EventNames } from "../utils/eventBus";
+import Spinner from "@/components/Spinner";
+
 import { bpTrack } from "@/tracking";
 import { EventName } from "@/tracking/events";
 
@@ -49,6 +48,8 @@ export interface CashoutModalConfig {
   initialStatus?: CashOutStatus;
   amount: string;
   progress?: number;
+  /** 跳过 REMINDER 步骤，直接进入后续流程（用于 cashout 页手动点击提现） */
+  skipReminder?: boolean;
   onConfirm?: () => void;
   onClose?: () => void;
 }
@@ -59,13 +60,16 @@ const CashOutAnimModal = ({
   initialStatus = CashOutStatus.REMINDER,
   amount = "",
   progress,
+  skipReminder = false,
   onConfirm,
   onClose,
 }: CashoutModalConfig) => {
   const [currentStatus, setCurrentStatus] = useState(initialStatus);
   const [paypalAuthStatus, setPaypalAuthStatus] = useState<PayPalAuthStatus>(PayPalAuthStatus.None);
+  const [isRedirectingToPayPal, setIsRedirectingToPayPal] = useState(false);
   const { willCashoutStage } = useCashoutStore();
   const { paypalAccount, fetchPaypalAccount, bindPaypal } = useUser();
+  const { cash } = useUserStore();
 
   useEffect(() => {
     setCurrentStatus(initialStatus);
@@ -81,20 +85,32 @@ const CashOutAnimModal = ({
   // 当进入 PAYPAL_BIND_RESULT 状态时，获取验证状态
   useEffect(() => {
     if (currentStatus === CashOutStatus.PAYPAL_BIND_RESULT) {
-      getPayPalAuthStatus().then(setPaypalAuthStatus);
-    }
-  }, [currentStatus]);
+      getPayPalAuthStatus().then((status) => {
+        setPaypalAuthStatus(status);
 
-  // 埋点：进入 SUCCESS 状态时触发一次
-  useEffect(() => {
-    if (currentStatus === CashOutStatus.SUCCESS) {
-      if (willCashoutStage === CashoutStage.StageThree) {
-        bpTrack(EventName.bff_w3_unlock);
-      } else if (willCashoutStage === CashoutStage.StageFive) {
-        bpTrack(EventName.bff_w5_complete);
-      }
+        // 埋点：PayPal OAuth 登录结果
+        if (status === PayPalAuthStatus.Success) {
+          bpTrack(EventName.pwa_checkout_paypal_login_success, {
+            amount: amount,
+          });
+          bpTrack(EventName.pwa_paypal_login_success, {
+            amount: amount,
+            email: paypalAccount,
+          });
+        } else if (status === PayPalAuthStatus.Failed || status === PayPalAuthStatus.Error) {
+          bpTrack(EventName.pwa_checkout_paypal_login_failure, {
+            amount: amount,
+            status: status,
+          });
+          bpTrack(EventName.pwa_cashout_paypal_fail, {
+            amount: amount,
+            error_type: status,
+            email: paypalAccount,
+          });
+        }
+      });
     }
-  }, [currentStatus]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentStatus, amount, paypalAccount]);
 
   // 统一的关闭处理
   const handleClose = useCallback(() => {
@@ -197,9 +213,17 @@ const CashOutAnimModal = ({
     }
   }, [currentStatus, paypalAccount, willCashoutStage]);
 
+  // skipReminder=true 时（cashout 页手动点击），自动跳过 REMINDER 步骤
+  useEffect(() => {
+    if (skipReminder && currentStatus === CashOutStatus.REMINDER) {
+      goToNextStatus();
+    }
+  }, [skipReminder, currentStatus, goToNextStatus]);
+
   const renderContent = () => {
     switch (currentStatus) {
       case CashOutStatus.REMINDER:
+        if (skipReminder) return null;
         return (
           <AnimatedModalContainer>
             <CashoutReminderModal
@@ -251,6 +275,14 @@ const CashOutAnimModal = ({
         );
 
       case CashOutStatus.LINK_PAYPAL:
+        if (isRedirectingToPayPal) {
+          return (
+            <div className="fixed inset-0 bg-white flex flex-col items-center justify-center gap-4 z-50">
+              <Spinner size={48} />
+              <p className="text-[15px] text-gray-500">Connecting to PayPal...</p>
+            </div>
+          );
+        }
         return (
           <AnimatedModalContainer>
             <CashoutReminderModal
@@ -260,6 +292,12 @@ const CashOutAnimModal = ({
               buttonText="Link PayPal"
               progress={progress}
               onConfirm={() => {
+                setIsRedirectingToPayPal(true);
+
+                // 埋点：PayPal 账户点击（Link PayPal 按钮）
+                bpTrack(EventName.pwa_checkout_paypal_account_click, {
+                  amount: amount,
+                });
                 redirectToPayPalLogin();
               }}
               onClose={handleClose}
@@ -273,6 +311,17 @@ const CashOutAnimModal = ({
             <CashoutProcessingModal
               amount={amount}
               onSuccess={async () => {
+                const withdrawList = useCashoutStore.getState().withdrawList;
+                const totalCashoutValue = withdrawList.reduce((sum, w) => sum + (w.amount || 0), 0) + Number(amount);
+                // 埋点：提现结果 - 处理成功
+                bpTrack(EventName.pwa_cashout_result, {
+                  cashout_value: Number(amount),
+                  result: "success",
+                  source: "cashout_modal",
+                  task_stage: willCashoutStage,
+                  total_cashout_value: totalCashoutValue,
+                  total_income: totalCashoutValue + (cash || 0),
+                });
                 // 处理成功，流转到下一个状态
                 await goToNextStatus();
               }}
@@ -282,38 +331,27 @@ const CashOutAnimModal = ({
         );
 
       case CashOutStatus.SUCCESS:
-        // W2 阶段使用专属奖励弹窗，W3+ 使用通用 BFF 奖励弹窗，W1 使用原版提现成功弹窗
-        if (willCashoutStage === CashoutStage.StageTwo) {
-          return (
-            <BffW2RewardModal
-              amount={Number(amount)}
-              onClose={() => {
-                handleClose();
-                onConfirm?.();
-              }}
-            />
-          );
-        } else if (isW3PlusStage(willCashoutStage)) {
-          return (
-            <BffRewardModal
-              amount={Number(amount)}
-              onClose={() => {
-                handleClose();
-                onConfirm?.();
-              }}
-            />
-          );
-        } else {
-          return (
-            <CashoutSuccessModal
-              amount={Number(amount)}
-              onClose={() => {
-                handleClose();
-                onConfirm?.();
-              }}
-            />
-          );
-        }
+        return (
+          <CashoutSuccessModal
+            amount={Number(amount)}
+            onClose={() => {
+              const withdrawList = useCashoutStore.getState().withdrawList;
+              const totalCashoutValue = withdrawList.reduce((sum, w) => sum + (w.amount || 0), 0) + Number(amount);
+              // 埋点：提现结果 - 最终成功
+              bpTrack(EventName.pwa_cashout_result, {
+                cashout_value: Number(amount),
+                result: "success",
+                source: "cashout_modal",
+                task_stage: willCashoutStage,
+                total_cashout_value: totalCashoutValue,
+                total_income: totalCashoutValue + (cash || 0),
+              });
+              // 成功确认，关闭弹窗
+              handleClose();
+              onConfirm?.();
+            }}
+          />
+        );
 
       default:
         return null;
@@ -370,6 +408,7 @@ export function showCashoutModal(config: CashoutModalConfig): void {
       initialStatus={finalConfig.initialStatus}
       amount={finalConfig.amount}
       progress={finalConfig.progress}
+      skipReminder={finalConfig.skipReminder}
       onClose={handleClose}
       onConfirm={handleConfirm}
     />,

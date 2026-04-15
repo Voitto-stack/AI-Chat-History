@@ -1,6 +1,6 @@
 ---
 title: PaymentMethodCard
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:31+08:00
 source: import
 language: tsx
 original: PaymentMethodCard.tsx
@@ -12,8 +12,11 @@ original: PaymentMethodCard.tsx
 import { useState, useCallback, useMemo } from "react";
 import { PaymentMethod, CashOutStatus } from "@/types/cashout";
 import { useUser } from "@/hooks/useUser";
+import { useCashoutStore } from "@/stores/cashoutStore";
 import { PaymentInfoModal } from "@/components/PaymentInfoModal";
 import { showCashoutModal } from "@/components/showCashoutModal";
+import { bpTrack } from "@/tracking";
+import { EventName } from "@/tracking/events";
 
 interface PaymentMethodCardProps {
   item: {
@@ -49,7 +52,8 @@ const PAYMENT_METHOD_CONFIG = {
 } as const;
 
 export function PaymentMethodCard({ item }: PaymentMethodCardProps) {
-  const { paypalAccount } = useUser();
+  const { paypalAccount, cash } = useUser();
+  const { willCashoutStage } = useCashoutStore();
   const linked = item.method === PaymentMethod.PayPal && !!paypalAccount;
 
   const [modalConfig, setModalConfig] = useState<{
@@ -67,25 +71,103 @@ export function PaymentMethodCard({ item }: PaymentMethodCardProps) {
   }, []);
 
   const onClick = useCallback(() => {
+    // 埋点：支付方式点击（统一）
+    bpTrack(EventName.pwa_cashout_method_click, {
+      type: item.method,
+    });
+
+    // 埋点：支付方式点击（具体）
     switch (item.method) {
       case PaymentMethod.PayPal:
+        bpTrack(EventName.pwa_conv_entry_paypal_click, {
+          has_paypal_account: !!paypalAccount,
+          type: item.method,
+        });
         if (!paypalAccount) {
           showBindPaypalModal();
+        } else {
+          // 埋点：方式结果 - PayPal 已绑定，可以直接提现
+          bpTrack(EventName.pwa_cashout_method_result, {
+            type: item.method,
+            result: "success",
+            message: "PayPal linked",
+          });
         }
         break;
 
       case PaymentMethod.Visa:
-      case PaymentMethod.Amazon:
-      case PaymentMethod.Bank: {
-        const config = PAYMENT_METHOD_CONFIG[item.method];
-        setModalConfig({
-          title: config.title,
-          content: config.getContent(!!paypalAccount),
+        bpTrack(EventName.pwa_conv_entry_visa_click, {
+          has_paypal_account: !!paypalAccount,
         });
+        {
+          const config = PAYMENT_METHOD_CONFIG[item.method];
+          setModalConfig({
+            title: config.title,
+            content: config.getContent(!!paypalAccount),
+          });
+          // 埋点：方式结果 - Visa 被锁定
+          bpTrack(EventName.pwa_cashout_method_result, {
+            type: item.method,
+            result: "locked",
+            message: "Reach $100 to unlock",
+          });
+          // 埋点：Toast 显示（锁定提示）
+          bpTrack(EventName.pwa_cashout_method_toast, {
+            type: item.method,
+            message: config.title,
+          });
+        }
         break;
-      }
+
+      case PaymentMethod.Amazon:
+        bpTrack(EventName.pwa_conv_entry_amazon_click, {
+          has_paypal_account: !!paypalAccount,
+        });
+        {
+          const config = PAYMENT_METHOD_CONFIG[item.method];
+          setModalConfig({
+            title: config.title,
+            content: config.getContent(!!paypalAccount),
+          });
+          // 埋点：方式结果 - Amazon 被锁定
+          bpTrack(EventName.pwa_cashout_method_result, {
+            type: item.method,
+            result: "locked",
+            message: "Reach $100 to unlock",
+          });
+          // 埋点：Toast 显示（锁定提示）
+          bpTrack(EventName.pwa_cashout_method_toast, {
+            type: item.method,
+            message: config.title,
+          });
+        }
+        break;
+
+      case PaymentMethod.Bank:
+        bpTrack(EventName.pwa_conv_entry_bank_click, {
+          has_paypal_account: !!paypalAccount,
+        });
+        {
+          const config = PAYMENT_METHOD_CONFIG[item.method];
+          setModalConfig({
+            title: config.title,
+            content: config.getContent(!!paypalAccount),
+          });
+          // 埋点：方式结果 - Bank 被锁定
+          bpTrack(EventName.pwa_cashout_method_result, {
+            type: item.method,
+            result: "locked",
+            message: "Reach $20 to unlock",
+          });
+          // 埋点：Toast 显示（锁定提示）
+          bpTrack(EventName.pwa_cashout_method_toast, {
+            type: item.method,
+            message: config.title,
+          });
+        }
+        break;
     }
-  }, [item.method, paypalAccount, showBindPaypalModal]);
+  }, [item.method, paypalAccount, showBindPaypalModal, linked]);
 
   const modalProps = useMemo(
     () => ({
@@ -95,8 +177,12 @@ export function PaymentMethodCard({ item }: PaymentMethodCardProps) {
       actionText: "Switch to PayPal",
       onClose: () => setModalConfig(null),
       onAction: paypalAccount ? () => setModalConfig(null) : showBindPaypalModal,
+      cashoutValue: cash ?? 0,
+      isBindPaypal: !!paypalAccount,
+      source: "cashout_page",
+      taskStage: willCashoutStage,
     }),
-    [modalConfig, paypalAccount, showBindPaypalModal],
+    [modalConfig, paypalAccount, showBindPaypalModal, cash, willCashoutStage],
   );
 
   return (

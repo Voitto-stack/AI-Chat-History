@@ -1,6 +1,6 @@
 ---
 title: useInsTaskInit
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: ts
 original: useInsTaskInit.ts
@@ -15,13 +15,7 @@ original: useInsTaskInit.ts
  */
 
 import { useCallback, useRef } from "react";
-import {
-  isApp,
-  startInsRobotWebView,
-  syncFollowedUsers,
-  requestFloatingPermission,
-  checkInsPageAbnormal,
-} from "@/utils/bridge";
+import { isApp, startInsRobotWebView, requestFloatingPermission, checkInsPageAbnormal } from "@/utils/bridge";
 import type { InsRobotUserInfo } from "@/utils/bridge";
 import { insExchangeQueue } from "@/utils/insExchangeQueue";
 import {
@@ -33,7 +27,7 @@ import {
   getClientConfig,
 } from "@/http/insApi";
 import { getUserInfo } from "@/http/userApi";
-import { UserType } from "@sitin/api-proto/gen/archat_api/user_api";
+import { UserType } from "@heyhru/business-pwa-proto/gen/archat_api/user_api";
 import { useSendMessage } from "@/hooks/useSendMessage";
 import { useInsExchangeStore, type InsExchangePendingMessage } from "@/stores/insExchangeStore";
 import { useUserStore } from "@/stores/userStore";
@@ -47,6 +41,8 @@ import { showInsModal } from "@/components/showInsModal";
 import { UserCloudStorage, UserCloudKey } from "@/services/userCloudStorage";
 import { useModalStore } from "@/stores/modalStore";
 import { OFFLINE_EARNINGS_MODAL_ID } from "@/components/OfflineEarningsModal";
+import { bpTrack } from "@/tracking";
+import { EventName } from "@/tracking/events";
 import IMManager, { type OnReceiveMsg } from "@/services/IMManager";
 import {
   createChatMessage,
@@ -147,16 +143,23 @@ export function useInsTaskInit() {
   const initInsFollowedUsers = useCallback(async () => {
     if (!isApp()) return;
     const response = await getPwaFollowedUser();
-    if (!response?.followedUserinfo) return;
+    if (!response?.followedUserinfo?.length) return;
     useInsExchangeStore.getState().setFollowedUsers(response.followedUserinfo);
-    const userList = response.followedUserinfo
-      .filter((u) => u.userInfo?.userId && u.userInfo?.insId)
-      .map((u) => ({
-        userId: u.userInfo!.userId!,
-        insId: u.userInfo!.insId || "",
-        insAvatar: u.userInfo!.insAvatar || "",
-      }));
-    await syncFollowedUsers(userList);
+    const isFirstTime = await checkFirstTimeRobot();
+    for (const u of response.followedUserinfo) {
+      if (!u.userInfo?.userId || !u.userInfo?.insId) continue;
+      await startRobot(
+        {
+          orderId: 0,
+          peerUserId: u.userInfo.userId,
+          insAccount: u.userInfo.insId || "",
+          insAvatar: u.userInfo.insAvatar || "",
+          expireTimestamp: 0,
+          pwafollowReward: u.earnedAmount || "0",
+        },
+        isFirstTime,
+      );
+    }
   }, []);
 
   const checkPendingOrders = useCallback(async () => {
@@ -219,6 +222,12 @@ export function useInsTaskInit() {
           orderStatus: "unpaid",
         };
         await sendCustomMessage(targetUserId, CustomDescription.InsExchangeRequestMessage, JSON.stringify(payloadData));
+        // 埋点：Instagram 交换请求发送 - 主动发起（旧埋点名称，用于数据连续性）
+        bpTrack(EventName.pwa_instagram_request_message_initiative, {
+          target_user_id: targetUserId,
+          order_id: orderResponse.orderId ?? 0,
+          requested_amount: parseFloat(orderResponse.pwaFollowReward ?? "0"),
+        });
         // 标记已发过交换请求（内存 + 云存储持久化）
         exchangedUsers.current.add(targetUserId);
         saveExchangedUsers(exchangedUsers.current);
@@ -255,6 +264,14 @@ export function useInsTaskInit() {
   const handleInsExchangeMessage = useCallback(
     (msg: InsExchangePendingMessage) => {
       useInsExchangeStore.getState().addMessage(msg);
+      // 埋点：Instagram 交换请求接收 - 被动接收（旧埋点名称，用于数据连续性）
+      bpTrack(EventName.pwa_instagram_request_message_passive, {
+        from_user_id: msg.peerUserId,
+        order_id: msg.orderId,
+        target_user_id: msg.peerUserId,
+        current_status: "valid",
+        requested_amount: parseFloat(msg.pwafollowReward || "0"),
+      });
       if (canShowInsModal() && !isInsExchangeModalOpen()) showInsExchangeModal();
     },
     [showInsExchangeModal],
@@ -286,7 +303,8 @@ export function useInsTaskInit() {
     }
 
     const totalEarnings = useInsExchangeStore.getState().earnings;
-    if (totalEarnings > 0) await showRewardModalAsync(useUserStore.getState().cash ?? 0, totalEarnings);
+    if (totalEarnings > 0)
+      await showRewardModalAsync(useUserStore.getState().cash ?? 0, totalEarnings, { source: "task" });
     store.resetEarnings();
     store.resetProcessed();
   }, []);

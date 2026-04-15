@@ -1,6 +1,6 @@
 ---
 title: WeeklyEarningsSummary
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:31+08:00
 source: import
 language: tsx
 original: WeeklyEarningsSummary.tsx
@@ -10,6 +10,7 @@ original: WeeklyEarningsSummary.tsx
 
 ```tsx
 import type { WeeklyIncomeData } from "./types";
+import { getCallDurationMin } from "./utils";
 
 interface Props {
   data: WeeklyIncomeData;
@@ -25,10 +26,12 @@ export default function WeeklyEarningsSummary({ data, selectedDay }: Props) {
     ? (dayData?.videoEarnings ?? 0) + (dayData?.voiceEarnings ?? 0)
     : data.videoEarnings + data.voiceEarnings;
 
-  const freeMinutes = isDaySelected ? (dayData?.freeCallDurationTotal ?? 0) : data.freeCallDurationTotal;
+  const freeMinutes = isDaySelected
+    ? getCallDurationMin(dayData?.freeVideoCallDurationTotal ?? 0)
+    : getCallDurationMin(data.freeVideoCallDurationTotal);
   const paidMinutes = isDaySelected
-    ? (dayData?.callDurationTotal ?? 0) - (dayData?.freeCallDurationTotal ?? 0)
-    : data.callDurationTotal - data.freeCallDurationTotal;
+    ? getCallDurationMin((dayData?.videoCallDurationTotal ?? 0) - (dayData?.freeVideoCallDurationTotal ?? 0))
+    : getCallDurationMin(data.videoCallDurationTotal - data.freeVideoCallDurationTotal);
 
   const summaryItems = [
     { value: `$${weeklyEarnings.toFixed(2)}`, label: "Weekly Earnings", color: "#0066FF" },

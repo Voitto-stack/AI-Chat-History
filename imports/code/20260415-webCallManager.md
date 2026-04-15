@@ -1,6 +1,6 @@
 ---
 title: webCallManager
-date: 2026-04-15T17:04:50+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: tsx
 original: webCallManager.tsx
@@ -22,6 +22,8 @@ import { unicodeToChinese, delay } from "./callUtils";
 import { getCallStoreState } from "@/hooks/useCall";
 import { getRemoteUserInfo } from "@/http/api";
 import { CallState, CallType, type ConnectSession } from "@/types/call";
+import { bpTrack } from "@/tracking";
+import { EventName } from "@/tracking/events";
 
 // SDK 动态加载（仅在实际使用时加载）
 let _TRTC: typeof TRTC | null = null;
@@ -204,6 +206,19 @@ class CallManagerClass {
 
         await this.engine.accept();
 
+        // 埋点：接听视频通话
+        bpTrack(EventName.pwa_video_call_accepted, {
+          remote_user_id: this.connectSession.remoteUserId,
+          call_type: this.connectSession.callType === CallType.VIDEO_CALL ? "video" : "audio",
+          room_id: this.connectSession.roomId,
+        });
+
+        // 埋点：接听通话
+        bpTrack(EventName.pwa_call_accept, {
+          remote_user_id: this.connectSession.remoteUserId,
+          room_id: this.connectSession.roomId,
+        });
+
         //只有视频通话才startLocalVideo
         if (this.connectSession.callType === CallType.VIDEO_CALL) {
           await this.startLocalVideo("local-video");
@@ -230,6 +245,14 @@ class CallManagerClass {
         callState: CallState.Rejected,
       };
 
+      // 埋点：拒绝通话
+      if (this.connectSession) {
+        bpTrack(EventName.pwa_call_decline, {
+          remote_user_id: this.connectSession.remoteUserId,
+          room_id: this.connectSession.roomId,
+        });
+      }
+
       this.setCallStateToStore(CallState.Rejected);
 
       await this.engine.reject();
@@ -241,6 +264,27 @@ class CallManagerClass {
   hangup = async () => {
     const engineStatus = this.engine.getCallStatus();
     if (engineStatus === "calling" || engineStatus === "connected") {
+      if (this.connectSession) {
+        const duration = this.connectSession.callBeginTime
+          ? Math.round((Date.now() - this.connectSession.callBeginTime) / 1000)
+          : 0;
+
+        // 埋点：用户主动挂断
+        bpTrack(EventName.pwa_video_call_hangup, {
+          remote_user_id: this.connectSession.remoteUserId,
+          call_type: this.connectSession.callType === CallType.VIDEO_CALL ? "video" : "audio",
+          room_id: this.connectSession.roomId,
+          duration: duration,
+        });
+
+        // 埋点：Native 通话结束
+        bpTrack(EventName.pwa_native_call_end, {
+          remote_user_id: this.connectSession.remoteUserId,
+          call_type: this.connectSession.callType === CallType.VIDEO_CALL ? "video" : "audio",
+          room_id: this.connectSession.roomId,
+          duration: duration,
+        });
+      }
       await this.engine?.hangup();
     } else {
       console.warn(TAG, `Skipping hangup() call, engine status is: ${engineStatus}`);
@@ -252,6 +296,41 @@ class CallManagerClass {
     const _now = Date.now();
 
     console.log(TAG, "Call invited", params);
+
+    // 埋点：收到视频通话邀请
+    bpTrack(EventName.pwa_video_call_received, {
+      remote_user_id: callerId,
+      call_type: callMediaType === CallType.VIDEO_CALL ? "video" : "audio",
+      room_id: inviteData.roomID,
+    });
+
+    // 埋点：通话开始（收到来电）
+    bpTrack(EventName.pwa_call_start, {
+      remote_user_id: callerId,
+      room_id: inviteData.roomID,
+      enter_user: callerId,
+    });
+
+    // 埋点：通话开始 - Web端
+    bpTrack(EventName.pwa_call_begin_web, {
+      remote_user_id: callerId,
+      room_id: inviteData.roomID,
+      call_type: callMediaType === CallType.VIDEO_CALL ? "video" : "audio",
+    });
+
+    // 埋点：Live 中收到来电
+    bpTrack(EventName.pwa_live_receive_call, {
+      remote_user_id: callerId,
+      room_id: inviteData.roomID,
+    });
+
+    // 埋点：音频通话开始（如果是音频）
+    if (callMediaType === CallType.AUDIO_CALL) {
+      bpTrack(EventName.pwa_audio_call_started, {
+        remote_user_id: callerId,
+        room_id: inviteData.roomID,
+      });
+    }
 
     this.connectSession = {
       ...this.connectSession,
@@ -342,6 +421,22 @@ class CallManagerClass {
     if (isVideoAvailable === true) {
       //开启
       this.startRemoteVideo(userID);
+
+      // 埋点：远程视频可用
+      if (this.connectSession) {
+        bpTrack(EventName.pwa_call_remote_video_available, {
+          remote_user_id: userID,
+          call_type: this.connectSession.callType === CallType.VIDEO_CALL ? "video" : "audio",
+          room_id: this.connectSession.roomId,
+        });
+
+        // 埋点：远程音频可用（音视频通常同时可用）
+        bpTrack(EventName.pwa_call_remote_audio_available, {
+          remote_user_id: userID,
+          call_type: this.connectSession.callType === CallType.VIDEO_CALL ? "video" : "audio",
+          room_id: this.connectSession.roomId,
+        });
+      }
     }
     eventBus.emit(EventNames.CALL_USER_VIDEO_AVAILABLE, { userID, isVideoAvailable });
   };
@@ -358,6 +453,27 @@ class CallManagerClass {
       };
 
       this.setCallStateToStore(CallState.Connected);
+
+      // 埋点：通话连接成功
+      bpTrack(EventName.pwa_call_connected, {
+        remote_user_id: this.connectSession.remoteUserId,
+        call_type: this.connectSession.callType === CallType.VIDEO_CALL ? "video" : "audio",
+        room_id: this.connectSession.roomId,
+      });
+
+      // 埋点：视频通话开始
+      bpTrack(EventName.pwa_video_call_started, {
+        remote_user_id: this.connectSession.remoteUserId,
+        call_type: this.connectSession.callType === CallType.VIDEO_CALL ? "video" : "audio",
+        room_id: this.connectSession.roomId,
+      });
+
+      // 埋点：用户进入房间
+      bpTrack(EventName.pwa_call_user_enter, {
+        remote_user_id: this.connectSession.remoteUserId,
+        call_type: this.connectSession.callType === CallType.VIDEO_CALL ? "video" : "audio",
+        room_id: this.connectSession.roomId,
+      });
     }
     eventBus.emit(EventNames.CALL_BEGIN, params);
   };
@@ -366,6 +482,19 @@ class CallManagerClass {
     console.log(TAG, "Call ended:", params);
     const _now = Date.now();
     if (this.connectSession) {
+      const duration = this.connectSession.callBeginTime
+        ? Math.round((_now - this.connectSession.callBeginTime) / 1000)
+        : 0;
+
+      // 埋点：通话结束
+      bpTrack(EventName.pwa_call_end, {
+        remote_user_id: this.connectSession.remoteUserId,
+        call_type: this.connectSession.callType === CallType.VIDEO_CALL ? "video" : "audio",
+        room_id: this.connectSession.roomId,
+        duration: duration,
+        reason: params.reason || "unknown",
+      });
+
       this.connectSession = {
         ...this.connectSession,
         callState: CallState.Idle,
@@ -401,6 +530,15 @@ class CallManagerClass {
   handleUserLeave = (params) => {
     console.log(TAG, "User left room:", params);
 
+    // 埋点：用户离开房间
+    if (this.connectSession) {
+      bpTrack(EventName.pwa_call_user_leave, {
+        remote_user_id: params.userID || this.connectSession.remoteUserId,
+        call_type: this.connectSession.callType === CallType.VIDEO_CALL ? "video" : "audio",
+        room_id: this.connectSession.roomId,
+      });
+    }
+
     const roomId = this.connectSession?.roomId;
     // 1v1收到离开房间的消息后，如果5s都没有收到callEnd/callCancel回调，就主动挂断
     setTimeout(() => {
@@ -413,6 +551,18 @@ class CallManagerClass {
 
   handleCallError = (error) => {
     this.cloesConnect();
+
+    // 埋点：通话错误
+    if (this.connectSession) {
+      bpTrack(EventName.pwa_call_error, {
+        remote_user_id: this.connectSession.remoteUserId,
+        call_type: this.connectSession.callType === CallType.VIDEO_CALL ? "video" : "audio",
+        room_id: this.connectSession.roomId,
+        error_code: error.code || -1,
+        error_message: error.message || "unknown",
+      });
+    }
+
     if (error.code === -1101) {
       toast.error(
         "You have disabled camera/microphone access, please allow the current application getMediaDevicesAuth to use the camera/microphone.",

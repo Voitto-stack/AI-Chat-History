@@ -1,6 +1,6 @@
 ---
 title: AnimatedModalContainer
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: tsx
 original: AnimatedModalContainer.tsx
@@ -19,6 +19,8 @@ import Lottie, { LottieRefCurrentProps } from "lottie-react";
 import bgEarnCash from "@/assets/images/cash/bg_earn_cash.webp";
 import bgEarnCashLight from "@/assets/images/cash/bg_earn_cash_light.webp";
 import topAni from "@/assets/animation/cashout-ani-top.json";
+import { bpTrack } from "@/tracking";
+import { EventName } from "@/tracking/events";
 
 interface AnimatedModalContainerProps {
   children: ReactNode;
@@ -34,6 +36,9 @@ export function AnimatedModalContainer({
   const lottieRef = useRef<LottieRefCurrentProps>(null);
 
   useEffect(() => {
+    // 埋点：动画弹窗显示
+    bpTrack(EventName.pwa_cashout_animeflow_show);
+
     // 播放音效
     if (audioPath) {
       const audio = new Audio(audioPath);
@@ -76,13 +81,13 @@ export function AnimatedModalContainer({
           {/* 顶部飞钱动画（绝对定位，不占布局空间） */}
           <Lottie
             animationData={topAni}
-            className="absolute left-1/2 -translate-x-1/2 bottom-full w-full h-[120px] mb-[-40px]"
+            className="absolute left-1/2 -translate-x-1/2 bottom-full w-full h-[120px] mb-[-40px] z-0"
             loop={false}
             lottieRef={lottieRef}
             autoplay={false}
             onComplete={() => {}}
           />
-          {children}
+          <div className="relative z-10">{children}</div>
         </div>
       </div>
     </div>

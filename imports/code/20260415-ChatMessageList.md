@@ -1,6 +1,6 @@
 ---
 title: ChatMessageList
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:31+08:00
 source: import
 language: tsx
 original: ChatMessageList.tsx
@@ -10,7 +10,7 @@ original: ChatMessageList.tsx
 
 ```tsx
 import { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef } from "react";
-import { UserInfo } from "@sitin/api-proto/gen/archat_api/user_api";
+import { UserInfo } from "@heyhru/business-pwa-proto/gen/archat_api/user_api";
 import { TimMessage } from "@/types/chatMessage";
 import { getAvatarUrl, CustomAvatarType } from "@/utils/userUtil";
 import Avatar from "@/components/Avatar";

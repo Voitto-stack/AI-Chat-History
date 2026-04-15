@@ -1,6 +1,6 @@
 ---
 title: MessageItem
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:31+08:00
 source: import
 language: tsx
 original: MessageItem.tsx
@@ -10,7 +10,7 @@ original: MessageItem.tsx
 
 ```tsx
 import { memo, PropsWithChildren, useState, ReactNode } from "react";
-import { UserInfo } from "@sitin/api-proto/gen/archat_api/user_api";
+import { UserInfo } from "@heyhru/business-pwa-proto/gen/archat_api/user_api";
 import {
   TimMessage,
   TextMessage,
@@ -81,7 +81,7 @@ const CenterBubble = memo<{ text: string; showTime: boolean; timestamp: number }
 const TextBubble = memo<{ text: string; isSelf: boolean }>(({ text, isSelf }) => (
   <div
     className={`max-w-[213px] min-h-10 px-2.5 py-2.5 text-[17px] text-white break-words select-text ${
-      isSelf ? "rounded-xl bg-[#47aeef] leading-5 tracking-[-0.23px]" : "rounded-lg bg-black/25"
+      isSelf ? "rounded-xl bg-brand leading-5 tracking-[-0.23px]" : "rounded-lg bg-black/25"
     }`}
   >
     {text}
@@ -114,7 +114,7 @@ const GiftBubble = memo<{ giftName: string; imageUrl: string; isSelf: boolean; o
         <div className="ml-4 flex flex-1 flex-col items-start justify-center">
           <span className="text-xs text-black/60">Sent you</span>
           <span className="my-2 text-[15px] text-black">"{giftName.charAt(0).toUpperCase() + giftName.slice(1)}"</span>
-          <button className="mt-2.5 h-7 w-[91px] rounded bg-[#47aeef] text-[15px] text-white" onClick={onSendMore}>
+          <button className="mt-2.5 h-7 w-[91px] rounded bg-brand text-[15px] text-white" onClick={onSendMore}>
             Send more
           </button>
         </div>
@@ -150,7 +150,7 @@ const AVCallBubble = memo<{
 
   return (
     <div
-      className={`flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-white ${isSelf ? "bg-[#47aeef]" : "bg-black/25"}`}
+      className={`flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-white ${isSelf ? "bg-brand" : "bg-black/25"}`}
     >
       {isSelf ? (
         <>
@@ -216,7 +216,7 @@ const MessageItem = memo<MessageItemProps>(({ message, peerUserInfo, showTime, o
     );
   }
   if (type === MessageType.Unknown) {
-    return import.meta.env.DEV ? (
+    return import.meta.env.MODE !== "production" ? (
       <CenterBubble text="[Unknown Message]" showTime={showTime} timestamp={timestamp} />
     ) : null;
   }

@@ -1,6 +1,6 @@
 ---
 title: CoinClaimButton
-date: 2026-04-15T17:04:50+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: tsx
 original: CoinClaimButton.tsx
@@ -58,8 +58,8 @@ export default function CoinClaimButton() {
         >
           <span className="ml-3 text-left text-[11px] text-white">Today's Earnings</span>
           <span
-            className="mr-[17px] mt-[5px] flex items-center justify-end text-[11px] font-semibold text-[#ff9500]"
-            style={{ fontFamily: "SF Pro" }}
+            className="mr-[17px] mt-[5px] flex items-center justify-end text-[11px] font-semibold text-warning"
+            style={{ fontFamily: "Pangram" }}
           >
             <img src={icCoin} className="mr-0.5 h-3.5 w-3.5" alt="" />
             {`$${cash.toFixed(2)}`}
@@ -71,7 +71,7 @@ export default function CoinClaimButton() {
       <div
         onClick={handleClick}
         className="relative grid h-12 w-12 cursor-pointer place-items-center"
-        style={{ fontFamily: "TT Fellows Trial" }}
+        style={{ fontFamily: "TTFellows" }}
       >
         {/* SVG 圆形进度条 */}
         <svg
@@ -92,7 +92,7 @@ export default function CoinClaimButton() {
             transform="rotate(-90 24 24)"
           />
           <circle
-            className="fill-none stroke-[#ff9500] stroke-2"
+            className="fill-none stroke-warning stroke-2"
             cx="24"
             cy="24"
             r={RADIUS}
@@ -107,12 +107,12 @@ export default function CoinClaimButton() {
         {/* 内容区域 */}
         <div className="z-[2] flex flex-col items-center justify-center gap-1">
           {[1, 3].includes(type) && <img src={icCoin} className="h-4 w-4" alt="" />}
-          {[1, 6].includes(type) && <NumberRoll className="text-[10px] font-bold text-[#ff9500]" value={displayCash} />}
-          {type === 2 && <p className="text-[10px] font-bold text-[#ff9500]">{displayTime}</p>}
-          {type === 3 && <p className="text-[8px] font-bold text-[#ff9500]">Claim</p>}
+          {[1, 6].includes(type) && <NumberRoll className="text-[10px] font-bold text-warning" value={displayCash} />}
+          {type === 2 && <p className="text-[10px] font-bold text-warning">{displayTime}</p>}
+          {type === 3 && <p className="text-[8px] font-bold text-warning">Claim</p>}
           {/* +1￠ 奖励文字 */}
           {type === 5 && (
-            <p className="absolute inset-0 z-[2] flex items-center justify-center animate-[award-text-float-in_0.3s_ease-out_forwards] text-sm font-bold text-[#ff9500]">
+            <p className="absolute inset-0 z-[2] flex items-center justify-center animate-[award-text-float-in_0.3s_ease-out_forwards] text-sm font-bold text-warning">
               +1￠
             </p>
           )}

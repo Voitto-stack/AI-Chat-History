@@ -1,6 +1,6 @@
 ---
 title: useSpeechDetect
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: ts
 original: useSpeechDetect.ts
@@ -76,13 +76,24 @@ export const useSpeechDetect = (): UseSpeechDetectReturn => {
 
       // 定时检测音量
       const dataArray = new Uint8Array(analyser.frequencyBinCount);
+      let detectCount = 0;
       timerRef.current = window.setInterval(() => {
         if (!analyserRef.current) return;
 
         analyserRef.current.getByteFrequencyData(dataArray);
         const average = dataArray.reduce((sum, v) => sum + v, 0) / dataArray.length;
+        const max = Math.max(...dataArray);
+        detectCount++;
+
+        // 每 10 次（约 5 秒）输出一次采样日志
+        if (detectCount % 10 === 1) {
+          console.log(TAG, `[sample #${detectCount}] avg=${average.toFixed(1)}, max=${max}, threshold=${VOLUME_THRESHOLD}, hasSpoken=${hasSpokenRef.current}, audioState=${audioContext.state}`);
+        }
 
         if (average > VOLUME_THRESHOLD) {
+          if (!hasSpokenRef.current) {
+            console.log(TAG, `Speech detected! avg=${average.toFixed(1)}, max=${max}, at sample #${detectCount}`);
+          }
           hasSpokenRef.current = true;
         }
       }, DETECT_INTERVAL);

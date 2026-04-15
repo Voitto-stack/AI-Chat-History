@@ -1,6 +1,6 @@
 ---
 title: cashoutApi
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: ts
 original: cashoutApi.ts
@@ -28,9 +28,12 @@ import {
   ReportPwaWithdrawPhaseResponse,
   UserServiceCommonCode,
   UserWithdrawInfo,
-} from "@sitin/api-proto/gen/archat_api/user_api";
+} from "@heyhru/business-pwa-proto/gen/archat_api/user_api";
 import httpClient from "./httpClient";
 import { WithdrawInfo, WithdrawStatus, USPaypalAccountType } from "@/types/cashout";
+import { bpTrack } from "@/tracking";
+import { EventName } from "@/tracking/events";
+import { useCashoutStore } from "@/stores/cashoutStore";
 
 // 查询用户提现任务列表
 export async function queryUserWithdrawTasks(): Promise<QueryUserWithdrawTasksResponse> {
@@ -59,7 +62,30 @@ export async function normalMediumWithdraw(params: {
     usPaypalAccountType: params.usPaypalAccountType,
   };
 
-  return await httpClient.requestPost2(NormalMediumWithdrawRequest, request, NormalMediumWithdrawResponse);
+  const response = await httpClient.requestPost2(NormalMediumWithdrawRequest, request, NormalMediumWithdrawResponse);
+
+  // 埋点：提现完成对应阶段的广告事件
+  if (response?.code === UserServiceCommonCode.Success) {
+    const stage = useCashoutStore.getState().willCashoutStage;
+    const stageEventMap = {
+      1: EventName.ad_WithdrawComplete_Stage1,
+      2: EventName.ad_WithdrawComplete_Stage2,
+      3: EventName.ad_WithdrawComplete_Stage3,
+      4: EventName.ad_WithdrawComplete_Stage4,
+      5: EventName.ad_WithdrawComplete_Stage5,
+      6: EventName.ad_WithdrawComplete_Stage6,
+      7: EventName.ad_WithdrawComplete_Stage7,
+    };
+    const eventName = stageEventMap[stage];
+    if (eventName) {
+      bpTrack(eventName, {
+        amount: params.amount,
+        stage: stage,
+      });
+    }
+  }
+
+  return response;
 }
 
 /**

@@ -1,6 +1,6 @@
 ---
 title: ChatTopCard
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:31+08:00
 source: import
 language: tsx
 original: ChatTopCard.tsx
@@ -11,14 +11,17 @@ original: ChatTopCard.tsx
 ```tsx
 import { memo, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { UserInfo, UserServiceCommonCode } from "@sitin/api-proto/gen/archat_api/user_api";
+import { UserInfo, UserServiceCommonCode } from "@heyhru/business-pwa-proto/gen/archat_api/user_api";
 import { getMatchCardInfo } from "@/http/chatApi";
-import { getAvatarUrl, CustomAvatarType } from "@/utils/userUtil";
+import { getAvatarUrl, CustomAvatarType, isRealHuman } from "@/utils/userUtil";
 import { useMatchCardCache } from "@/hooks/chatList";
+import { useUser } from "@/hooks/useUser";
 import Avatar from "@/components/Avatar";
 import bgHaoganChatTop from "@/assets/images/chat/bg_haogan_chat_top.webp";
 import icRightChatTop from "@/assets/images/chat/ic_right_chat_top.svg";
 import iconChatTopLeft from "@/assets/images/chat/icon_chat_top_left.svg";
+import { bpTrack } from "@/tracking";
+import { EventName } from "@/tracking/events";
 
 interface ChatTopCardProps {
   peerUserInfo: UserInfo | null; // 对方用户信息
@@ -31,6 +34,7 @@ interface ChatTopCardProps {
  */
 const ChatTopCard = memo<ChatTopCardProps>(({ peerUserInfo, selfUserInfo }) => {
   const navigate = useNavigate();
+  const { cash } = useUser();
   const { cachedUserInfo, setMatchCardInfo } = useMatchCardCache(peerUserInfo?.userId);
 
   const [locationString, setLocationString] = useState("");
@@ -86,6 +90,13 @@ const ChatTopCard = memo<ChatTopCardProps>(({ peerUserInfo, selfUserInfo }) => {
 
   const handleClick = () => {
     if (peerUserInfo?.userId) {
+      // 埋点：聊天资料卡点击
+      bpTrack(EventName.pwa_chat_profile_card_click, {
+        target_user_id: peerUserInfo.userId,
+        earning_value: 0, // 点击资料卡不产生收益
+        total_earning_value: cash ?? 0,
+        target_user_type: isRealHuman(peerUserInfo) ? "real" : "dh",
+      });
       navigate("/profile", { state: { userId: peerUserInfo.userId } });
     }
   };

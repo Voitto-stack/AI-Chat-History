@@ -1,6 +1,6 @@
 ---
 title: useDispatchDetection
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: ts
 original: useDispatchDetection.ts
@@ -21,6 +21,9 @@ import mockCallManager from "@/utils/mockCallManager";
 import { MockCallType } from "@/types/call";
 import { useCashout } from "@/hooks/useCashout";
 import { CashoutStage } from "@/types/cashout";
+import { bpTrack } from "@/tracking";
+import { EventName } from "@/tracking/events";
+import { eventBus, EventNames } from "@/utils/eventBus";
 
 const TAG = "useDispatchDetection";
 
@@ -38,6 +41,7 @@ export function useDispatchDetection() {
   const hasTriggeredRef = useRef(false);
   // 用 ref 保持最新的 liveState，供异步回调读取
   const liveStateRef = useRef(liveState);
+  const prevLiveStateRef = useRef(liveState);
   liveStateRef.current = liveState;
 
   const clearTimer = () => {
@@ -47,31 +51,76 @@ export function useDispatchDetection() {
     }
   };
 
+  const canTriggerDispatch = () => {
+    if (!userInfo?.userId) return false;
+    if (liveStateRef.current === LiveState.Action) return false;
+    const stages = Object.values(CashoutStage);
+    if (stages.indexOf(willCashoutStage) < 2) return false;
+    return true;
+  };
+
+  const scheduleDispatch = () => {
+    clearTimer();
+    const delay = Math.random() * (DISPATCH_DELAY_MAX - DISPATCH_DELAY_MIN) + DISPATCH_DELAY_MIN;
+    console.log(TAG, `非 live 状态，${Math.round(delay / 1000)}s 后下发 Dispatch mock 来电`);
+
+    timerRef.current = setTimeout(() => {
+      if (getLiveStoreState().liveState === LiveState.Action) {
+        console.log(TAG, "用户已开启 live，取消 Dispatch mock 来电");
+        return;
+      }
+      mockCallManager.startMockCall(MockCallType.Dispatch, 0);
+    }, delay);
+  };
+
   useEffect(() => {
     const tryTriggerDispatch = () => {
-      // 已触发过则跳过
       if (hasTriggeredRef.current) return;
-      // 未完成注册的用户不触发
-      if (!userInfo?.userId) return;
-      // 必须在非 live 状态下
-      if (liveStateRef.current === LiveState.Action) return;
-      // 第一二阶段不下发 dispatch mock，第三阶段起才下发
-      const stages = Object.values(CashoutStage);
-      if (stages.indexOf(willCashoutStage) < 2) return;
+      if (!canTriggerDispatch()) return;
 
       hasTriggeredRef.current = true;
+      scheduleDispatch();
+
       clearTimer();
 
       const delay = Math.random() * (DISPATCH_DELAY_MAX - DISPATCH_DELAY_MIN) + DISPATCH_DELAY_MIN;
       console.log(TAG, `非 live 状态，${Math.round(delay / 1000)}s 后下发 Dispatch mock 来电`);
 
-      timerRef.current = setTimeout(() => {
+      timerRef.current = setTimeout(async () => {
         // 再次检查：如果用户已主动开启 live，则不再下发
         if (getLiveStoreState().liveState === LiveState.Action) {
           console.log(TAG, "用户已开启 live，取消 Dispatch mock 来电");
           return;
         }
-        mockCallManager.startMockCall(MockCallType.Dispatch, 0);
+        bpTrack(EventName.pwa_waiting_detection_enter);
+        const sent = await mockCallManager.startMockCall(MockCallType.Dispatch, 0);
+        if (sent) {
+          bpTrack(EventName.pwa_waiting_detection_mock_sent);
+
+          // 监听用户是否接听了 dispatch mock 来电
+          // 使用 on + 手动 off（不用 once，因为 once 包装了 callback 导致 off 无法正确移除）
+          let mockCallTracked = false;
+          const cleanup = () => {
+            eventBus.off(EventNames.MOCK_CALL_BEGIN, handleAnswered);
+            eventBus.off(EventNames.MOCK_CALL_CANCELED, handleNotAnswered);
+            eventBus.off(EventNames.MOCK_CALL_ENDED, handleNotAnswered);
+          };
+          const handleAnswered = () => {
+            if (mockCallTracked) return;
+            mockCallTracked = true;
+            bpTrack(EventName.pwa_waiting_detection_mock_state, { is_answered: true });
+            cleanup();
+          };
+          const handleNotAnswered = () => {
+            if (mockCallTracked) return;
+            mockCallTracked = true;
+            bpTrack(EventName.pwa_waiting_detection_mock_state, { is_answered: false });
+            cleanup();
+          };
+          eventBus.on(EventNames.MOCK_CALL_BEGIN, handleAnswered);
+          eventBus.on(EventNames.MOCK_CALL_CANCELED, handleNotAnswered);
+          eventBus.on(EventNames.MOCK_CALL_ENDED, handleNotAnswered);
+        }
       }, delay);
     };
 
@@ -99,11 +148,24 @@ export function useDispatchDetection() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userInfo?.isClubUser, userState]);
 
-  // live 状态变为 Action 时，清除待触发的定时器
+  // live 状态变化处理
   useEffect(() => {
+    // 进入 Action 时，清除待触发的定时器
     if (liveState === LiveState.Action) {
       clearTimer();
     }
+
+    // 从 Action 变为非 Action（关播），重置标记并触发 dispatch
+    if (prevLiveStateRef.current === LiveState.Action && liveState !== LiveState.Action) {
+      hasTriggeredRef.current = false;
+      if (canTriggerDispatch()) {
+        hasTriggeredRef.current = true;
+        scheduleDispatch();
+      }
+    }
+
+    prevLiveStateRef.current = liveState;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [liveState]);
 }
 

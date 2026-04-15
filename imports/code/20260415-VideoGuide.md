@@ -1,6 +1,6 @@
 ---
 title: VideoGuide
-date: 2026-04-15T17:04:50+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: tsx
 original: VideoGuide.tsx
@@ -9,13 +9,16 @@ original: VideoGuide.tsx
 # VideoGuide
 
 ```tsx
+/* eslint-disable react-refresh/only-export-components */
 /**
  * VideoGuide - 视频通话规则引导弹窗
  * 两步引导：第一步介绍收益，第二步介绍违规规则
  */
 
-import { FC, useState } from "react";
+import { FC, useEffect, useState } from "react";
 import { useModal } from "@/hooks/useModal";
+import { bpTrack } from "@/tracking";
+import { EventName } from "@/tracking/events";
 
 // 引导图片资源
 import icTitle1 from "@/assets/images/classify/ic_title1.webp";
@@ -36,28 +39,30 @@ interface VideoGuideProps {
 const VideoGuideContent: FC<VideoGuideProps> = ({ onClose }) => {
   const [step, setStep] = useState(0);
 
+  // 埋点：视频规则弹窗展示
+  useEffect(() => {
+    bpTrack(EventName.pwa_conv_video_rules_pop_show);
+  }, []);
+
   const handleNext = () => {
     if (step === 0) {
+      // 埋点：下一步按钮 1 点击
+      bpTrack(EventName.pwa_conv_video_rules_next1_click);
       setStep(1);
     } else {
+      // 埋点：下一步按钮 2 点击（Got it）
+      bpTrack(EventName.pwa_conv_video_rules_next2_click);
       onClose();
     }
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75"
-      data-disable-auto-redirect="true"
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75" data-disable-auto-redirect="true">
       {/* 渐变背景弹窗 */}
       <div className="relative flex w-[330px] flex-col items-center gap-2.5 rounded-[28px] bg-gradient-to-br from-[#71c7ea] via-[#3d70f2] to-[#bffaee] px-2 pb-2 pt-5">
         {/* 标题图片 */}
         <div className="flex justify-center">
-          <img
-            src={step === 0 ? icTitle1 : icTitle2}
-            className="h-[30px] w-[150px] object-contain"
-            alt="title"
-          />
+          <img src={step === 0 ? icTitle1 : icTitle2} className="h-[30px] w-[150px] object-contain" alt="title" />
         </div>
 
         {/* 半透明内容区 */}
@@ -76,11 +81,7 @@ const VideoGuideContent: FC<VideoGuideProps> = ({ onClose }) => {
           {step === 0 ? (
             <div className="relative h-[230px] w-[240px]">
               <img src={icTip1} className="mx-auto block h-[230px] w-[120px]" alt="tip" />
-              <img
-                src={icDollar}
-                className="absolute bottom-[27%] right-[30px] z-[2] h-[50px] w-[50px]"
-                alt="dollar"
-              />
+              <img src={icDollar} className="absolute bottom-[27%] right-[30px] z-[2] h-[50px] w-[50px]" alt="dollar" />
               <div className="absolute bottom-[40%] z-[2] inline-flex h-[27px] w-[86px] items-center justify-center rounded bg-black/70 px-2 py-1">
                 <img src={icDollar2} className="mr-1 h-[19px] w-[25px]" alt="dollar" />
                 <span className="text-center text-[15px] font-semibold italic text-[#8cd370]">+$100</span>
@@ -112,7 +113,7 @@ const VideoGuideContent: FC<VideoGuideProps> = ({ onClose }) => {
 
         {/* 底部悬浮按钮 */}
         <button
-          className="absolute -bottom-[70px] left-1/2 z-[100] w-full -translate-x-1/2 rounded-full bg-[#47aeef] px-2 pb-4 pt-5 text-base font-bold text-white active:opacity-80"
+          className="absolute -bottom-[70px] left-1/2 z-[100] w-full -translate-x-1/2 rounded-full bg-brand px-2 pb-4 pt-5 text-base font-bold text-white active:opacity-80"
           onClick={handleNext}
         >
           {step === 0 ? "Next" : "Got it"}

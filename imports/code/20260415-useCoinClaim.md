@@ -1,6 +1,6 @@
 ---
 title: useCoinClaim
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: ts
 original: useCoinClaim.ts
@@ -10,7 +10,7 @@ original: useCoinClaim.ts
 
 ```ts
 import { useCallback, useEffect, useRef, useState } from "react";
-import { UserServiceCommonCode } from "@sitin/api-proto/gen/archat_api/user_api";
+import { UserServiceCommonCode } from "@heyhru/business-pwa-proto/gen/archat_api/user_api";
 import { claimWaitingCoin } from "@/http/userApi";
 import { toast } from "@/utils/toast";
 import { useUser } from "@/hooks/useUser";

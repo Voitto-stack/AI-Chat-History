@@ -1,6 +1,6 @@
 ---
 title: showApkDownloadModal
-date: 2026-04-15T17:04:50+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: tsx
 original: showApkDownloadModal.tsx
@@ -16,6 +16,8 @@ import { isApp } from "@/utils/bridge";
 import { DragHandle } from "./DragHandle";
 import Button from "./Button";
 import { useModal } from "@/hooks/useModal";
+import { bpTrack } from "@/tracking";
+import { EventName } from "@/tracking/events";
 import guideImage1 from "@/assets/images/task_detail/ic_install_apk_guide_1.webp";
 import guideImage2 from "@/assets/images/task_detail/ic_install_apk_guide_2.webp";
 import guideImage3 from "@/assets/images/task_detail/ic_install_apk_guide_3.webp";
@@ -28,6 +30,7 @@ const MODAL_ID = "apk-download-modal";
 
 interface ApkDownloadModalProps {
   onClose: () => void;
+  from: string;
 }
 
 // 引导步骤
@@ -55,12 +58,39 @@ const GUIDE_STEPS = [
 ];
 
 // eslint-disable-next-line react-refresh/only-export-components
-function ApkDownloadModalContent({ onClose }: ApkDownloadModalProps) {
+function ApkDownloadModalContent({ onClose, from }: ApkDownloadModalProps) {
   const [showGuide, setShowGuide] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
 
+  // 埋点：APK 安装弹窗展示
+  useEffect(() => {
+    bpTrack(EventName.pwa_apk_install_show, { from });
+    bpTrack(EventName.pwa_earnings_apk_installation_mission_brief_page_show, { from });
+    // 广告埋点：下载 APK 弹窗显示
+    bpTrack(EventName.pwa_conv_download_apk_pop_show);
+    bpTrack(EventName.ad_pwa_conv_download_apk_pop_show);
+    // 最终 APK 弹窗显示
+    bpTrack(EventName.pwa_conv_final_apk_pop_show);
+
+    return () => {
+      // 弹窗关闭时埋点
+      bpTrack(EventName.pwa_conv_final_apk_pop_close);
+    };
+  }, []);
+
   const handleClick = useCallback(() => {
     setShowGuide(true);
+    // 埋点：APK 安装按钮点击
+    bpTrack(EventName.pwa_apk_install_click, { from });
+    bpTrack(EventName.pwa_earnings_apk_installation_install_button_clicked, {
+      apk_install_task_status: "not_installed",
+    });
+    // 广告埋点：下载 APK 弹窗按钮点击
+    bpTrack(EventName.pwa_conv_download_apk_pop_clickButton);
+    bpTrack(EventName.ad_pwa_conv_download_apk_pop_clickButton);
+    // 最终 APK 下载点击
+    bpTrack(EventName.pwa_conv_final_apk_download_click);
+
     // 下载前将登录信息复制到剪贴板，APK 启动时自动读取
     copyLoginInfoToClipboard();
     const downloadUrl = import.meta.env.VITE_APK_DOWNLOAD_URL || "";
@@ -115,7 +145,7 @@ function ApkDownloadModalContent({ onClose }: ApkDownloadModalProps) {
               <div
                 key={index}
                 className={`w-1.5 h-1.5 rounded-full transition-colors ${
-                  index === currentStep ? "bg-[#47AEEF]" : "bg-[rgba(60,60,67,0.3)]"
+                  index === currentStep ? "bg-brand" : "bg-[rgba(60,60,67,0.3)]"
                 }`}
               />
             ))}
@@ -134,8 +164,8 @@ function ApkDownloadModalContent({ onClose }: ApkDownloadModalProps) {
               <img src="/apkLogo192.png" alt="App Icon" className="w-[55px] h-[55px] rounded-full" />
               <div className="flex flex-col items-start ml-3 gap-1">
                 <span className="text-[rgba(1,34,105,0.5)] text-xs font-semibold">Task</span>
-                <span className="text-[#012269] text-sm font-semibold">Install GraceChat App</span>
-                <span className="px-2 py-0.5 rounded-[10px] bg-[#47AEEF] text-white text-[10px] font-medium">
+                <span className="text-brand text-sm font-semibold">Install GraceChat App</span>
+                <span className="px-2 py-0.5 rounded-[10px] bg-brand text-white text-[10px] font-medium">
                   In Progress
                 </span>
               </div>
@@ -144,14 +174,14 @@ function ApkDownloadModalContent({ onClose }: ApkDownloadModalProps) {
             {/* 奖励信息卡片 */}
             <div className="flex flex-col mt-6 rounded-[14px] bg-[#D1EDFF]">
               <div className="flex items-center px-3.5 py-[18px]">
-                <span className="flex-grow text-[#012269] text-sm font-medium">Total Reward</span>
+                <span className="flex-grow text-brand-dark text-sm font-medium">Total Reward</span>
                 <span className="text-[rgba(1,34,105,0.5)] text-xl" style={{ fontFamily: "RacingSansOne, serif" }}>
                   $0.80
                 </span>
               </div>
               <div className="w-full h-px bg-[#EFF9FF]" />
               <div className="flex items-center px-3.5 py-[18px]">
-                <span className="flex-grow text-[#012269] text-sm font-medium">Estimated Time</span>
+                <span className="flex-grow text-brand-dark text-sm font-medium">Estimated Time</span>
                 <span className="text-[rgba(1,34,105,0.5)] text-xl" style={{ fontFamily: "RacingSansOne, serif" }}>
                   2 mins
                 </span>
@@ -173,7 +203,7 @@ function ApkDownloadModalContent({ onClose }: ApkDownloadModalProps) {
             <Button onClick={handleClick} variant="primary">
               Download APP & Cash Out
             </Button>
-            <div className="text-center text-[#012269] text-sm h-[38px] flex items-center justify-center -mx-5">
+            <div className="text-center text-brand-dark text-sm h-[38px] flex items-center justify-center -mx-5">
               Claim Your Final $0.8 to Cash out
             </div>
           </div>
@@ -183,7 +213,7 @@ function ApkDownloadModalContent({ onClose }: ApkDownloadModalProps) {
   );
 }
 
-export function showApkDownloadModal(onClose?: () => void): void {
+export function showApkDownloadModal(from: string, onClose?: () => void): void {
   // 如果已经在 App 内，不显示下载弹窗
   if (isApp()) {
     console.log("已在 App 内运行，无需显示 APK 下载弹窗");
@@ -197,7 +227,7 @@ export function showApkDownloadModal(onClose?: () => void): void {
     onClose?.();
   };
 
-  modalStore.open(MODAL_ID, <ApkDownloadModalContent onClose={handleClose} />, { variant: "bottom-sheet", onClose });
+  modalStore.open(MODAL_ID, <ApkDownloadModalContent onClose={handleClose} from={from} />, { variant: "bottom-sheet", onClose });
 }
 
 ```

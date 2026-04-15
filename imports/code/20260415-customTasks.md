@@ -1,6 +1,6 @@
 ---
 title: customTasks
-date: 2026-04-15T17:04:50+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: ts
 original: customTasks.ts
@@ -19,10 +19,6 @@ import { TaskId } from "@/types/task";
 
 // 自定义任务ID列表（需要跨设备同步状态的任务）
 export const CUSTOM_TASK_IDS = [
-  // TaskId.CameraPermission,
-  // TaskId.MicrophonePermission,
-  // TaskId.InstallApk,
-  // TaskId.FaceVerify,
   TaskId.SecondEarn,
   TaskId.ThirdEarn,
   TaskId.FourthEarn,

@@ -1,6 +1,6 @@
 ---
 title: vision_wasm_nosimd_internal
-date: 2026-04-15T17:04:49+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: js
 original: vision_wasm_nosimd_internal.js

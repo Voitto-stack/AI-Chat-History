@@ -1,6 +1,6 @@
 ---
 title: OnboardingTaskList
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:31+08:00
 source: import
 language: tsx
 original: OnboardingTaskList.tsx
@@ -15,9 +15,7 @@ original: OnboardingTaskList.tsx
 
 import { FC, useMemo } from "react";
 import { useTask } from "@/hooks/useTask";
-import { useUser } from "@/hooks/useUser";
 import { TaskId, ITask, TaskStatus } from "@/types/task";
-import { UserThirdPartyLoginState } from "@sitin/api-proto/gen/archat_api/user_api";
 import { formatReward, formatTime } from "@/utils/format";
 
 // 导入图片资源
@@ -39,16 +37,12 @@ const TASK_THEMES = [
 
 // Onboarding 任务配置
 const ONBOARDING_TASKS = [
-  { id: TaskId.LinkGoogleAccount, title: "Link your Google account" },
   { id: TaskId.BindInsAccount, title: "Authorize Instagram" },
-  { id: TaskId.LocationPermission, title: "Allow Location Access" },
-  { id: TaskId.CompleteProfile, title: "Complete My Profile" },
-  { id: TaskId.InstallApk, title: "Install Apk" },
+  { id: TaskId.CompleteProfile, title: "Complete Profile" },
   { id: TaskId.RecordFirstVoiceMessage, title: "Scenario 1 Record A Voice Greeting" },
-  { id: TaskId.NotificationPermission, title: "Turn On Notifications" },
+  { id: TaskId.NotificationPermission, title: "Enable Notifications" },
   { id: TaskId.RecordSecondVoiceMessage, title: "Scenario 2 Record A Voice Greeting" },
   { id: TaskId.RecordThirdVoiceMessage, title: "Scenario 3 Record A Voice Greeting" },
-  { id: TaskId.FaceVerify, title: "Identity Verification" },
   { id: TaskId.RecordForthVoiceMessage, title: "Scenario 4 Record A Voice Greeting" },
 ] as const;
 
@@ -104,22 +98,15 @@ const OnboardingTaskCard: FC<TaskCardProps> = ({ task, index, onClick }) => {
 
 export const OnboardingTaskList = () => {
   const { tasks, handleTaskAction } = useTask();
-  const { userInfo } = useUser();
 
   // 过滤未完成的任务
   const displayTasks = useMemo(
     () =>
       ONBOARDING_TASKS.map((config) => tasks.get(config.id)).filter((task): task is ITask => {
         if (!task || task.status === TaskStatus.finish) return false;
-
-        // LinkGoogleAccount 任务只在未授权时显示
-        if (task.id === TaskId.LinkGoogleAccount) {
-          return userInfo?.userThirdPartyLoginState === UserThirdPartyLoginState.USER_UNAUTHORIZED;
-        }
-
         return true;
       }),
-    [tasks, userInfo],
+    [tasks],
   );
 
   if (displayTasks.length === 0) return null;

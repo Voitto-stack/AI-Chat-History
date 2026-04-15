@@ -1,6 +1,6 @@
 ---
 title: ConfirmDialog
-date: 2026-04-15T17:04:50+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: tsx
 original: ConfirmDialog.tsx
@@ -63,8 +63,8 @@ export function showConfirmDialog(options: {
             render()
           ) : title && content ? (
             <>
-              <span className="mt-2 text-[#012269] font-bold text-[15px] leading-[22px] text-center">{title}</span>
-              <span className="text-[#012269] font-light text-[15px] leading-[22px] text-center break-words">
+              <span className="mt-2 text-brand-dark font-bold text-[15px] leading-[22px] text-center">{title}</span>
+              <span className="text-brand-dark font-light text-[15px] leading-[22px] text-center break-words">
                 {content}
               </span>
             </>

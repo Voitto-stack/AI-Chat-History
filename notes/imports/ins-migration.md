@@ -1,6 +1,6 @@
 ---
 title: ins-migration
-date: 2026-04-15T17:04:49+08:00
+date: 2026-04-15T17:05:29+08:00
 source: import
 original: ins-migration.md
 ---

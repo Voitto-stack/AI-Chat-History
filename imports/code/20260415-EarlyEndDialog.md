@@ -1,6 +1,6 @@
 ---
 title: EarlyEndDialog
-date: 2026-04-15T17:04:50+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: tsx
 original: EarlyEndDialog.tsx
@@ -64,8 +64,8 @@ export const EarlyEndDialogContent: React.FC<EarlyEndDialogContentProps> = ({
 }) => {
   const desc =
     rejectedCount === 0
-      ? "Ending calls under 15s counts as a Decline. You will lose earnings."
-      : "Ending calls under 15s counts as a Decline. Declining calls frequently lowers your recommendation ranking.";
+      ? "Calls under 15 seconds are counted as declines and earn nothing."
+      : "Calls under 15 seconds are counted as declines. Declining calls frequently lowers your recommendation ranking.";
 
   return (
     <div className="flex w-[300px] flex-col items-center gap-5 rounded-[20px] bg-[#f8fcff] px-4 py-5">
@@ -79,7 +79,7 @@ export const EarlyEndDialogContent: React.FC<EarlyEndDialogContentProps> = ({
       </div>
       <div className="flex flex-col gap-2.5">
         <button
-          className="flex w-[260px] items-center justify-center rounded-full border-none bg-[#47aeef] px-4 py-4 text-[14px] font-medium leading-[1.14em] text-white transition-opacity active:opacity-80"
+          className="flex w-[260px] items-center justify-center rounded-full border-none bg-brand px-4 py-4 text-[14px] font-medium leading-[1.14em] text-white transition-opacity active:opacity-80"
           onClick={onContinue}
         >
           Continue Call
@@ -90,7 +90,7 @@ export const EarlyEndDialogContent: React.FC<EarlyEndDialogContentProps> = ({
             if (countdownFinish) {
               onEndCall();
             } else {
-              toast.info("Cannot Be End Right Now. Try It Later.");
+              toast.info("Can't end call right now. Try again soon.");
             }
           }}
         >
@@ -111,6 +111,7 @@ export interface ShowEarlyEndDialogParams {
   onEndCall: () => void;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const showEarlyEndDialog = (params: ShowEarlyEndDialogParams): void => {
   const modalStore = useModal.getState();
   let countdownFinish = params.countdownTime <= 0;
@@ -141,6 +142,7 @@ export const showEarlyEndDialog = (params: ShowEarlyEndDialogParams): void => {
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const closeEarlyEndDialog = (): void => {
   useModal.getState().close(MODAL_ID);
 };

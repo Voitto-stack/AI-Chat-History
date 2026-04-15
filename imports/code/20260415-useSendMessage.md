@@ -1,6 +1,6 @@
 ---
 title: useSendMessage
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: ts
 original: useSendMessage.ts
@@ -19,7 +19,7 @@ import type { Message } from "@tencentcloud/chat";
 import IMManager from "@/services/IMManager";
 import { sendGift } from "@/http/chatApi";
 import { CustomDescription } from "@/types/chatMessage";
-import { UserServiceCommonCode } from "@sitin/api-proto/gen/archat_api/user_api";
+import { UserServiceCommonCode } from "@heyhru/business-pwa-proto/gen/archat_api/user_api";
 
 interface GiftMessagePayloadData {
   giftName: string;

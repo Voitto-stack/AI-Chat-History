@@ -1,6 +1,6 @@
 ---
 title: chatListStore
-date: 2026-04-15T17:04:50+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: ts
 original: chatListStore.ts
@@ -11,7 +11,7 @@ original: chatListStore.ts
 ```ts
 import { create } from "zustand";
 import type { ChatListItem } from "@/hooks/chatList";
-import type { UserInfo, GetHumanChatFriendMatchCardInfoResponse } from "@sitin/api-proto/gen/archat_api/user_api";
+import type { UserInfo, GetHumanChatFriendMatchCardInfoResponse } from "@heyhru/business-pwa-proto/gen/archat_api/user_api";
 
 // 扩展 UserInfo，添加 matchCardInfo 缓存
 export interface UserInfoWithCache extends UserInfo {

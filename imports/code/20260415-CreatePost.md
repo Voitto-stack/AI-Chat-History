@@ -1,6 +1,6 @@
 ---
 title: CreatePost
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:31+08:00
 source: import
 language: tsx
 original: CreatePost.tsx
@@ -11,14 +11,18 @@ original: CreatePost.tsx
 ```tsx
 import { useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { CreatePostResult, PostPicture } from "@sitin/api-proto/gen/archat_api/post_api";
+import { CreatePostResult, PostPicture } from "@heyhru/business-pwa-proto/gen/archat_api/post_api";
 import { createPost, postSuggestedContent } from "@/http/postApi";
 import { compressImage } from "@/utils/fileUtils";
 import { usePost } from "@/hooks/usePost";
+import { useTask } from "@/hooks/useTask";
+import { useUser } from "@/hooks/useUser";
+import { TaskId } from "@/types/task";
 import { useLockFn } from "@/hooks/useLockFn";
 import { STORAGE_KEYS } from "@/constants/storageKeys";
 import { toast } from "@/utils/toast";
 import { goBack } from "@/utils/navigation";
+import { showRewardModalAsync } from "@/components/showRewardModal";
 import Layout from "@/components/Layout";
 import NavigationBar from "@/components/NavigationBar";
 import ImagePicker, { type ImagePickerRef } from "./ImagePicker";
@@ -28,6 +32,7 @@ function extractTextFromAiResponse(raw: string): string {
   try {
     const parsed = JSON.parse(raw);
     if (typeof parsed === "string") return parsed;
+    if (Array.isArray(parsed) && typeof parsed[0] === "string") return parsed[0];
     if (typeof parsed.text === "string") return parsed.text;
     if (typeof parsed.content === "string") return parsed.content;
     if (typeof parsed.caption === "string") return parsed.caption;
@@ -53,6 +58,8 @@ function checkPostCooldown(): boolean {
 export default function CreatePost() {
   const navigate = useNavigate();
   const { fetchMyPosts } = usePost();
+  const { finishTask, isTaskFinished, tasks } = useTask();
+  const { cash } = useUser();
   const imagePickerRef = useRef<ImagePickerRef>(null);
 
   const [content, setContent] = useState("");
@@ -155,12 +162,38 @@ export default function CreatePost() {
       console.log("[CreatePost] 发布帖子请求完成, 结果代码:", res.code, "消息:", res.message);
 
       switch (res.code) {
-        case CreatePostResult.SuccessResult:
+        case CreatePostResult.SuccessResult: {
           localStorage.setItem(STORAGE_KEYS.LAST_POST_TIME, Date.now().toString());
+          toast.success("Post shared successfully!");
+
+          // 收集待完成任务的总奖励
+          const originBalance = cash || 0;
+          let totalEarned = 0;
+          const pendingTasks: TaskId[] = [];
+          for (const id of [TaskId.PostPhoto, TaskId.FirstPost]) {
+            if (!isTaskFinished(id)) {
+              totalEarned += parseFloat(tasks.get(id)?.reward || "0");
+              pendingTasks.push(id);
+            }
+          }
+
+          // 完成任务（不触发弹窗，已从白名单移除）
+          for (const id of pendingTasks) {
+            await finishTask(id);
+          }
+
           // Backend as SSoT
           await fetchMyPosts(true);
+
+          // 先导航离开
           goBack(navigate, "/me");
+
+          // 退出页面后弹一次奖励弹窗
+          if (totalEarned > 0) {
+            await showRewardModalAsync(originBalance, totalEarned);
+          }
           return;
+        }
 
         case CreatePostResult.FileSizeNotSupported:
           toast.error("Image is too large, please select another one");
@@ -180,21 +213,20 @@ export default function CreatePost() {
       }
     } catch (error) {
       console.error("[CreatePost] 发布帖子请求出错:", error);
-      toast.error("Network error, please try again");
+      toast.error("Connection error. Please check your internet and try again.");
     } finally {
       setIsSubmitting(false);
     }
-  }, [content, fetchMyPosts, navigate]);
+  }, [content, fetchMyPosts, navigate, finishTask, isTaskFinished, tasks, cash]);
 
   const handleSubmit = useLockFn(submitHandler);
 
   return (
     <Layout showTabBar={false}>
-      <div className="flex flex-col h-full bg-white">
+      <div className="flex flex-col h-full bg-surface">
         <NavigationBar
           leftIcon="close"
           onBack={() => goBack(navigate, "/me")}
-          showBorder={false}
           rightSlot={
             <button
               onClick={handleSubmit}
@@ -217,10 +249,16 @@ export default function CreatePost() {
         {/* 内容区 */}
         <div className="flex-1 flex flex-col gap-4 px-4 py-4 overflow-y-auto">
           <textarea
+            autoComplete="off"
             value={content}
             onChange={(e) => {
               hasUserTypedRef.current = true;
               setContent(e.target.value);
+              // 用户开始输入后取消正在进行的 AI 请求
+              if (isGenerating) {
+                requestSeqRef.current++;
+                setIsGenerating(false);
+              }
             }}
             placeholder="What's on your mind?"
             className="w-full min-h-[50px] text-base text-gray-900 placeholder:text-gray-400 font-light bg-transparent border-none outline-none resize-none"

@@ -1,6 +1,6 @@
 ---
 title: EarningDetailCards
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:31+08:00
 source: import
 language: tsx
 original: EarningDetailCards.tsx
@@ -17,6 +17,8 @@ import { isCallType } from "./utils";
 import { useEarningDetail } from "@/hooks/useEarningDetail";
 import Skeleton from "@/components/Skeleton";
 import Spinner from "@/components/Spinner";
+import { getUserInfos } from "@/http/userApi";
+import { useEarningUser } from "@/hooks/useEarningUser";
 import type { RecordItem, RecordType } from "./types";
 
 type GroupedRecord = RecordItem & { freeAmount: string };
@@ -31,6 +33,7 @@ export default function EarningDetailCards() {
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const navigate = useNavigate();
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const { setUserInfoBatch } = useEarningUser();
 
   useEffect(() => {
     if (!sentinelRef.current) return;
@@ -47,6 +50,35 @@ export default function EarningDetailCards() {
     observer.observe(sentinelRef.current);
     return () => observer.disconnect();
   }, [hasMore, loadMore]);
+
+  // 批量预加载用户信息
+  useEffect(() => {
+    // 收集所有需要显示头像的 userId（去重）
+    const userIds = new Set<number>();
+    records.forEach((record) => {
+      if (isCallType(record.type) && record.orders) {
+        record.orders.forEach((order) => {
+          if (order.maleUserId) {
+            userIds.add(order.maleUserId);
+          }
+        });
+      }
+    });
+
+    // 批量预加载用户信息
+    if (userIds.size > 0) {
+      getUserInfos(Array.from(userIds))
+        .then((response) => {
+          if (response.userInfos) {
+            setUserInfoBatch(response.userInfos);
+          }
+        })
+        .catch((error) => {
+          console.error("Failed to prefetch user info:", error);
+          // 预加载失败不影响功能，UserAvatar 会降级到单独请求
+        });
+    }
+  }, [records, setUserInfoBatch]);
 
   const toggleExpand = useCallback((key: string) => {
     setExpandedItems((prev) => {
@@ -95,7 +127,7 @@ export default function EarningDetailCards() {
   if (loading && records.length === 0) {
     return (
       <div>
-        <h2 className="text-base font-semibold text-[#012269] mb-2.5 ml-[22px]">Earnings Detail</h2>
+        <h2 className="text-base font-semibold text-brand-dark mb-2.5 ml-[22px]">Earnings Detail</h2>
         <div className="px-4">
           <Skeleton.RecordList count={3} />
         </div>
@@ -107,15 +139,17 @@ export default function EarningDetailCards() {
   if (!loading && records.length === 0) {
     return (
       <div>
-        <h2 className="text-base font-semibold text-[#012269] mb-2.5 ml-[22px]">Earnings Detail</h2>
-        <div className="mx-4 mt-3 p-4 rounded-xl bg-white text-center text-sm text-[#A2AFCA]">No earnings records</div>
+        <h2 className="text-base font-semibold text-brand-dark mb-2.5 ml-[22px]">Earnings Detail</h2>
+        <div className="mx-4 mt-3 p-4 rounded-xl bg-surface text-center text-sm text-[#A2AFCA]">
+          No earnings records
+        </div>
       </div>
     );
   }
 
   return (
     <div>
-      <h2 className="text-base font-semibold text-[#012269] mb-2.5 ml-[22px]">Earnings Detail</h2>
+      <h2 className="text-base font-semibold text-brand-dark mb-2.5 ml-[22px]">Earnings Detail</h2>
       {Object.keys(recordsByDate)
         .sort((a, b) => b.localeCompare(a))
         .map((date) => {
@@ -127,8 +161,8 @@ export default function EarningDetailCards() {
               onClick={() => handleDateClick(date)}
             >
               <div className="flex justify-between items-center pb-2.5 mb-2.5 border-b border-dashed border-[#e0e0e0]">
-                <span className="text-xs font-bold text-[#012269]">{date}</span>
-                <span className="text-xs font-medium text-[#012269]">${dailyTotal(dayRecords)}</span>
+                <span className="text-xs font-bold text-brand-dark">{date}</span>
+                <span className="text-xs font-medium text-brand-dark">${dailyTotal(dayRecords)}</span>
               </div>
               {Object.entries(dayRecords)
                 .filter(([, item]) => !(item.type === ("Other" as RecordType) && item.amount <= 0))

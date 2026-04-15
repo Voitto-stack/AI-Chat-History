@@ -1,6 +1,6 @@
 ---
 title: useCheckFreeCallDuration
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: ts
 original: useCheckFreeCallDuration.ts
@@ -25,7 +25,7 @@ import { useCallback, useEffect, useRef } from "react";
 import {
   CheckUserFreeCallDurationRequest,
   CheckUserFreeCallDurationResponse,
-} from "@sitin/api-proto/gen/archat_api/user_api";
+} from "@heyhru/business-pwa-proto/gen/archat_api/user_api";
 import httpClient from "@/http/httpClient";
 import { useCall } from "@/hooks/useCall";
 import { isApp, notifyCallType } from "@/utils/bridge";

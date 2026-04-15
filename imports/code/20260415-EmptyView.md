@@ -1,6 +1,6 @@
 ---
 title: EmptyView
-date: 2026-04-15T17:04:50+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: tsx
 original: EmptyView.tsx
@@ -19,7 +19,7 @@ interface EmptyViewProps {
 
 export default function EmptyView({
   emptyIcon = icEmptyData,
-  emptyText = "No data available",
+  emptyText = "Nothing here yet",
   className = "",
 }: EmptyViewProps) {
   return (

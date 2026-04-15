@@ -1,6 +1,6 @@
 ---
 title: postStore
-date: 2026-04-15T17:04:50+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: ts
 original: postStore.ts
@@ -14,7 +14,7 @@ original: postStore.ts
  */
 
 import { create } from "zustand";
-import { Post } from "@sitin/api-proto/gen/archat_api/post_api";
+import { Post } from "@heyhru/business-pwa-proto/gen/archat_api/post_api";
 
 interface PostState {
   myPosts: Post[];

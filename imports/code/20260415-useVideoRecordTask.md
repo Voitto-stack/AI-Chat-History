@@ -1,6 +1,6 @@
 ---
 title: useVideoRecordTask
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: tsx
 original: useVideoRecordTask.tsx
@@ -14,7 +14,7 @@ import {
   CreateCloudRecordingResponse,
   DeleteCloudRecordingRequest,
   DeleteCloudRecordingResponse,
-} from "@sitin/api-proto/gen/archat_api/data_bridge_api";
+} from "@heyhru/business-pwa-proto/gen/archat_api/data_bridge_api";
 import httpClient from "@/http/httpClient";
 import { useRef } from "react";
 

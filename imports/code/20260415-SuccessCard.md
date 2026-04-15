@@ -1,6 +1,6 @@
 ---
 title: SuccessCard
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:31+08:00
 source: import
 language: tsx
 original: SuccessCard.tsx
@@ -10,6 +10,9 @@ original: SuccessCard.tsx
 
 ```tsx
 import Button from "@/components/Button";
+import { useEffect } from "react";
+import { bpTrack } from "@/tracking";
+import { EventName } from "@/tracking/events";
 
 interface SuccessCardProps {
   open: boolean;
@@ -17,6 +20,13 @@ interface SuccessCardProps {
 }
 
 export default function SuccessCard({ open, onFinish }: SuccessCardProps) {
+  // 埋点：验证成功结果页展示
+  useEffect(() => {
+    if (open) {
+      bpTrack(EventName.pwa_scan_face_result_page_show);
+    }
+  }, [open]);
+
   if (!open) return null;
 
   return (
@@ -31,8 +41,8 @@ export default function SuccessCard({ open, onFinish }: SuccessCardProps) {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
         </svg>
 
-        <h2 className="text-2xl font-bold text-[#012269] mb-2">YOU'RE VERIFIED!</h2>
-        <p className="text-[15px] text-[rgba(1,34,105,0.6)] mb-8">Ready to cashout to PayPal</p>
+        <h2 className="text-2xl font-bold text-brand-dark mb-2">Verified!</h2>
+        <p className="text-[15px] text-[rgba(1,34,105,0.6)] mb-8">You can now cash out to PayPal</p>
 
         <Button onClick={onFinish} variant="primary">
           Continue

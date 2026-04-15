@@ -1,6 +1,6 @@
 ---
 title: useCheckGCCoin
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: ts
 original: useCheckGCCoin.ts
@@ -14,7 +14,7 @@ import {
   GetMaleUserBalanceRequest,
   GetMaleUserBalanceResponse,
   UserServiceCommonCode,
-} from "@sitin/api-proto/gen/archat_api/user_api";
+} from "@heyhru/business-pwa-proto/gen/archat_api/user_api";
 import { delay } from "../utils/callUtils";
 import webCallManager from "../utils/webCallManager";
 import { CallState } from "@/types/call";

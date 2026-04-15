@@ -1,6 +1,6 @@
 ---
 title: userStore
-date: 2026-04-15T17:04:50+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: ts
 original: userStore.ts
@@ -11,7 +11,7 @@ original: userStore.ts
 ```ts
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { UserInfo } from "@sitin/api-proto/gen/archat_api/user_api";
+import { UserInfo } from "@heyhru/business-pwa-proto/gen/archat_api/user_api";
 import { STORAGE_KEYS, clearUserLocalStorage } from "@/constants/storageKeys";
 
 export enum UserState {

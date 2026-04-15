@@ -1,6 +1,6 @@
 ---
 title: ExitCallModal
-date: 2026-04-15T17:04:50+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: tsx
 original: ExitCallModal.tsx
@@ -20,6 +20,8 @@ import { FinalWarningModalContent } from "./FinalWarningModal";
 import { EarlyEndDialogContent } from "./EarlyEndDialog";
 import { ConfirmEndCallContent } from "./ConfirmEndCallModal";
 import { STORAGE_KEYS } from "../constants/storageKeys";
+import { bpTrack } from "@/tracking";
+import { EventName } from "@/tracking/events";
 
 /**
  * ExitCallModal - 退出通话确认弹窗
@@ -85,6 +87,16 @@ const ExitCallModalContent: React.FC<ExitCallModalProps> = ({
   const [countdownFinish, setCountdownFinish] = useState(countdownTime <= 0);
   const [isShowLimitModal, setIsShowLimitModal] = useState(false);
   const { cash } = useCash();
+
+  // 埋点：退出通话对话框显示
+  useEffect(() => {
+    bpTrack(EventName.pwa_video_call_quit_dialog_show, {
+      is_user_hangup: isUserHangup,
+      is_30_hint: is30Hint,
+      is_15_hint: is15Hint || false,
+      call_type: callTypeLabel,
+    });
+  }, [isUserHangup, is30Hint, is15Hint, callTypeLabel]);
 
   /** 带倒计时检查的结束通话 → 进入二次确认 */
   const handleCloseTimeModal = useCallback(() => {
@@ -228,10 +240,18 @@ export const showExitCallModal = (params: ShowExitCallModalParams): void => {
       {...params}
       onClose={handleClose}
       onEndCall={() => {
+        // 埋点：退出通话对话框 - 结束通话点击
+        bpTrack(EventName.pwa_video_call_quit_dialog_end_call_click, {
+          call_type: params.callTypeLabel,
+        });
         handleClose();
         params.onEndCall();
       }}
       onContinue={() => {
+        // 埋点：退出通话对话框 - 保持收益点击
+        bpTrack(EventName.pwa_video_call_quit_dialog_keep_earing_click, {
+          call_type: params.callTypeLabel,
+        });
         handleClose();
         params.onContinue();
       }}

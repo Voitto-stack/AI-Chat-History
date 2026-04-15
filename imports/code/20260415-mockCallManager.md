@@ -1,6 +1,6 @@
 ---
 title: mockCallManager
-date: 2026-04-15T17:04:50+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: ts
 original: mockCallManager.ts
@@ -23,10 +23,13 @@ import webCallManager from "@/utils/webCallManager";
 import { CallState, MockCallType, MockCallState, type MockConnectSession } from "@/types/call";
 import { getCallStoreState } from "@/hooks/useCall";
 import { getUserStoreState } from "@/hooks/useUser";
-import { MockVideoSource } from "@sitin/api-proto/gen/archat_api/user_api";
+import { MockVideoSource } from "@heyhru/business-pwa-proto/gen/archat_api/user_api";
 import { checkCameraAndMicPermission } from "@/utils/callUtils";
 import { STORAGE_KEYS } from "@/constants/storageKeys";
 import nativeCallManager from "@/utils/nativeCallManager";
+import { bpTrack } from "@/tracking";
+import { EventName } from "@/tracking/events";
+import { getLiveStoreState } from "@/hooks/useLive";
 
 const TAG = "MockCallManager";
 
@@ -174,6 +177,15 @@ class MockCallManagerClass {
       // 发出 MOCK_CALL_INVITED 事件，由 useMockCall 处理 navigate
       eventBus.emit(EventNames.MOCK_CALL_INVITED, this.connectSession);
 
+      // 埋点：Mock 通话接收
+      bpTrack(EventName.pwa_mock_call_receive, {
+        mock_type: type,
+        video_id: videoResponse.id,
+        remaining_count: videoResponse.count,
+        price: price,
+        source: getSource(),
+      });
+
       console.log(TAG, "Mock 通话发起成功", this.connectSession);
       return true;
     } catch (error) {
@@ -200,6 +212,18 @@ class MockCallManagerClass {
     };
 
     eventBus.emit(EventNames.MOCK_CALL_BEGIN, this.connectSession);
+
+    // 埋点：Mock 通话接听
+    bpTrack(EventName.pwa_mock_call_answer, {
+      mock_type: this.connectSession.mockCallType,
+      video_id: this.connectSession.mockVideoId,
+      order_id: this.connectSession.orderId,
+      price_per_min: this.connectSession.price,
+      call_source: this.connectSession.source,
+      Pwa_live_sate: getLiveStoreState().liveState,
+      action_type: "accept",
+    });
+
     console.log(TAG, "Mock 通话已连接");
   }
 
@@ -213,6 +237,8 @@ class MockCallManagerClass {
     }
 
     const _now = Date.now();
+    const duration = this.connectSession.callBeginTime > 0 ? (_now - this.connectSession.callBeginTime) / 1000 : 0;
+
     this.connectSession = {
       ...this.connectSession,
       callState: MockCallState.Ended,
@@ -220,6 +246,19 @@ class MockCallManagerClass {
     };
 
     eventBus.emit(EventNames.MOCK_CALL_ENDED, this.connectSession);
+
+    // 埋点：Mock 通话结果
+    bpTrack(EventName.pwa_mock_result, {
+      mock_type: this.connectSession.mockCallType,
+      video_id: this.connectSession.mockVideoId,
+      order_id: this.connectSession.orderId,
+      duration: duration,
+      result: "user_hangup",
+      price_per_min: this.connectSession.price,
+      call_source: this.connectSession.source,
+      Pwa_live_sate: getLiveStoreState().liveState,
+    });
+
     console.log(TAG, "Mock 通话已结束");
   }
 

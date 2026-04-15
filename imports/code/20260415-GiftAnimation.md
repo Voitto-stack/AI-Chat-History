@@ -1,6 +1,6 @@
 ---
 title: GiftAnimation
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:31+08:00
 source: import
 language: tsx
 original: GiftAnimation.tsx

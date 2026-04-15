@@ -1,6 +1,6 @@
 ---
 title: CashoutProcessingModal
-date: 2026-04-15T17:04:50+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: tsx
 original: CashoutProcessingModal.tsx
@@ -19,17 +19,17 @@ import Lottie from "lottie-react";
 import ProgressBar from "@/components/ProgressBar";
 import { useCashoutStore } from "@/stores/cashoutStore";
 import { useCashout } from "@/hooks/useCashout";
-import { bpTrack } from "@/tracking/api/byteplus";
-import { EventName } from "@/tracking/events";
 import { useUser } from "@/hooks/useUser";
 import { CashoutStage, USPaypalAccountType } from "@/types/cashout";
 import { normalMediumWithdraw } from "@/http/cashoutApi";
 import { checkLocationPermission } from "@/utils/permissions";
 import { getGeocodeInfo } from "@/utils/locationUtils";
-import { UserServiceCommonCode } from "@sitin/api-proto/gen/archat_api/user_api";
+import { UserServiceCommonCode } from "@heyhru/business-pwa-proto/gen/archat_api/user_api";
 import { toast } from "@/utils/toast";
 import { STORAGE_KEYS } from "@/constants/storageKeys";
 import { formatNumber } from "@/utils/format";
+import { bpTrack } from "@/tracking";
+import { EventName } from "@/tracking/events";
 
 // 导入资源
 import aniLoading from "@/assets/animation/ani_loading_cash_processing.json";
@@ -85,7 +85,7 @@ export const CashoutProcessingModal = ({ amount, onSuccess, onFailed }: CashoutP
     try {
       // 检查 PayPal 账户
       if (!paypalAccount) {
-        toast.error("PayPal account not found. Please bind your account first.");
+        toast.error("No PayPal account linked. Please link your account first.");
         onFailed?.();
         return;
       }
@@ -113,6 +113,19 @@ export const CashoutProcessingModal = ({ amount, onSuccess, onFailed }: CashoutP
         allowPayment = true;
       }
 
+      // 埋点：提现审核申请
+      bpTrack(EventName.pwa_withdraw_audit_apply, {
+        // 新参数（更详细的上下文）
+        amount: formatNumber(Number(amount), 2),
+        paypal_account: paypalAccount,
+        allow_payment: allowPayment,
+        is_lbs_america: isLbsAmerica,
+        us_paypal_account_type: usPaypalAccountType,
+        will_cashout_stage: willCashoutStage,
+        // 旧参数（用于数据连续性）
+        withdraw_amount: formatNumber(Number(amount), 2), // 与amount保持一致
+      });
+
       // 调用提现接口
       const formattedAmount = formatNumber(Number(amount), 2);
       const response = await normalMediumWithdraw({
@@ -126,37 +139,46 @@ export const CashoutProcessingModal = ({ amount, onSuccess, onFailed }: CashoutP
         response.code === UserServiceCommonCode.Success ||
         response.code === UserServiceCommonCode.UserServiceCommonCodeNone
       ) {
-        // 提现成功，更新 willCashoutStage 到下一阶段
-        await finishWillCashoutStage();
-
-        // 埋点：提现成功
-        bpTrack(EventName.bff_cash_out_referral_bonus_result, {
-          result: true,
-          amount: Number(amount),
+        // 埋点：提现审核成功
+        bpTrack(EventName.pwa_withdraw_audit_success, {
+          amount: formattedAmount,
+          paypal_account: paypalAccount,
+          will_cashout_stage: willCashoutStage,
         });
 
+        // 提现成功，更新 willCashoutStage 到下一阶段
+        await finishWillCashoutStage();
         setShowNotification(true);
         setTimeout(() => {
           onSuccess?.();
         }, 5000);
       } else {
-        // 埋点：提现失败
-        bpTrack(EventName.bff_cash_out_referral_bonus_result, {
-          result: false,
-          amount: Number(amount),
-          reason: "paypal",
+        toast.error(response.message || "Unable to process withdrawal. Please try again.");
+
+        // 埋点：提现审核失败
+        bpTrack(EventName.pwa_withdraw_audit_failed, {
+          amount: formattedAmount,
+          paypal_account: paypalAccount,
+          error_code: response.code,
+          error_message: response.message || "Unknown error",
         });
+
         toast.error(response.message || "Cash out failed!");
         onFailed?.();
       }
     } catch (error) {
       console.error("Cash out error:", error);
-      // 埋点：提现异常
-      bpTrack(EventName.bff_cash_out_referral_bonus_result, {
-        result: false,
-        amount: Number(amount),
-        reason: "unknown",
+      toast.error("Unable to process withdrawal. Please try again.");
+
+
+      // 埋点：提现审核失败（异常）
+      bpTrack(EventName.pwa_withdraw_audit_failed, {
+        amount: formatNumber(Number(amount), 2),
+        paypal_account: paypalAccount,
+        error_code: -1,
+        error_message: error instanceof Error ? error.message : "Unknown error",
       });
+
       toast.error("Cash out failed!");
       onFailed?.();
     }
@@ -194,7 +216,18 @@ export const CashoutProcessingModal = ({ amount, onSuccess, onFailed }: CashoutP
               <div key={index} className="flex items-start gap-2">
                 {/* 步骤图标 */}
                 <div className="relative z-10 flex items-center justify-center w-5 h-5 rounded-full bg-[#f2f2f7] flex-shrink-0">
-                  {currentStep >= index ? (
+                  {index < currentStep ? (
+                    <svg className="w-5 h-5" viewBox="0 0 20 20" fill="none">
+                      <circle cx="10" cy="10" r="10" fill="#35D193" />
+                      <path
+                        d="M5.5 10l3 3 6-6"
+                        stroke="white"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  ) : index === currentStep ? (
                     <Lottie
                       animationData={aniLoading}
                       className="w-5 h-5 mt-[2px]"

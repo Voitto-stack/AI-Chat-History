@@ -1,6 +1,6 @@
 ---
 title: ViolationLimitModal
-date: 2026-04-15T17:04:50+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: tsx
 original: ViolationLimitModal.tsx
@@ -9,9 +9,14 @@ original: ViolationLimitModal.tsx
 # ViolationLimitModal
 
 ```tsx
+/* eslint-disable react-refresh/only-export-components */
 import { useCallback } from "react";
+
+import { useEffect } from "react";
 import { useModal } from "@/hooks/useModal";
 import type { PopupTextConfig } from "@/hooks/useVoiceModeration";
+import { bpTrack } from "@/tracking";
+import { EventName } from "@/tracking/events";
 
 /**
  * ViolationLimitModal - 违规限制弹窗
@@ -46,6 +51,13 @@ interface ViolationLimitModalProps {
   onAnswer?: () => void; // 确认回调
   onClose: () => void; // 关闭回调（确认按钮也会调用）
   onForfeit?: () => void; // 放弃按钮独立回调（不传则 fallback 到 onClose）
+  // 通话上下文（用于埋点）
+  callContext?: {
+    target_user_id?: string;
+    roomid?: string;
+    current_call_duration?: number;
+    violation_type?: string;
+  };
 }
 
 /**
@@ -97,7 +109,22 @@ export const ViolationLimitModalContent: React.FC<ViolationLimitModalProps> = ({
   onAnswer,
   onClose,
   onForfeit,
+  callContext,
 }) => {
+  // 埋点：实时违规弹窗显示
+  useEffect(() => {
+    bpTrack(EventName.pwa_call_real_time_violation_pop_up_show, {
+      rejected_count: rejectedCount,
+      warning_message: warning,
+      ...(callContext?.target_user_id && { target_user_id: callContext.target_user_id }),
+      ...(callContext?.roomid && { roomid: callContext.roomid }),
+      ...(callContext?.current_call_duration !== undefined && {
+        current_call_duration: callContext.current_call_duration,
+      }),
+      ...(callContext?.violation_type && { violation_type: callContext.violation_type }),
+    });
+  }, [rejectedCount, warning, callContext]);
+
   // rerender-use-callback: 稳定确认按钮回调
   const handleAnswer = useCallback(() => {
     onAnswer?.();
@@ -158,7 +185,20 @@ export const ViolationLimitModalContent: React.FC<ViolationLimitModalProps> = ({
         {answerText ? (
           <button
             className="mt-2 w-full rounded-full border-none bg-[#47aeef] px-0 py-3.5 text-lg font-medium text-white"
-            onClick={handleAnswer}
+            onClick={() => {
+              // 埋点：实时扣款 - 选择继续
+              bpTrack(EventName.pwa_call_real_time_deduct_Earnings, {
+                action: "continue",
+                rejected_count: rejectedCount,
+                ...(callContext?.target_user_id && { target_user_id: callContext.target_user_id }),
+                ...(callContext?.roomid && { roomid: callContext.roomid }),
+                ...(callContext?.current_call_duration !== undefined && {
+                  current_call_duration: callContext.current_call_duration,
+                }),
+                ...(callContext?.violation_type && { violation_type: callContext.violation_type }),
+              });
+              handleAnswer();
+            }}
           >
             {answerText}
           </button>
@@ -167,7 +207,20 @@ export const ViolationLimitModalContent: React.FC<ViolationLimitModalProps> = ({
         {/* 关闭按钮 */}
         <button
           className="mt-2 w-full rounded-full border-none bg-[#f2f2f7] px-0 py-3.5 text-xs font-medium text-[rgba(60,60,67,0.6)]"
-          onClick={onForfeit ?? onClose}
+          onClick={() => {
+            // 埋点：实时扣款 - 选择放弃
+            bpTrack(EventName.pwa_call_real_time_deduct_Earnings, {
+              action: "forfeit",
+              rejected_count: rejectedCount,
+              ...(callContext?.target_user_id && { target_user_id: callContext.target_user_id }),
+              ...(callContext?.roomid && { roomid: callContext.roomid }),
+              ...(callContext?.current_call_duration !== undefined && {
+                current_call_duration: callContext.current_call_duration,
+              }),
+              ...(callContext?.violation_type && { violation_type: callContext.violation_type }),
+            });
+            (onForfeit ?? onClose)();
+          }}
         >
           {closeText}
         </button>
@@ -182,10 +235,12 @@ export const ViolationLimitModalContent: React.FC<ViolationLimitModalProps> = ({
  * @param params 违规弹窗配置（由 useVoiceModeration 的 onVoiceViolation 回调传入）
  * @param onAnswer 确认回调
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export const showViolationLimitModal = (
   params: PopupTextConfig & { warning?: string },
   onAnswer?: () => void,
   onForfeit?: () => void,
+  callContext?: ViolationLimitModalProps["callContext"],
 ): void => {
   const modalStore = useModal.getState();
 
@@ -211,6 +266,7 @@ export const showViolationLimitModal = (
       closeText={params.closeText}
       onAnswer={onAnswer}
       onClose={handleClose}
+      callContext={callContext}
     />,
     { variant: "center" },
   );
@@ -219,6 +275,7 @@ export const showViolationLimitModal = (
 /**
  * 关闭违规限制弹窗
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export const closeViolationLimitModal = (): void => {
   const modalStore = useModal.getState();
   modalStore.close(MODAL_ID);

@@ -1,6 +1,6 @@
 ---
 title: ConnectingHint
-date: 2026-04-15T17:04:50+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: tsx
 original: ConnectingHint.tsx
@@ -15,6 +15,8 @@ import { FC, useEffect, useState } from "react";
 import { useCall } from "@/hooks/useCall";
 import { CallType } from "@/types/call";
 import mockCallManager from "@/utils/mockCallManager";
+import { bpTrack } from "@/tracking";
+import { EventName } from "@/tracking/events";
 
 // 通话时薪常量（单位：$/小时）
 const AUDIO_CALL_HOURLY_RATE = 30; // 音频通话时薪
@@ -41,8 +43,16 @@ export const ConnectingHint: FC<ConnectingHintProps> = ({ callType }) => {
     calculatePrice();
   }, [callType, releasePrice]);
 
+  // 埋点：连接中提示展示
+  useEffect(() => {
+    bpTrack(EventName.pwa_video_call_connecting_show, {
+      call_type: callType === CallType.AUDIO_CALL ? "audio" : "video",
+      remote_user_id: remoteUserInfo?.userId || 0,
+    });
+  }, [callType, remoteUserInfo?.userId]);
+
   return (
-    <div className="flex flex-col font-[SFProDisplay] will-change-opacity transition-opacity duration-500 ease-out">
+    <div className="flex flex-col font-[Pangram] will-change-opacity transition-opacity duration-500 ease-out">
       <div className="flex flex-row items-center rounded-[18px] py-1.5 px-3 pl-1.5 bg-black/40 text-white will-change-[transform,opacity]">
         <img
           className="w-6 h-6 shrink-0 rounded-full object-cover"

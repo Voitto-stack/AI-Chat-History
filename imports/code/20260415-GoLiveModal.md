@@ -1,6 +1,6 @@
 ---
 title: GoLiveModal
-date: 2026-04-15T17:04:50+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: tsx
 original: GoLiveModal.tsx
@@ -9,6 +9,7 @@ original: GoLiveModal.tsx
 # GoLiveModal
 
 ```tsx
+/* eslint-disable react-refresh/only-export-components */
 import { useModal } from "@/hooks/useModal";
 
 /**
@@ -41,7 +42,7 @@ const GoLiveModalContent: React.FC<GoLiveModalProps> = ({ onEnable, onClose }) =
         </p>
       </div>
       <button
-        className="flex h-[50px] w-full items-center justify-center rounded-full border-none bg-[#47aeef] text-[15px] font-medium tracking-[0.1px] text-white shadow-[0_4px_12px_rgba(71,174,239,0.3)] active:scale-[0.98] active:opacity-80"
+        className="flex h-[50px] w-full items-center justify-center rounded-full border-none bg-brand text-[15px] font-medium tracking-[0.1px] text-white shadow-[0_4px_12px_rgba(71,174,239,0.3)] active:scale-[0.98] active:opacity-80"
         onClick={handleEnable}
         type="button"
       >

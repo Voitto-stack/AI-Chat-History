@@ -1,6 +1,6 @@
 ---
 title: cashoutPaypal
-date: 2026-04-15T17:04:50+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: ts
 original: cashoutPaypal.ts
@@ -17,7 +17,7 @@ import { getPaypalUserInfo } from "@/http/userApi";
 import { STORAGE_KEYS } from "@/constants/storageKeys";
 import { UserCloudStorage, UserCloudKey } from "@/services/userCloudStorage";
 
-const isProd = import.meta.env.PROD;
+const isProd = import.meta.env.MODE === "production";
 
 const prodClientId = "ATdvsNyAfsaHbFYCDzD7wx0ScX7ViaLG2Pgysn8LxZf2llt6USzuJgUFCOwF6nX-eEYjaARF4DPTgEHL";
 const sandboxClientId = "Af3VKoOJrxv9LLvHlOfumjUSXOGxJXegWEJlD4m2X0GkiTwbu7uUt5MSij7vzV1BE4iRNGFigZSAZW90";

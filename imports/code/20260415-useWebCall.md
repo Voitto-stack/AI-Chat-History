@@ -1,6 +1,6 @@
 ---
 title: useWebCall
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: tsx
 original: useWebCall.tsx
@@ -19,7 +19,7 @@ import { useNavigate } from "react-router-dom";
 import WebCallManager from "@/utils/webCallManager";
 import { CallType } from "@/types/call";
 import { eventBus, EventNames } from "@/utils/eventBus";
-import { showReceiveCallModal, closeReceiveCallModal } from "@/components/ReceiveCallModal";
+import { showReceiveCallModal, closeReceiveCallModal } from "@/components/receiveCallModalHelpers";
 import { closeCallRecordModal, showCallRecordModalAsync } from "@/components/CallRecordModal";
 import { showViolationLimitModal } from "@/components/ViolationLimitModal";
 import { checkCameraAndMicPermission, formatInTimeZone } from "@/utils/callUtils";
@@ -46,7 +46,7 @@ import { processCallRecord } from "@/utils/callUtils";
 import { useLive, LiveState } from "@/hooks/useLive";
 import { useVibration } from "@/hooks/useVibration";
 import { useCashout } from "@/hooks/useCashout";
-import { ReportType } from "@sitin/api-proto/gen/archat_api/user_api";
+import { ReportType } from "@heyhru/business-pwa-proto/gen/archat_api/user_api";
 import { useMissCall } from "@/hooks/useMissCall";
 import { saveReturnPath, getReturnPath } from "@/utils/callReturnPath";
 
@@ -81,7 +81,13 @@ export function useWebCall() {
   const { start: startTupuDetection, stop: stopTupuDetection } = useTupu({
     sharedViolationCountRef,
     onTupuViolationToast: (params) => {
-      showViolationLimitModal(params);
+      const { roomId, remoteUserId, callBeginTime } = WebCallManager.connectSession;
+      showViolationLimitModal(params, undefined, undefined, {
+        target_user_id: remoteUserId,
+        roomid: roomId,
+        current_call_duration: callBeginTime ? Math.round((Date.now() - callBeginTime) / 1000) : undefined,
+        violation_type: "face",
+      });
     },
   });
   const { start: starCheckFreeCallDuration, stop: stopCheckFreeCallDuration } = useCheckFreeCallDuration();
@@ -95,7 +101,13 @@ export function useWebCall() {
         // 通过 bridge 调用原生弹窗
         showViolationToast(params as unknown as Record<string, unknown>);
       } else {
-        showViolationLimitModal(params);
+        const { roomId, remoteUserId, callBeginTime } = WebCallManager.connectSession;
+        showViolationLimitModal(params, undefined, undefined, {
+          target_user_id: remoteUserId,
+          roomid: roomId,
+          current_call_duration: callBeginTime ? Math.round((Date.now() - callBeginTime) / 1000) : undefined,
+          violation_type: "voice",
+        });
       }
     },
     onVoiceSilent: (isSilent) => {
@@ -418,7 +430,11 @@ export function useWebCall() {
 
         if (callDuration > 30) {
           //奖励弹窗
-          await showRewardModalAsync(originCashRef.current, callRecordParams.earned);
+          await showRewardModalAsync(originCashRef.current, callRecordParams.earned, {
+            target_user_id: remoteUserInfo?.userId?.toString(),
+            target_user_type: remoteUserInfo ? "real" : undefined,
+            source: "call",
+          });
         }
 
         // 场景 2.1：视频通话结束，处理违规记录与降级
@@ -457,6 +473,7 @@ export function useWebCall() {
       stopFaceDetect,
       stopVideoRecordTask,
       updateVideoCallTime,
+      remoteUserInfo,
     ],
   );
 

@@ -1,6 +1,6 @@
 ---
 title: OfflineEarningsModal
-date: 2026-04-15T17:04:50+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: tsx
 original: OfflineEarningsModal.tsx
@@ -9,10 +9,12 @@ original: OfflineEarningsModal.tsx
 # OfflineEarningsModal
 
 ```tsx
-import { FC, useState } from "react";
+import { FC, useEffect, useState } from "react";
 import { useOfflineEarningsStore, type EarningsData } from "@/stores/offlineEarningsStore";
 import { useUserStore } from "@/stores/userStore";
 import { useModalStore } from "@/stores/modalStore";
+import { bpTrack } from "@/tracking";
+import { EventName } from "@/tracking/events";
 
 export const OFFLINE_EARNINGS_MODAL_ID = "offline-earnings";
 
@@ -27,8 +29,29 @@ export const OfflineEarningsModal: FC<Props> = ({ earnings }) => {
   const closeModal = useModalStore((s) => s.close);
   const userInfo = useUserStore((s) => s.userInfo);
 
+  // 埋点：离线收益弹窗展示
+  useEffect(() => {
+    bpTrack(EventName.pwa_ai_avatar_earnings_pop_up_show, {
+      total: earnings.total,
+      instagram: earnings.instagram,
+      idle: earnings.idle,
+      reward_amount: earnings.total,
+      reward_type: "offline_earnings",
+    });
+  }, [earnings]);
+
   const handleClaim = async () => {
     if (loading) return;
+
+    // 埋点：离线收益领取点击
+    bpTrack(EventName.pwa_ai_avatar_earnings_pop_up_click, {
+      total: earnings.total,
+      reward_amount: earnings.total,
+      reward_type: "offline_earnings",
+    });
+    bpTrack(EventName.pwa_offline_earnings_claim, {
+      total: earnings.total,
+    });
 
     setLoading(true);
     const result = await claimEarnings();

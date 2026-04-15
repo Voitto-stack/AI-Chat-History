@@ -1,6 +1,6 @@
 ---
 title: ChatNextUnreadButton
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:31+08:00
 source: import
 language: tsx
 original: ChatNextUnreadButton.tsx
@@ -12,6 +12,11 @@ original: ChatNextUnreadButton.tsx
 import { memo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import useChatList from "@/hooks/chatList";
+import { convToUid } from "@/utils/chatUtils";
+import { useChatListStore } from "@/stores/chatListStore";
+import { UserType } from "@heyhru/business-pwa-proto/gen/archat_api/user_api";
+import { bpTrack } from "@/tracking";
+import { EventName } from "@/tracking/events";
 
 interface ChatNextUnreadButtonProps {
   conversationId: string;
@@ -36,8 +41,16 @@ const ChatNextUnreadButton = memo<ChatNextUnreadButtonProps>(({ conversationId }
     const nextConv = currentIndex === unreadList.length - 1 ? unreadList[0] : unreadList[currentIndex + 1];
 
     if (nextConv) {
+      // 埋点：跳转下一个奖励点击（未读对话）
+      const targetUserId = convToUid(nextConv.conversationID);
+      const targetUserInfo = useChatListStore.getState().userInfoMap[targetUserId];
+      bpTrack(EventName.pwa_jump_next_reward_click, {
+        target_user_id: targetUserId,
+        target_user_type: targetUserInfo?.userType === UserType.User ? "real" : "dh",
+      });
+
       navigate("/chat-detail", {
-        state: { conversationId: nextConv.conversationID },
+        state: { conversationId: nextConv.conversationID, from_jump_next: true },
         replace: true,
       });
     }

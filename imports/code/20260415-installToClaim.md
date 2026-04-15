@@ -1,6 +1,6 @@
 ---
 title: installToClaim
-date: 2026-04-15T17:04:49+08:00
+date: 2026-04-15T17:05:29+08:00
 source: import
 language: html
 original: installToClaim.html
@@ -28,6 +28,7 @@ original: installToClaim.html
     <link rel="preload" as="image" href="/activity-images/install-to-claim/icon-earnings.webp" />
     <link rel="preload" as="image" href="/activity-images/install-to-claim/ic_first_guide_finger.svg" />
     <link rel="preload" as="image" href="/logo192.png" />
+    <link rel="stylesheet" href="./installToClaim.css" />
 
     <!-- 预连接外部页面 -->
     <link rel="preconnect" href="https://app.gracechat.com" crossorigin />
@@ -36,11 +37,27 @@ original: installToClaim.html
     <link rel="manifest" href="/manifest.webmanifest" />
 
     <!-- 埋点和渠道 JS - 统一从 src/tracking 加载 -->
-    <script type="module" crossorigin src="/assets/js/installToClaim-DJ6S5Ukb.js"></script>
-    <link rel="modulepreload" crossorigin href="/assets/js/BytePlusManager-v1Z9XOMx.js">
-    <link rel="modulepreload" crossorigin href="/assets/js/activity-BKJz9LBv.js">
-    <link rel="stylesheet" crossorigin href="/assets/css/installToClaim-DzJhE5ca.css">
-  <link rel="manifest" href="/manifest.webmanifest"></head>
+    <script type="module">
+      import * as tracking from "/src/tracking/activity.ts";
+
+      // 挂载到 window（保持向后兼容）
+      window.adTrack = tracking.adTrack;
+      window.setOriginalChannel = tracking.setOriginalChannel;
+      window.setAdChannel = tracking.setAdChannel;
+      window.getAdChannel = tracking.getAdChannel;
+      window.getTtclid = tracking.getTtclid;
+      window.setTtclid = tracking.setTtclid;
+      window.getFbclid = tracking.getFbclid;
+      window.setFbclid = tracking.setFbclid;
+
+      // BytePlus 追踪函数
+      window.bytePlusTrack = (eventName, params) => {
+        tracking.BytePlusManager.getInstance().trackEvent(eventName, params);
+      };
+
+      console.log("✅ Tracking loaded from src/tracking/activity.ts");
+    </script>
+  </head>
 
   <body>
     <div class="install-to-claim-container">
@@ -91,6 +108,7 @@ original: installToClaim.html
       />
     </div>
 
+    <script type="module" src="./installToClaim.js"></script>
   </body>
 </html>
 

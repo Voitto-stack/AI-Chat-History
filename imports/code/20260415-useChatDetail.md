@@ -1,6 +1,6 @@
 ---
 title: useChatDetail
-date: 2026-04-15T17:04:51+08:00
+date: 2026-04-15T17:05:30+08:00
 source: import
 language: ts
 original: useChatDetail.ts
@@ -11,12 +11,14 @@ original: useChatDetail.ts
 ```ts
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Message } from "@tencentcloud/chat";
-import { UserInfo } from "@sitin/api-proto/gen/archat_api/user_api";
+import { UserInfo } from "@heyhru/business-pwa-proto/gen/archat_api/user_api";
 import IMManager, { OnReceiveMsg } from "@/services/IMManager";
 import { getUserBasicInfos } from "@/http/chatApi";
 import { createChatMessage, TimMessage, MessageType } from "@/types/chatMessage";
 import { convToUid } from "@/utils/chatUtils";
 import { useSendMessage } from "@/hooks/useSendMessage";
+import { bpTrack } from "@/tracking";
+import { EventName } from "@/tracking/events";
 
 const PAGE_SIZE = 15; // TIM SDK 默认每页 15 条
 
@@ -175,8 +177,18 @@ export function useChatDetail(
         setMessages((prev) => dedupeAndSort([...prev, chatMsg]));
         IMManager.setMessageRead(conversationId);
 
+        // 埋点：收到消息
+        bpTrack(EventName.pwa_chat_receive_message, {
+          conversation_id: conversationId,
+          message_type: chatMsg.type,
+        });
+
         // 如果是礼物消息，触发动画
         if (chatMsg.type === MessageType.Gift && onShowGiftAnimation) {
+          // 埋点：收到礼物
+          bpTrack(EventName.pwa_chat_gift_receive, {
+            conversation_id: conversationId,
+          });
           onShowGiftAnimation(chatMsg);
         }
       },
@@ -211,6 +223,13 @@ export function useChatDetail(
       // 先调用通用方法发送礼物（扣钱 + 发 IM）
       const message = await sendGiftMessageBase(giftId, toUserId, giftImageUrl, priceDollar);
       if (!message) return false;
+
+      // 埋点：发送礼物
+      bpTrack(EventName.pwa_chat_gift_send, {
+        gift_id: giftId,
+        to_user_id: toUserId,
+        price_dollar: priceDollar,
+      });
 
       // 将发送的礼物消息添加到消息列表
       const chatMsg = createChatMessage(message);
