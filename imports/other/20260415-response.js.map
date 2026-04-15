@@ -1,0 +1,1 @@
+{"version":3,"file":"response.js","sourceRoot":"","sources":["../src/response.ts"],"names":[],"mappings":";;;AAAA,6BAAwB;AAExB,+CAA+C;AAC/C,mBAAmB;AACnB,+CAA+C;AAE/C;;GAEG;AACU,QAAA,cAAc,GAAG,OAAC,CAAC,MAAM,CAAC;IACrC,IAAI,EAAE,OAAC,CAAC,MAAM,EAAE;IAChB,OAAO,EAAE,OAAC,CAAC,MAAM,EAAE;IACnB,OAAO,EAAE,OAAC,CAAC,OAAO,EAAE,CAAC,QAAQ,EAAE;CAChC,CAAC,CAAC"}

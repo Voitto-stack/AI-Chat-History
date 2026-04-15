@@ -1,0 +1,14 @@
+---
+title: bff-CjL5TLXj
+date: 2026-04-15T17:04:50+08:00
+source: import
+language: js
+original: bff-CjL5TLXj.js
+---
+
+# bff-CjL5TLXj
+
+```js
+!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof globalThis?globalThis:"undefined"!=typeof self?self:{};e.SENTRY_RELEASE={id:"1.0.0"};var t=(new e.Error).stack;t&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[t]="45d079be-5dcc-4012-9fd1-42cd4f7b72f5",e._sentryDebugIdIdentifier="sentry-dbid-45d079be-5dcc-4012-9fd1-42cd4f7b72f5")}catch(a){}}();import{df as e,dO as t,dP as a,dQ as n,dR as i}from"./main-BAGg6ga3.js";const r=e=>{if(!e)return"W1";return{1:"W1",2:"W2",3:"W3",4:"W4",5:"W5",6:"DONE"}[e]??"W1"},o=(e,t)=>e[t]??0,s=(e,t)=>e[t],d=(e,t)=>{return{relationId:String(e.relationshipId??`member-${t}`),nickname:e.nickname||"",avatar:e.avatar||"",currentStage:r(e.currentStage),stageProgress:[],inactiveHours:e.lastActiveTime?Math.max(0,Math.floor((Date.now()/1e3-e.lastActiveTime)/3600)):0,pokeAvailable:!0,riskFlag:e.riskStatus||"NONE",taskText:"",mainBtnText:"Poke Her",stageReminderCopy:e.stageReminderCopy||"",activeStatus:(a=e.activeStatus,["active","idle","inactive","very_inactive"].includes(a??"")?e.activeStatus:"active"),activeStatusCopy:e.activeStatusCopy||""};var a},l=async()=>{try{const n=await e.requestPost2(t,{},a);return console.log("[BFF API] getOverview response:",n),{lockedAmount:o(n,"lockedAmountDollars"),availableAmount:o(n,"availableAmountDollars"),entryStatus:n.entryStatus??"NO_INVITE",totalInviteCount:n.totalInviteCount??0,inviteCode:n.inviteCode||"",bannerGiftAmount:n.inviteeSignupRewardDollars??0,bannerRewardAmount:n.inviterSignupRewardDollars??0,inviteeSignupReward:n.inviteeSignupRewardDollars??0,inviterSignupReward:n.inviterSignupRewardDollars??0,content:n.content?{title:n.content.title,subTitle:n.content.subTitle}:void 0,squadActivityStatus:void 0,recentEarnerNickname:void 0,recentEarnerAmount:void 0}}catch(n){throw console.error("[BFF API] getOverview error:",n),n}},u=async()=>{try{const t=await e.requestPost2(n,{},i);return console.log("[BFF API] getDashboard response:",t),{lockedAmount:Number(s(t,"lockedAmountDollars")??0),availableAmount:Number(s(t,"availableAmountDollars")??0),inviteUrl:"",shareText:t.shareText||"",hasPendingCoinAnimation:t.hasPendingCoinAnimation??!1,animationRewardDelta:void 0,squadList:(t.squadList||[]).map(d),inviteCode:t.inviteCode||"",defaultCopy:t.defaultContent||"",defaultReward:t.defaultRewards?.[0]?{taskName:t.defaultRewards[0].title||"",rewardAmount:Number((t.defaultRewards[0].subTitle||"").replace(/[^\d.]/g,""))||60}:void 0,historicalWithdrawAmount:Number(s(t,"historicalWithdrawAmountDollars")??0),defaultRewards:(t.defaultRewards||[]).map(e=>({title:e.title||"",subTitle:e.subTitle||""})),buttonText:String(s(t,"buttonText")??"")}}catch(t){throw console.error("[BFF API] getDashboard error:",t),t}};export{u as a,l as g};
+
+```

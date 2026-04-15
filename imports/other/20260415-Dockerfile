@@ -1,0 +1,45 @@
+# ============================================
+# Minerva Server (Koa.js) Dockerfile
+# ============================================
+# 从项目根目录构建：
+#   docker build -t minerva-server -f apps/minerva-server/Dockerfile .
+#
+# 前提：已运行 turbo build（tsc 编译 + prisma generate）
+# ============================================
+
+# --- Stage 1: 安装生产依赖 ---
+FROM node:20-alpine AS deps
+
+WORKDIR /app
+
+# 复制 package.json，移除 workspace 依赖后安装（workspace 包单独处理）
+COPY apps/minerva-server/package.json ./package.json
+RUN sed -i '/"@sitin\/minerva-schemas"/d' package.json && \
+    npm install --omit=dev --ignore-scripts
+
+# 手动放置 workspace 包 @sitin/minerva-schemas
+COPY packages/minerva-schemas/package.json ./node_modules/@sitin/minerva-schemas/package.json
+COPY packages/minerva-schemas/dist/ ./node_modules/@sitin/minerva-schemas/dist/
+
+# --- Stage 2: 运行镜像 ---
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 appuser
+
+# 从 deps 阶段复制已安装的 node_modules
+COPY --from=deps --chown=appuser:nodejs /app/node_modules ./node_modules
+
+# 复制编译产物（tsc 输出到 ../minerva-server/ + prisma generated client）
+COPY --chown=appuser:nodejs ../build/minerva-server/ .
+
+USER appuser
+
+EXPOSE 3000
+
+CMD ["node", "index.js"]

@@ -1,0 +1,14 @@
+---
+title: getallmylinks-DmobNM-q
+date: 2026-04-15T17:04:50+08:00
+source: import
+language: js
+original: getallmylinks-DmobNM-q.js
+---
+
+# getallmylinks-DmobNM-q
+
+```js
+!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof globalThis?globalThis:"undefined"!=typeof self?self:{};e.SENTRY_RELEASE={id:"1.0.0"};var n=(new e.Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="e6a2bd9e-2218-4495-9c91-ef872e8ce9af",e._sentryDebugIdIdentifier="sentry-dbid-e6a2bd9e-2218-4495-9c91-ef872e8ce9af")}catch(t){}}();import{s as e,b as n,g as t,c as o,d as a,e as i,f as c,B as d}from"./BytePlusManager-v1Z9XOMx.js";import{a as l}from"./activity-BKJz9LBv.js";window.adTrack=l,window.setOriginalChannel=e,window.setAdChannel=n,window.getAdChannel=t,window.getTtclid=o,window.setTtclid=a,window.getFbclid=i,window.setFbclid=c,window.bytePlusTrack=(e,n)=>{d.getInstance().trackEvent(e,n)},console.log("✅ Tracking loaded from src/tracking/activity.ts"),function(){const e=document.getElementById("claimBtn"),n=document.getElementById("closeBtn"),t=document.getElementById("handDecoration"),o=document.getElementById("modalOverlay"),a=document.getElementById("paypalSuccess"),i=new URLSearchParams(window.location.search),c=i.get("chl");if(c&&"function"==typeof window.setOriginalChannel&&window.setOriginalChannel(c),"function"==typeof window.bytePlusTrack){window.bytePlusTrack("pwa_conv_lp_show"),window.bytePlusTrack("ad_pwa_conv_lp_show");window.chrome&&/Chrome/.test(navigator.userAgent)?window.bytePlusTrack("web_ads_link_page_show"):window.bytePlusTrack("web_ads_link_page_show_non_chrome")}function d(){"function"==typeof window.bytePlusTrack&&(window.bytePlusTrack("pwa_conv_lp_clickButton"),window.bytePlusTrack("ad_pwa_conv_lp_clickButton"),window.chrome&&/Chrome/.test(navigator.userAgent)?window.bytePlusTrack("pwa_ad_cashout_click"):window.bytePlusTrack("pwa_ad_cashout_click_non_chrome"));"function"==typeof window.adTrack&&window.adTrack("ClickButton");if(window.chrome&&/Chrome/.test(navigator.userAgent))window.location.href="/activity/installToClaim.html"+window.location.search;else{o.classList.add("hidden"),a.classList.remove("hidden");const e={};i.forEach((n,t)=>{e[t]=n}),c&&(e.chl_trans=c),function(e,n){let t="";n&&(t=Object.keys(n).filter(e=>null!=n[e]).map(e=>`${e}=${n[e]}`).join("&"),t=`?${t}`);const o=`intent://${window.location.host}/${e}${t}#Intent;scheme=https;package=com.android.chrome;end`;window.location.href=o}("activity/installToClaim.html",e)}}e&&e.addEventListener("click",d),n&&n.addEventListener("click",d),t&&t.addEventListener("click",d),document.body.addEventListener("touchmove",function(e){e.preventDefault()},{passive:!1});const l="/activity/install-to-claim.html"+window.location.search,s=document.createElement("link");s.rel="prefetch",s.href=l,document.head.appendChild(s)}();
+
+```

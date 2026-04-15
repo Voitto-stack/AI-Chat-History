@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.pserver.proto.archat";
+option java_outer_classname = "CommonCode";
+package ServiceCommonCode;
+
+enum ServiceCode {
+  // Not an error; returned on success.
+  //
+  // common code range 1-100
+  SUCCESS          = 0;
+  // server error
+  UNKNOWN          = 1;
+  /**
+    some service code start with 100 - +
+    格式：{SERVICENAME_ERRORMSG} = ERORNUM
+    eg： 使用bot service
+    BOT_SERVICE_REJECT = 100;
+    BOT_SREVICE_ERROR_MISSING_ID = 101;
+   */
+  // user service
+  USER_NOT_FOUND   = 100;
+  USER_DB_ERROR    = 101;
+  USER_FETCH_ERROR = 102;
+
+}
+

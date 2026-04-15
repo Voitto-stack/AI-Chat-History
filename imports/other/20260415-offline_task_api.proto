@@ -1,0 +1,123 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.pserver.proto.archat";
+option java_outer_classname = "OfflineTaskServiceProto";
+
+option csharp_namespace = "OfflineTaskServiceApi";
+
+// 生成指定用户颜值分
+message AdminFaceScoreGenerateRequest {
+  int32 app_name = 1;
+  int32 cai_user_type = 2;
+  int32 gender = 3;
+  repeated int32 user_ids = 4;
+}
+
+message AdminFaceScoreGenerateResponse {
+  bool success = 1;
+  string errorMessage = 2;
+}
+
+message AdminGenerateUserSlideQueueRequest {
+  bool refresh = 1;
+}
+
+message AdminGenerateUserSlideQueueResponse {
+  bool success = 1;
+  string errorMessage = 2;
+}
+
+message AdminSyncUserProfileToTimRequest {
+  repeated int32 user_ids = 1; // 可以指定要同步的用户，不指定的话就同步所有用户
+}
+
+message AdminSyncUserProfileToTimResponse {
+  bool success = 1;
+  string errorMessage = 2;
+}
+
+message AdminAddTimedEntitlementRequest {
+  int32 userId = 1;
+  int32 chatTimes = 2;
+  int32 videoCallTimes = 3; // 单位（min）
+  int64 expiredAt = 4; // 单位（ms）
+}
+
+message AdminAddTimedEntitlementResponse {
+  bool success = 1;
+  string errorMessage = 2;
+}
+
+message AdminTriggerScanGCUserAndDeliverGiftRequest {}
+
+message AdminTriggerScanGCUserAndDeliverGiftResponse {
+  bool success = 1;
+  string errorMessage = 2;
+}
+
+// 生成pwa视频等级分
+message AdminGeneratePwaScoreRequest {
+}
+
+message AdminGeneratePwaScoreResponse {
+  bool success = 1;
+  string errorMessage = 2;
+}
+
+// 生成pwa emoji头像
+message AdminGeneratePwaEmojiAvatarRequest {
+}
+
+message AdminGeneratePwaEmojiAvatarResponse {
+  bool success = 1;
+  string errorMessage = 2;
+}
+
+message AdminInsertMsgVectorRequest {
+  repeated string msg = 1;
+}
+
+message AdminInsertMsgVectorResponse {
+  bool success = 1;
+  string errorMessage = 2;
+}
+
+message AdminQuerySimilarMsgRequest {
+  string query_text = 1;
+  int32 from_user_id = 2;
+  int32 to_user_id = 3;
+}
+
+message AdminQuerySimilarMsgResponse {
+  bool success = 1;
+  string errorMessage = 2;
+  MsgVector msg_vector = 3;
+  repeated string extend_msgs = 4;
+}
+
+message MsgVector {
+  string msg = 1;
+  float similarity = 2;
+  int64 cost_ms = 3;
+  int32 user_id = 4;
+}
+
+message AdminRefreshGatewayUserBanListRequest {}
+
+message AdminRefreshGatewayUserBanListResponse {
+  bool success = 1;
+  string errorMessage = 2;
+}
+
+message AdminQuerySimilarMsgReceivedRequest {
+  string query_text = 1;
+  int32 to_user_id = 2;
+  int32 exclude_from_user_id = 3;
+}
+
+message AdminQuerySimilarMsgReceivedResponse {
+  bool success = 1;
+  string errorMessage = 2;
+  repeated MsgVector similar_msgs = 3;
+}

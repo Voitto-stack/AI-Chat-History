@@ -1,0 +1,35 @@
+syntax = "proto3";
+package hello;
+
+// 服务端 java的配置
+option java_package = "com.pserver.proto";
+option java_outer_classname = "MessageGlobal";
+
+// Unity/C# 的配置
+option csharp_namespace = "MessageGlobal";
+
+/**
+  本文件为全局消息协议约定文档
+  消息类型:
+    // 心跳 协议
+    TYPE_HEARTBEAT = 0;
+    // 认证类协议
+    TYPE_AUTH = 1;
+    // 常规的通信协议
+    TYPE_CLIENT = 2;
+ */
+
+ enum MessageGlobalTypes {
+   // 心跳 协议
+   TYPE_HEARTBEAT = 0;
+  // alllen(4)+playerId(4)+protoId(4)+sn(4)+body
+   TYPE_AUTH = 1;
+   // alllen(4)+playerId(4)+protoId(4)+sn(4)+body
+   TYPE_CLIENT = 2;
+ }
+
+ enum ProtoGlobalIds {
+   AUTH_MESSAGE = 0;
+   BROCASET_MESSAGE = 2;
+ }
+

@@ -1,0 +1,418 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.pserver.proto.aichat";
+option java_outer_classname = "MatchProto";
+import "archat_api/user_api.proto";
+
+package Match;
+
+enum APP_ONLINE_STATUS {
+  UNKNOWN = 0;
+  ONLINE_ACTIVE = 1;
+  ONLINE_INACTIVE = 2;
+}
+
+/**
+这两个是心跳包
+ */
+message C2S_HeartBeat {
+  int32 index = 1;
+  APP_ONLINE_STATUS status = 2;
+  bool isCalling = 3;
+}
+
+message S2C_HeartBeat {
+  int32 index = 1;
+}
+/*
+  统计发过文字聊天的消息，需要上报
+ */
+message C2S_SyncChat {
+  /**
+   当前聊天的 对方id
+   */
+  int32 playerId = 1;
+}
+
+message S2C_SyncChat {
+  SyncChatResultCode result = 1;
+}
+/**
+ 结果码
+ */
+enum SyncChatResultCode {
+  SYNC_CHAT_SUCCESS = 0;
+  SYNC_CHAT_FAILED = 10;
+}
+
+/**
+  开始匹配
+ */
+message C2S_StartMatch {
+  /**
+   client pass seqNum
+   */
+  int32 seqNum = 1;
+  /**
+   匹配类型，旧版本
+   */
+  MatchFilterType filterType = 2;
+  /**
+    临时用的flag
+    有值就是新客户端，支持ai匹配
+    空值就是旧端，不支持ai匹配
+   */
+  string client_ver = 3;
+}
+/**
+  匹配的filter类型
+ */
+enum MatchFilterType {
+  MATCH_FILTER_TYPE_DEFAULT = 0;
+  MATCH_FILTER_TYPE_FEMALE = 1;
+  MATCH_FILTER_TYPE_MALE = 2;
+  MATCH_FILTER_TYPE_EVERYONE = 3;
+}
+message S2C_StartMatch {
+  StartMatchResultCode result = 1;
+  int32 matchPlayerId = 2; //如果匹配失败 则该id 传0
+  /**
+   client pass seqNum
+   */
+  int32 seqNum = 3;
+  bool isOnline = 4;
+  /**
+   */
+  MATCH_PLAYER_TYPE matchPlayerType = 5;
+  /**
+    如果是bot的话，本次带botid下去
+   */
+  string bot_id = 6;
+}
+
+enum MATCH_PLAYER_TYPE {
+  MATCH_PLAYER_TYPE_REAL_MAN = 0;
+  MATCH_PLAYER_TYPE_REAL_DIGITAL_HUMAN = 1;
+}
+
+enum StartMatchResultCode {
+  MATCH_SUCCESS = 0;
+  MATCH_FAILED = 10;
+}
+
+message C2S_CancelMatch {}
+
+message S2C_CancelMatch {
+  CancelMatchResultCode result = 1;
+}
+enum CancelMatchResultCode {
+  CANCEL_MATCH_SUCCESS = 0;
+  CANCEL_MATCH_FAILED = 10;
+}
+
+/**
+  设置匹配过滤的配置，每次变更的时候调用
+ */
+message C2S_SetMatchFilterType {
+  MatchFilterType filterType = 1;
+}
+
+message S2C_SetMatchFilterType {
+  FilterTypeErrorCode result = 1;
+}
+
+enum FilterTypeErrorCode {
+  UPDATE_FILTER_TYPE_SUCCESS = 0;
+  UPDATE_FILTER_TYPE_FAILED = 10;
+}
+/**
+  获取上次设置的匹配类型
+  检测本地没有 cache的时候，获取一次
+  其他情况以本地为准
+ */
+message C2S_GetMatchFilterType {}
+
+message S2C_GetMatchFilterType {
+  MatchFilterType filterType = 1;
+}
+
+enum BoostResultCode {
+  BOOST_SUCCESS = 0;
+  BOOST_FAILED = 10;
+  // 预留其他理由
+}
+// 将用户添加进boost
+message C2S_AddToBoost {}
+// 添加boost 回包
+message S2C_AddToBoost {
+  BoostResultCode result = 1;
+}
+
+// 服务端推送boost匹配
+message S2C_BoostMatch {
+  int32 matchPlayerId = 1;
+}
+
+// 将用户添加进Vip boost
+message C2S_AddToVipBoost {}
+// 添加Vip boost 回包
+message S2C_AddToVipBoost {
+  BoostResultCode result = 1;
+}
+
+// 服务端推送vip boost匹配
+message S2C_VipBoostMatch {
+  int32 matchPlayerId = 1;
+}
+
+enum TCP_COMMON_CODE {
+  TCP_COMMON_CODE_SUCCESS = 0;
+  TCP_COMMON_CODE_FAILED = 100;
+}
+// 恋爱铃
+enum LoveRingType {
+  LOVE_RING_TYPE_DEFAULT = 0; // 默认状态
+  LOVE_RING_TYPE_START = 1; // 开始 120s
+  LOVE_RING_TYPE_EXIT = 2; // 退出通话 120s
+  LOVE_RING_TYPE_END = 3; // 未能成功进入通话 180s
+  LOVE_RING_TYPE_MATCH_HOME = 4; // 用户登录成功后进入到Match首页
+  LOVE_RING_TYPE_CANCEL = 5; // 恋爱铃弹出显示后，用户点击“Cancel”按钮
+  LOVE_RING_TYPE_CLOSE = 6; // 恋爱铃弹出显示后，用户点击关闭按钮
+  LOVE_RING_TYPE_AUTO_DISMISS = 7; // 恋爱铃弹出显示后，用户无操作恋爱铃弹框自动消失
+  LOVE_RING_TYPE_ACCEPT_REJECTED = 8; // 恋爱铃弹出显示后，用户点击“Accept”，电话被拒绝
+  LOVE_RING_TYPE_ACCEPT_INSUFFICIENT_BALANCE = 9; // 恋爱铃弹出显示后，用户点击“Accept”，余额不足
+  LOVE_RING_TYPE_ACCEPT_NO_ANSWER = 10; // 恋爱铃弹出显示后，用户点击“Accept”，电话未接通，用户主动挂断
+  LOVE_RING_TYPE_ACCEPT_NOT_CONNECTED = 11; // 恋爱铃弹出显示后，用户点击“Accept”，电话未连接成功，退出通话
+  LOVE_RING_TYPE_ACCEPT_CONNECTED_EXIT = 12; // 恋爱铃弹出显示后，用户点击“Accept”，电话连接成功，从视频电话中退出后
+  LOVE_RING_TYPE_EXIT_VIDEO_CALL = 13; // 用户从任意视频电话中退出
+  LOVE_RING_TYPE_DISPLAY_FAILED = 14; // 恋爱铃展示失败
+}
+// 开始一个延迟的恋爱铃 任务
+message C2S_StartLoveRing {
+  LoveRingType loveRingType = 1; // 任务类型 对应不同的策略跟次数
+}
+
+message S2C_StartLoveRing {
+  TCP_COMMON_CODE code = 1; // 通用的 返回码
+}
+
+message S2C_LoveRingPush {
+  UserServiceProto.UserInfo user = 1; // 任务推送的用户信息
+}
+
+// 主动match，这个协议只是为了客户端调试用，每次发一个该请求，则会推送一个
+message C2S_MatchCardPush {}
+// 主动match的push，协议
+message S2C_MatchCardPush {
+  UserServiceProto.UserInfo user = 1; // 任务推送的用户信息
+}
+
+enum ChatActionType {
+  CHAT_ACTION_TYPE_DEFAULT = 0;
+  CHAT_ACTION_TYPE_ENTER = 1; // 进入聊天
+  CHAT_ACTION_TYPE_EXIT = 2; // 退出聊天
+}
+message C2S_ChatAction {
+  ChatActionType chatActionType = 1;
+  int32 userId = 2; // 对方的id
+}
+message S2C_ChatAction {
+  TCP_COMMON_CODE code = 1; // 通用的 返回码
+}
+
+enum TimCustomMessageType {
+  TIM_CUSTOM_MESSAGE_TYPE_DEFAULT = 0;
+  TIM_CUSTOM_MESSAGE_TYPE_VIDEO_CALL_TOOL_TIPS = 1; // 主动聊天，tool tips
+  TIM_CUSTOM_MESSAGE_TYPE_EXCHANGE_PHONE_NUMBER_TIPS = 2; // 交换联系方式，系统提醒
+}
+
+enum TimCustomMessageVideoTipsType {
+  //分message【消息】、intention【视频意图】两种类型 触发类型
+  TIM_CUSTOM_MESSAGE_VIDEO_TIPS_TYPE_MESSAGE = 0; // 消息触发
+  TIM_CUSTOM_MESSAGE_VIDEO_TIPS_TYPE_INTENT = 1; // 视频意图触发
+}
+
+// 通知客户端 现在正在typing的人
+message S2C_IsTyping {
+  int32 fromUserId = 1; // 对方的id, 表示正在输入
+  int32 delay = 2; //展示时间，单位:秒(>0) 若=0则立即停止typing 若=-1则忽略此字段
+}
+
+// 通知客户端 现在正在viewProfile的人
+message S2C_IsViewingProfile {
+  int32 fromUserId = 1; // 对方的id，表示正在查看
+  int32 delay = 2; // 展示时间，单位:秒(>0) 若=0则立即停止typing 若=-1则忽略此字段
+}
+
+enum DisplayType {
+  UNKNOWN_TYPE = 0;
+  SUCCESS = 1;
+  FAIL = 2;
+}
+
+// 恋爱铃展示上报
+message C2S_ReportLoveRing {
+  DisplayType displayType = 1; // SUCCESS  FAIL
+  int32 userId = 2; // 对方的id
+}
+
+message S2C_ReportLoveRing {
+  TCP_COMMON_CODE code = 1; // 通用的 返回码
+}
+
+// 上报展示的用户id
+message C2S_ReportVideoMatch {
+  int32 target_user_id = 1; // 对方的id
+}
+
+message S2C_ReportVideoMatch {
+  TCP_COMMON_CODE code = 1; // 通用的 返回码
+}
+
+message S2C_CancelVideoMatch {
+  int32 target_user_id = 1; // 对方的id，客户端通过该id与当前展示的用户进行比较，如果是当前用户，则取消展示
+}
+
+message S2C_CancelLoveRing {
+  int32 target_user_id = 1; // 对方的id，客户端通过该id与当前展示的用户进行比较，如果是当前用户，则取消展示
+}
+
+message UserAvatarViolationNotify {
+  bool   violation = 2;
+  string reason = 1;
+}
+
+message UserAvatarReviewNotify {
+  int64 start_time = 1;
+}
+
+
+//通知用户PWA等待回播电话
+message S2C_PwaVideoRecall {
+  UserServiceProto.UserInfo female_user = 1; // 任务推送的用户信息
+}
+// 用户向pwa发起假打
+message S2C_SearchSimulatedUserCallPwa {
+  UserServiceProto.UserInfo female_user = 1; // pwa
+  UserServiceProto.UserInfo male_user = 2; // 用户信息
+}
+// 通知用户向pwa发起真打
+message S2C_SearchRealUserCallPwa {
+  int32 male_user_id = 1; // 用户id
+  UserServiceProto.UserInfo female_user = 2; // pwa信息
+}
+//通知客户端取消search
+message S2C_SearchCancel {
+  int32 male_user_id = 1; // 用户id
+  repeated int32 female_user_id = 2; // pwa id列表 如果为空，则表示没有pwa推送取消search
+}
+
+
+message S2C_FullScreenVideoPush {
+  UserServiceProto.UserInfo user = 1; // 任务推送的用户信息
+}
+
+message S2C_CancelFullScreenVideoPush {
+  int32 target_user_id = 1; // 对方的id，客户端通过该id与当前展示的用户进行比较，如果是当前用户，则取消展示
+}
+
+message C2S_ReportUserEvent{
+  int32 user_id = 1; // 上报事件的用户ID（当前用户）
+  int32 target_user_id = 2; // 目标用户ID（匹配的另一方）
+  UserEvent event_type = 3; // 事件类型
+  int64 timestamp = 4; // 事件发生时间戳（毫秒）
+  // (map<string, string> event_properties = 6; // 额外的事件属性（如：曝光位置、停留时长等）)
+}
+
+message S2C_ReportUserEvent{
+  TCP_COMMON_CODE code = 1; // 通用的 返回码
+}
+
+enum UserEvent{
+  USER_EVENT_UNKNOWN = 0;
+  // DH&PWA滑卡曝光
+  USER_EVENT_DH_PWA_SWIPE_CARD_EXPOSURE = 1;
+  // DH&PWA滑卡曝光被左滑
+  USER_EVENT_DH_PWA_SWIPE_CARD_LEFT = 2;
+  // DH&PWA滑卡曝光被右滑
+  USER_EVENT_DH_PWA_SWIPE_CARD_RIGHT = 3;
+
+  // PWA视频匹配曝光
+  USER_EVENT_PWA_VIDEO_MATCH_EXPOSURE = 4;
+  // PWA视频匹配被点击
+  USER_EVENT_PWA_VIDEO_MATCH_CLICKED = 5;
+  // PWA视频匹配接通电话
+  USER_EVENT_PWA_VIDEO_MATCH_CALL_CONNECTED = 6;
+
+  // PWA恋爱铃曝光
+  USER_EVENT_PWA_LOVE_BELL_EXPOSURE = 7;
+  // PWA恋爱铃被点击
+  USER_EVENT_PWA_LOVE_BELL_CLICKED = 8;
+  // PWA恋爱铃接通电话
+  USER_EVENT_PWA_LOVE_BELL_CALL_CONNECTED = 9;
+
+  // PWA tips曝光次数
+  USER_EVENT_PWA_TIPS_EXPOSURE = 10;
+  // PWA tips被点击
+  USER_EVENT_PWA_TIPS_CLICKED = 11;
+  // PWA tips接通电话
+  USER_EVENT_PWA_TIPS_CALL_CONNECTED = 12;
+
+  // PWA恋爱铃拒绝
+  USER_EVENT_PWA_LOVE_BELL_CALL_REJECT = 13;
+  // PWA视频匹配-用户删除视频匹配
+  USER_EVENT_PWA_VIDEO_MATCH_DELETE = 14;
+  // 用户状态变更为后台
+  USER_EVENT_STATUS_BACKEND = 15;
+  // 用户状态变更为视频ing
+  USER_EVENT_STATUS_VIDEOING = 16;
+  // 用户离开message tab
+  USER_EVENT_STATUS_PWA_LEAVE_MSG_TAB = 17;
+  // PWA全屏视频匹配曝光
+  USER_EVENT_PWA_FULL_VIDEO_MATCH_EXPOSURE = 18;
+  //PWA老击穿
+  USER_EVENT_PWA_PITY_RANDOM = 19;
+  //PWA老击穿回复
+  USER_EVENT_PWA_PITY_RANDOM_REPLY = 20;
+  //PWA新击穿
+  USER_EVENT_PWA_HUNTER = 21;
+  //PWA新击穿回复
+  USER_EVENT_PWA_HUNTER_REPLY = 22;
+}
+
+message S2C_CancelPwaVideoRecall {
+  int32 male_user_id = 1;// 男性用户id
+  int32 female_user_id = 2;// 女性用户id
+}
+
+message C2S_ReportPwaVideoRecall {
+  int32 user_id = 1; // 对方的id
+}
+
+message S2C_ReportPwaVideoRecall {
+  TCP_COMMON_CODE code = 1; // 通用的 返回码
+}
+
+
+
+// 前端新架构 - 用户余额变动通知（S2C推送）
+message S2C_CashUpdate{
+  string cash = 1;                        // 最新余额（必填）
+  int64 update_time = 2;                 // 更新时间戳（可选，Unix时间戳，毫秒）
+  string reason = 3;                      // 余额变更原因（可选，如："匹配消费"、"充值"、"退款"等）
+}
+
+// 前端新架构 - 男用户信息更改通知
+message S2C_MaleUserInfoUpdate{
+  int32 user_id = 1;
+  UserServiceProto.UserInfo user = 2;
+  int64 update_time = 3;
+}
+
+// 前端新架构 - 当前用户信息更改通知
+message S2C_UserInfoUpdate {
+  int32 user_id = 1;
+  UserServiceProto.UserInfo user = 2;
+  int64 update_time = 3;
+}

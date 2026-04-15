@@ -1,0 +1,199 @@
+syntax = "proto3";
+
+import "archat_api/user_api.proto";
+import "archat_api/post_api.proto";
+
+package PostServiceStoryProto;
+
+option java_multiple_files = true;
+option java_package = "com.pserver.proto.archat";
+option java_outer_classname = "PostServiceStoryProto";
+// Unity/C# 命名空间
+option csharp_namespace = "PostServiceApi.Story";
+
+
+// =================== Story ===================
+
+message Story {
+  int64                                         id = 1; // 故事id
+  int64                                        created_at = 2; // 创建时间
+  int64                                        updated_at = 3;  // 更新时间
+  int64                                        deleted_at = 4; // 删除时间
+  UserServiceProto.UserInfo                    from_user = 5; // 发布者 user
+  UserServiceProto.UserInfo                    to_user = 6; // 关联者 user
+  int32                                         from_user_id = 7;
+  int32                                         to_user_id = 8;
+  repeated PostServiceProto.PostPictureInQuery pictures = 9; // 复用PostPictureInQuery结构体，二者暂时保持一致
+  string                                       title = 10; //  故事标题文案
+  string                                       content = 11; // 故事内容文案
+  bool                                         is_bless = 12; // 是否已经祝福
+  int32                                        bless_count = 13;  // 祝福数量
+}
+
+// 爱情故事祝福
+message StoryBless {
+  int64                     id = 1; // id
+  int64                     story_id = 2; // 关联的爱情故事id
+  int64                     created_at = 3; // 创建时间
+  int64                     updated_at = 4; // 更新时间
+  int64                     deleted_at = 5; // 删除时间
+  int32                     user_id = 6; // 发布者user_id
+  UserServiceProto.UserInfo user = 7; // 发布者 user
+  string                    content = 8; // 祝福文案内容
+}
+
+
+
+// =================== Story Admin===================
+
+// AdminCreateStoryRequest 后台创建爱情故事
+message AdminCreateStoryRequest {
+  int32                                        from_user_id = 1;
+  int32                                        to_user_id = 2;
+  string                                       title = 3;
+  string                                       content = 4;
+  int64                                        created_at = 5;
+  repeated PostServiceProto.PostPicture        pictures = 6;
+  repeated PostServiceProto.PostPictureInQuery picturesInQuery = 7;
+}
+
+message AdminCreateStoryResponse {
+  PostServiceProto.CreatePostResult code = 1;
+  string                            message = 2; // if fail
+  Story                             story = 3;
+}
+
+
+// AdminEditStoryRequest 后台编辑爱情故事
+message AdminEditStoryRequest {
+  int64                                        story_id = 1;
+  int32                                        from_user_id = 2;
+  int32                                        to_user_id = 3;
+  string                                       title = 4;
+  string                                       content = 5;
+  int64                                        created_at = 6;
+  repeated PostServiceProto.PostPicture        pictures = 7;
+  repeated PostServiceProto.PostPictureInQuery picturesInQuery = 8;
+}
+
+message AdminEditStoryResponse {
+  PostServiceProto.CreatePostResult code = 1;
+  string           message = 2; // if fail
+  Story             story = 3;
+}
+
+// AdminDeleteStoryRequest 后台删除爱情故事
+message AdminDeleteStoryRequest {
+  repeated int64 story_ids = 1;
+}
+
+message AdminDeleteStoryResponse {
+  PostServiceProto.PostServiceCommonCode code = 1;
+  string                message = 2;
+}
+
+
+// AdminGetStoryListRequest 后台分页获取爱情列表
+message AdminGetStoryListRequest {
+  int64 offset = 1;
+  int64 limit = 2;
+}
+
+message AdminGetStoryListResponse {
+  PostServiceProto.PostServiceCommonCode code = 1;
+  string                message = 2;
+  repeated Story        story_list = 3;
+  int64                 next_offset = 4;
+}
+
+
+
+// =================== Story APP===================
+
+// GetStoryFeed 获取爱情故事列表
+message GetStoryFeedRequest {
+  int64 limit = 1;
+  int64 offset = 2;
+}
+
+message GetStoryFeedResponse {
+  PostServiceProto.PostServiceCommonCode code = 1;
+  string                message = 2;
+  repeated Story        story_list = 3;
+  int64                 next_offset = 4;
+}
+
+// GetStoryBanner 获取爱情故事轮播内容
+message GetStoryBannerRequest {
+}
+
+message GetStoryBannerResponse {
+  PostServiceProto.PostServiceCommonCode code = 1;
+  string                message = 2;
+  repeated Story        story_list = 3;
+}
+
+// GetStoryById 根据ID获取爱情故事详情
+message GetStoryByIdRequest {
+  int64 story_id = 1;
+}
+
+message GetStoryByIdResponse {
+  PostServiceProto.PostServiceCommonCode code = 1;
+  string                message = 2;
+  Story                 story = 3;
+}
+
+
+// GetMyStoryFeed 获取我的爱情故事列表（因为无针内容，该接口返回为空）
+message GetMyStoryFeedRequest {
+  int64 limit = 1;
+  int64 offset = 2;
+}
+
+message GetMyStoryFeedResponse {
+  PostServiceProto.PostServiceCommonCode code = 1;
+  string                message = 2;
+  repeated Story        story_list = 3;
+  int64                 next_offset = 4;
+}
+
+// GetRandStoryBlessText 获取随机的祝福文案
+message GetRandStoryBlessTextRequest {
+}
+
+message GetRandStoryBlessTextResponse {
+  PostServiceProto.PostServiceCommonCode code = 1;
+  string                message = 2;
+  string                content = 3;
+}
+
+
+// CreateStoryBless 创建故事祝福
+message CreateStoryBlessRequest {
+  int64 story_id = 1;
+  string content = 2;
+}
+
+message CreateStoryBlessResponse {
+  PostServiceProto.PostServiceCommonCode code = 1;
+  string                message = 2; // if fail
+  int64                 story_bless_id = 3;
+  StoryBless            story_bless = 4;
+}
+
+// GetStoryBlessFeed 获取故事祝福列表
+message GetStoryBlessFeedRequest {
+  int64 story_id = 1;
+  int64 offset = 2;
+  int64 limit = 3;
+}
+
+message GetStoryBlessFeedResponse {
+  PostServiceProto.PostServiceCommonCode code = 1;
+  string                message = 2;
+  repeated StoryBless   story_bless_list = 3;
+  bool                  has_more = 4;
+  int64                 story_bless_count = 5;
+  int64                 next_offset = 6;
+}

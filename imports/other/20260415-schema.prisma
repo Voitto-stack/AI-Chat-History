@@ -1,0 +1,3156 @@
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../src/generated/prisma"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Admin user account for management panels
+model AdminUser {
+  id          String     @id @default(cuid())
+  sub         String     @unique @db.VarChar(100)
+  displayName String?    @map("display_name") @db.VarChar(100)
+  avatarUrl   String?    @map("avatar_url") @db.VarChar(500)
+  tenantKey   String?    @map("tenant_key") @db.VarChar(100)
+  unionId     String?    @unique @map("union_id") @db.VarChar(100)
+  mobile      String?    @db.VarChar(50)
+  password    String     @db.VarChar(255)
+  userType    UserType   @default(FEISHU) @map("user_type")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+  auditLogs   AuditLog[]
+  userRoles   UserRole[]
+
+  @@map("admin_users")
+}
+
+/// Role defines a set of permissions
+model Role {
+  id              String           @id @default(cuid())
+  name            String           @unique @db.VarChar(50)
+  description     String?          @db.VarChar(255)
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+  rolePermissions RolePermission[]
+  userRoles       UserRole[]
+
+  @@map("admin_roles")
+}
+
+/// Permission represents a single capability/action
+model Permission {
+  id              String           @id @default(cuid())
+  key             String           @unique @db.VarChar(100)
+  description     String?          @db.VarChar(255)
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+  rolePermissions RolePermission[]
+
+  @@map("admin_permissions")
+}
+
+/// Many-to-many relation between AdminUser and Role
+model UserRole {
+  id        String    @id @default(cuid())
+  userId    String    @map("user_id")
+  roleId    String    @map("role_id")
+  createdAt DateTime  @default(now()) @map("created_at")
+  role      Role      @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  user      AdminUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@map("admin_user_roles")
+}
+
+/// Many-to-many relation between Role and Permission
+model RolePermission {
+  id           String     @id @default(cuid())
+  roleId       String     @map("role_id")
+  permissionId String     @map("permission_id")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@map("admin_role_permissions")
+}
+
+/// Audit log for tracking RBAC changes
+model AuditLog {
+  id         String     @id @default(cuid())
+  userId     String?    @map("user_id")
+  action     String     @db.VarChar(50)
+  targetType String?    @map("target_type") @db.VarChar(50)
+  targetId   String?    @map("target_id")
+  details    Json?
+  ipAddress  String?    @map("ip_address") @db.VarChar(45)
+  userAgent  String?    @map("user_agent") @db.VarChar(500)
+  createdAt  DateTime   @default(now()) @map("created_at")
+  user       AdminUser? @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("admin_audit_logs")
+}
+
+model ai_agent_cycle_task {
+  session_key   String?   @unique(map: "ai_agent_cycle_task_session_key_uindex") @db.VarChar
+  status        Int?
+  id            Int       @id(map: "ai_agent_cycle_task_pk") @default(autoincrement())
+  updated_at    DateTime? @default(now()) @db.Timestamp(6)
+  task_run_time DateTime? @db.Timestamp(6)
+
+  @@index([task_run_time])
+}
+
+model ai_call_daily_report_push_record {
+  stat_date DateTime @id @db.Date
+  sent_at   DateTime @default(now()) @db.Timestamptz(6)
+}
+
+model ai_call_daily_stats {
+  stat_date              DateTime @db.Date
+  channel                String   @db.VarChar(100)
+  model_name             String   @db.VarChar(100)
+  total_calls            BigInt
+  total_success          BigInt
+  success_rate           Decimal  @db.Decimal(6, 4)
+  avg_duration_ms        Decimal? @db.Decimal
+  max_duration_ms        BigInt?
+  tp99_duration_ms       Decimal? @db.Decimal
+  created_at             DateTime @default(now()) @db.Timestamptz(6)
+  failed_top_extra       Json?
+  failed_top_extra_count BigInt?
+
+  @@id([stat_date, channel, model_name])
+}
+
+model ai_call_fail_rate_5m {
+  window_start DateTime  @db.Timestamptz(6)
+  channel      String    @db.VarChar(100)
+  model_name   String    @db.VarChar(100)
+  starts       Int
+  fails        Int
+  fail_rate    Decimal   @db.Decimal(6, 4)
+  created_at   DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@id([window_start, channel, model_name])
+}
+
+model ai_call_fail_rate_alert {
+  id           BigInt   @id @default(autoincrement())
+  window_start DateTime @db.Timestamptz(6)
+  channel      String   @db.VarChar(100)
+  model_name   String   @db.VarChar(100)
+  fail_rate    Decimal  @db.Decimal(6, 4)
+  threshold    Decimal  @db.Decimal(6, 4)
+  sent_at      DateTime @default(now()) @db.Timestamptz(6)
+  webhook_resp Json?
+
+  @@unique([window_start, channel, model_name])
+}
+
+/// This table is a partition table and requires additional setup for migrations. Visit https://pris.ly/d/partition-tables for more info.
+model ai_call_record {
+  id                   BigInt         @default(autoincrement())
+  call_id              String         @db.Uuid
+  channel              String         @db.VarChar(100)
+  model_name           String         @db.VarChar(100)
+  status               ai_call_status
+  duration_ms          BigInt?
+  started_at           DateTime       @db.Timestamptz(6)
+  finished_at          DateTime?      @db.Timestamptz(6)
+  extra                Json?
+  fail_top_extra       Json?          @default("{}")
+  fail_top_extra_count Int?           @default(0)
+
+  @@id([id, started_at], map: "ai_call_record_pk")
+  @@unique([call_id, started_at], map: "ai_call_record_callid_uq")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model ai_call_record_old {
+  id          BigInt
+  id_back     BigInt?
+  call_id     String         @db.Uuid
+  channel     String         @db.VarChar(100)
+  model_name  String         @db.VarChar(100)
+  status      ai_call_status
+  duration_ms BigInt?
+  started_at  DateTime       @db.Timestamptz(6)
+  finished_at DateTime?      @db.Timestamptz(6)
+  extra       Json?
+
+  @@ignore
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model ai_chat_reply {
+  id           BigInt   @id @default(autoincrement())
+  user_id      Int
+  other_id     Int
+  chat_id      String?  @db.VarChar(100)
+  user_content String?
+  ai_reply     String?
+  status       String?  @db.VarChar(50)
+  ext_info     String?
+  created_at   DateTime @default(now()) @db.Timestamp(6)
+  updated_at   DateTime @default(now()) @db.Timestamp(6)
+
+  @@unique([user_id, other_id], map: "uniq_user_pair")
+  @@index([chat_id], map: "idx_ai_reply_chat_id")
+  @@index([user_id], map: "idx_ai_reply_user_id")
+}
+
+model ai_chat_reply_stats {
+  id         BigInt   @id @default(autoincrement())
+  status     String?  @db.VarChar(50)
+  count      BigInt?
+  created_at DateTime @default(now()) @db.Timestamp(6)
+  updated_at DateTime @default(now()) @db.Timestamp(6)
+}
+
+model available_cai_account {
+  id           Int       @id @default(autoincrement())
+  created_at   DateTime  @default(now()) @db.Timestamp(6)
+  updated_at   DateTime? @default(now()) @db.Timestamp(6)
+  email        String?   @db.VarChar
+  password     String?   @db.VarChar
+  cai_username String?   @db.VarChar
+  account_type Int       @default(1) @db.SmallInt
+  type_cursor  Int?
+}
+
+model avatar_desc_task {
+  id         BigInt   @id @default(autoincrement())
+  user_id    BigInt   @unique(map: "uniq_user_id")
+  avatar_md5 String?  @default("") @db.VarChar
+  status     Int      @default(0)
+  created_at DateTime @default(now()) @db.Timestamp(6)
+  update_at  DateTime @default(now()) @db.Timestamp(6)
+
+  @@index([avatar_md5], map: "idx_avatar_md5")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model avatar_generate_task {
+  external_task_id  String    @db.VarChar
+  external_platform String    @db.VarChar
+  id                Int       @id @default(autoincrement())
+  user_id           Int?
+  create_at         DateTime? @default(now()) @db.Timestamp(6)
+  update_at         DateTime? @default(now()) @db.Timestamp(6)
+  status            String?   @db.VarChar
+  result            String?
+
+  @@index([create_at], map: "avatar_generate_task_create_at_index")
+  @@index([external_task_id, external_platform], map: "avatar_generate_task_external_task_id_external_platform_index")
+  @@index([external_task_id], map: "avatar_generate_task_external_task_id_index")
+  @@index([status], map: "avatar_generate_task_status_index")
+  @@index([user_id], map: "avatar_generate_task_user_id_index")
+}
+
+model bot_stats {
+  bot_id                 String @id @db.VarChar
+  conversation_count     Int    @default(0)
+  msg_received_count     BigInt @default(0)
+  avg_msg_received_count Int    @default(0)
+
+  @@index([avg_msg_received_count(sort: Desc)], map: "idx_bot_stats_avg_msg_rsv_count")
+}
+
+model bot_tag {
+  id            Int     @id @default(autoincrement())
+  name          String? @unique(map: "bot_tag_name_index") @db.VarChar
+  sort_key      Int?
+  is_for_review Boolean @default(false)
+}
+
+model bot_tran_text {
+  id       Int     @id(map: "bot_tran_text_pk") @default(autoincrement())
+  ori_text String? @db.VarChar
+  es       String? @db.VarChar
+  pt       String? @db.VarChar
+
+  @@index([ori_text], map: "bot_tran_text_ori_text_index")
+}
+
+/// This table is a partition table and requires additional setup for migrations. Visit https://pris.ly/d/partition-tables for more info.
+model bot_warehouse_v2 {
+  external_id                   String                   @db.VarChar
+  title                         String                   @default("") @db.VarChar
+  greeting                      String                   @default("") @db.VarChar
+  avatar_file_name              String                   @default("") @db.VarChar
+  visibility                    Int                      @default(1)
+  participant__name             String?                  @default("") @db.VarChar
+  participant__num_interactions BigInt                   @default(0)
+  user__username                String                   @default("") @db.VarChar
+  priority                      BigInt                   @default(0)
+  search_score                  Float                    @default(0)
+  avatar_ori_url                String                   @default("") @db.VarChar
+  category                      String                   @default("") @db.VarChar
+  name_af                       String                   @default("") @db.VarChar
+  greeting_af                   String                   @default("") @db.VarChar
+  avatar_cur_url                String                   @default("") @db.VarChar
+  ip                            String                   @default("") @db.VarChar
+  is_for_review                 Boolean                  @default(false)
+  personality                   String                   @default("") @db.VarChar
+  short_desc                    String                   @default("")
+  long_desc                     String                   @default("")
+  advanced                      String                   @default("") @db.VarChar
+  author_name                   String                   @default("") @db.VarChar
+  author_id                     Int                      @default(0)
+  chat_user_id                  Int                      @default(0)
+  search_name_af                String                   @default("") @db.VarChar
+  created_at                    DateTime                 @default(now()) @db.Timestamp(6)
+  updated_at                    DateTime                 @default(now()) @db.Timestamp(6)
+  lang                          String                   @default("") @db.VarChar
+  bak_id                        Int                      @default(autoincrement())
+  title_new                     String                   @default("") @db.VarChar
+  search_vector                 Unsupported("tsvector")?
+  recommend_vec                 Unsupported("tsvector")?
+  overall_rating                Float?
+  total_comment                 BigInt?
+  id                            Int                      @default(autoincrement())
+  personality_foreign           String?                  @db.VarChar
+  from_type                     Int?                     @default(2)
+
+  @@unique([external_id, author_id], map: "idx_unique_bot_external_id")
+  @@index([chat_user_id])
+  @@index([recommend_vec], map: "idx_bot_rec_vec", type: Gin)
+  @@index([search_vector], map: "idx_bot_search_vec", type: Gin)
+  @@index([search_name_af(ops: raw("gin_bigm_ops"))], map: "idx_bot_warehouse_search_name_af", type: Gin)
+  @@index([author_id], map: "idx_bot_warehouse_v2_author_id")
+  @@index([category], map: "idx_bot_warehouse_v2_category")
+  @@index([created_at(sort: Desc)], map: "idx_bot_warehouse_v2_created_at")
+  @@index([external_id], map: "idx_bot_warehouse_v2_external_id")
+  @@index([ip], map: "idx_bot_warehouse_v2_ip")
+  @@index([lang], map: "idx_bot_warehouse_v2_lang")
+  @@index([personality], map: "idx_bot_warehouse_v2_personality")
+}
+
+model cai_account {
+  id                        Int       @id @default(autoincrement())
+  user_id                   Int?
+  created_at                DateTime  @default(now()) @db.Timestamp(6)
+  updated_at                DateTime? @default(now()) @db.Timestamp(6)
+  deleted_at                DateTime? @db.Timestamp(6)
+  email                     String?   @db.VarChar
+  password                  String?   @db.VarChar
+  third_party_login_user_id String?   @db.VarChar
+  sign_up_type              String?   @db.VarChar
+  cai_username              String?   @unique(map: "idx_cai_account_cai_username") @db.VarChar
+  register_state            Int?
+  available_cai_account_id  Int?
+  cookie                    String?   @db.VarChar
+  user_agent                String?   @db.VarChar
+
+  @@index([third_party_login_user_id], map: "idx_cai_account_third_party_user_id")
+}
+
+model cai_account_cookie {
+  id          BigInt    @id @default(autoincrement())
+  user_id     Int
+  cookie      String?   @db.VarChar
+  user_agent  String?   @db.VarChar
+  client_type Int?
+  created_at  DateTime  @default(now()) @db.Timestamp(6)
+  updated_at  DateTime? @default(now()) @db.Timestamp(6)
+  deleted_at  DateTime? @db.Timestamp(6)
+
+  @@unique([user_id, client_type], map: "cai_account_cookie_user_id_client_type_index")
+  @@index([user_id], map: "cai_account_cookie_user_id_index")
+}
+
+model cai_account_email_type {
+  id   Int    @id @default(autoincrement())
+  name String @db.VarChar(100)
+}
+
+model cai_user_type {
+  id   Int    @id @default(autoincrement())
+  name String @unique @db.VarChar(255)
+}
+
+model chat_meetup {
+  id                               BigInt    @id @default(autoincrement())
+  real_user_id                     Int
+  bot_user_id                      Int
+  trigger_method_1                 Boolean?  @default(false)
+  trigger_method_2                 Boolean?  @default(false)
+  trigger_method_2_current_count   Int?      @default(0)
+  method_2_trigger_count           Int
+  trigger_at                       DateTime? @db.Timestamptz(6)
+  dating_confirmed_at              DateTime? @db.Timestamptz(6)
+  cancelled_at                     DateTime? @db.Timestamptz(6)
+  cancelled_reason                 String?   @db.VarChar(255)
+  status                           String    @db.VarChar(32)
+  change_attempts_curr_reply_times Int       @default(0)
+  change_attempts_max_reply_times  Int?
+  cancel_meetup_trigger_time       DateTime? @db.Timestamptz(6)
+  cancel_meetup_dismiss_match_time DateTime? @db.Timestamptz(6)
+  cancel_prompt_chat_round_begin   Int?
+  cancel_prompt_chat_round_end     Int?
+  meetup_summary                   String?
+  created_at                       DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at                       DateTime  @default(now()) @db.Timestamptz(6)
+  deleted_at                       DateTime? @db.Timestamptz(6)
+
+  @@unique([real_user_id, bot_user_id])
+}
+
+model chat_meetup_confirmation_state {
+  id                 BigInt   @id @default(autoincrement())
+  real_user_id       Int
+  bot_user_id        Int
+  conversation_state Json
+  current_step       String?  @db.VarChar(50)
+  total_rejections   Int?     @default(0)
+  is_completed       Boolean? @default(false)
+  reject_meetup      Boolean? @default(false)
+  created_at         DateTime @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([real_user_id, bot_user_id])
+  @@index([is_completed], map: "idx_dating_confirmation_state_completed")
+  @@index([reject_meetup], map: "idx_dating_confirmation_state_reject")
+  @@index([current_step], map: "idx_dating_confirmation_state_step")
+  @@index([real_user_id], map: "idx_dating_confirmation_state_user_1")
+  @@index([bot_user_id], map: "idx_dating_confirmation_state_user_2")
+}
+
+model chat_meetup_cooldown {
+  id             BigInt   @id @default(autoincrement())
+  real_user_id   Int
+  bot_user_id    Int
+  cooldown_type  String   @db.VarChar(50)
+  cooldown_until DateTime @db.Timestamptz(6)
+  created_at     DateTime @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([real_user_id, bot_user_id, cooldown_type])
+  @@index([cooldown_until], map: "idx_meetup_cooldown_until")
+}
+
+model chat_meetup_trigger_counts {
+  id                              BigInt   @id @default(autoincrement())
+  real_user_id                    Int
+  bot_user_id                     Int
+  intent_trigger_count            Int?     @default(0)
+  rejection_count                 Int?     @default(0)
+  procrastination_exchanges       Int?     @default(0)
+  change_attempts                 Int?     @default(0)
+  last_trigger_round              Int?     @default(0)
+  area_choice_attempts            Int?     @default(0)
+  total_rejections_dating_confirm Int?     @default(0)
+  user_asks_to_choose_count       Int?     @default(0)
+  created_at                      DateTime @default(now()) @db.Timestamptz(6)
+  updated_at                      DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([real_user_id, bot_user_id])
+}
+
+/// This table is a partition table and requires additional setup for migrations. Visit https://pris.ly/d/partition-tables for more info.
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model comment {
+  id             BigInt    @default(autoincrement())
+  user_id        Int?
+  bot_id         String?   @db.VarChar
+  parent_id      BigInt?
+  reply_id       BigInt?
+  type           Int?      @default(0) @db.SmallInt
+  reply_count    BigInt?   @default(0)
+  content        String?
+  size           Int?      @default(0)
+  status         Int?      @default(0) @db.SmallInt
+  created_at     DateTime  @default(now()) @db.Timestamp(6)
+  updated_at     DateTime? @default(now()) @db.Timestamp(6)
+  deleted_at     DateTime? @db.Timestamp(6)
+  lang           String?   @db.VarChar(16)
+  default_bot_id Int?
+
+  @@index([bot_id], map: "comment_bot_external_id_idx")
+  @@index([default_bot_id])
+  @@ignore
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model config {
+  id      Int     @id(map: "config_pk") @default(autoincrement())
+  service String? @db.VarChar
+  key     String? @db.VarChar
+  value   String? @db.VarChar
+}
+
+model delayed_tasks {
+  id             Int      @id @default(autoincrement())
+  task_data      Json
+  scheduled_time DateTime @db.Timestamp(6)
+  status         Int      @default(1)
+  task_type      Int?
+}
+
+model dh_personality {
+  id          BigInt    @id @default(autoincrement())
+  user_id     Int
+  bot_user_id Int
+  template_id String    @db.VarChar
+  template    Json
+  create_time DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@unique([user_id, bot_user_id], map: "dh_personality_uq")
+}
+
+model dh_post_log {
+  id           BigInt   @id @default(autoincrement())
+  user_id      BigInt
+  post_day     BigInt
+  post_format  String?  @default("") @db.VarChar
+  post_content String?  @default("") @db.VarChar
+  post_pic     String?  @default("") @db.VarChar
+  created_at   DateTime @default(now()) @db.Timestamp(6)
+  update_at    DateTime @default(now()) @db.Timestamp(6)
+  schedule_id  BigInt
+
+  @@index([post_day], map: "ids_post_day")
+  @@index([schedule_id], map: "idx_schedule_id")
+}
+
+model dh_post_schedule {
+  id           BigInt   @id @default(autoincrement())
+  schedule_day BigInt
+  post_at      BigInt
+  post_format  String?  @default("") @db.VarChar
+  post_status  Int      @default(0)
+  ai_res       String?  @default("") @db.VarChar
+  created_at   DateTime @default(now()) @db.Timestamp(6)
+  update_at    DateTime @default(now()) @db.Timestamp(6)
+
+  @@unique([schedule_day, post_at], map: "uniq_day_at")
+  @@index([schedule_day, post_at], map: "idx_day_at")
+  @@index([post_status], map: "idx_post_status")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model dh_share_schedule {
+  id                 BigInt   @id @default(autoincrement())
+  ins_pic_id         BigInt
+  dh_user_id         BigInt
+  pictures_full_info String?  @default("") @db.VarChar
+  trigger_time       BigInt
+  ai_content         String?  @default("") @db.VarChar
+  ai_raw_res         String?  @default("") @db.VarChar
+  share_status       Int      @default(0) @db.SmallInt
+  created_at         DateTime @default(now()) @db.Timestamp(6)
+  update_at          DateTime @default(now()) @db.Timestamp(6)
+
+  @@index([share_status], map: "idx_share_status")
+  @@index([trigger_time], map: "idx_trigger_time")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model dora_follow_up_execution_log {
+  id               Int       @id @default(autoincrement())
+  message_id       Int
+  user_id          Int
+  bot_user_id      Int
+  execution_result String    @db.VarChar(20)
+  skip_reason      String?   @db.VarChar(100)
+  error_message    String?
+  executed_at      DateTime? @default(now()) @db.Timestamp(6)
+
+  @@index([message_id], map: "idx_dora_follow_up_execution_log_message")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model dora_follow_up_messages {
+  id              Int       @id @default(autoincrement())
+  plan_id         Int
+  bot_user_id     Int
+  message_type    String    @db.VarChar(50)
+  scheduled_time  DateTime  @db.Timestamp(6)
+  time_slot       String    @db.VarChar(20)
+  status          Int?      @default(0)
+  message_content String?
+  sent_at         DateTime? @db.Timestamp(6)
+  created_at      DateTime? @default(now()) @db.Timestamp(6)
+
+  @@index([plan_id], map: "idx_dora_follow_up_messages_plan")
+  @@index([scheduled_time, status], map: "idx_dora_follow_up_messages_schedule")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model dora_follow_up_plans {
+  id            Int       @id @default(autoincrement())
+  user_id       Int
+  plan_date     DateTime  @db.Date
+  message_count Int
+  created_at    DateTime? @default(now()) @db.Timestamp(6)
+  updated_at    DateTime? @default(now()) @db.Timestamp(6)
+
+  @@unique([user_id, plan_date])
+  @@index([user_id, plan_date], map: "idx_dora_follow_up_plans_user_date")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model entitlement_activity {
+  id            BigInt   @id @default(autoincrement())
+  activity_type BigInt?  @unique(map: "idx_entitlement_activity_activity_type")
+  activity_desc String?  @db.VarChar
+  created_at    DateTime @default(now()) @db.Timestamp(6)
+  update_at     DateTime @default(now()) @db.Timestamp(6)
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model entitlement_activity_transaction {
+  id          BigInt   @id @default(autoincrement())
+  activity_id BigInt
+  user_id     BigInt
+  created_at  DateTime @default(now()) @db.Timestamp(6)
+
+  @@index([activity_id, user_id], map: "idx_activity_id_user_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model entitlement_v2_consumption_log {
+  id                       BigInt   @id @default(autoincrement())
+  timed_entitlement_id     BigInt
+  from_user_id             Int
+  to_user_id               Int
+  consumed_amount          Int
+  amount_after_consumption Int
+  entitlement_type         String   @db.VarChar(50)
+  action_context           Json?
+  created_at               DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([entitlement_type], map: "idx_log_action_type")
+  @@index([timed_entitlement_id], map: "idx_log_timed_entitlement_id")
+  @@index([from_user_id, created_at(sort: Desc)], map: "idx_log_user_id_consumed_at")
+}
+
+model fail_cai_account {
+  id                        Int       @id @default(autoincrement())
+  created_at                DateTime  @default(now()) @db.Timestamp(6)
+  updated_at                DateTime? @default(now()) @db.Timestamp(6)
+  email                     String?   @db.VarChar
+  password                  String?   @db.VarChar
+  cai_username              String?   @db.VarChar
+  available_cai_account_id  Int?
+  error_msg                 String?   @db.VarChar
+  user_id                   Int?
+  third_party_login_user_id String?   @db.VarChar
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model gc_daily_retain_user_list {
+  id         BigInt   @id @default(autoincrement())
+  user_id    Int?
+  created_at DateTime @db.Timestamp(6)
+}
+
+model gender {
+  id   Int    @id @default(autoincrement())
+  name String @unique @db.VarChar(255)
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model image_recognition_log {
+  id         BigInt   @id @default(autoincrement())
+  user_id    BigInt?
+  image_url  String?
+  reason     String?
+  biz_source String?  @db.VarChar(64)
+  created_at DateTime @default(now()) @db.Timestamp(6)
+}
+
+model ins_ai_filtered_content {
+  id                 BigInt    @id @default(autoincrement())
+  user_id            Int?
+  content_url        String?
+  content_type       String?   @db.VarChar(50)
+  description        String?
+  use_status         Int?
+  usage_type         String?   @db.VarChar(50)
+  post_id            String?   @db.VarChar(100)
+  created_at         DateTime? @db.Timestamp(6)
+  updated_at         DateTime? @db.Timestamp(6)
+  miss_reason        String?
+  user_name          String?   @db.VarChar(255)
+  public_url         String?   @db.VarChar(500)
+  local_path         String?   @db.VarChar(500)
+  ai_analysis_raw    String?
+  pictures_full_info String?
+  pictures           String?
+
+  @@unique([user_name, local_path], map: "idx_ins_ai_filtered_content_user_name_local_path")
+  @@index([usage_type], map: "idx_ins_ai_filtered_content_usage_type")
+  @@index([user_id], map: "idx_ins_ai_filtered_content_user_id")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model ins_ai_filtered_content_backup_1755863364 {
+  id              BigInt?
+  user_id         Int?
+  content_url     String?
+  content_type    String?   @db.VarChar(50)
+  description     String?
+  use_status      Int?
+  usage_type      String?   @db.VarChar(50)
+  post_id         String?   @db.VarChar(100)
+  created_at      DateTime? @db.Timestamp(6)
+  updated_at      DateTime? @db.Timestamp(6)
+  miss_reason     String?
+  user_name       String?   @db.VarChar(255)
+  public_url      String?   @db.VarChar(500)
+  local_path      String?   @db.VarChar(500)
+  ai_analysis_raw String?
+  pictures        String?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model ins_ai_filtered_content_backup_1755863547 {
+  id                 BigInt?
+  user_id            Int?
+  content_url        String?
+  content_type       String?   @db.VarChar(50)
+  description        String?
+  use_status         Int?
+  usage_type         String?   @db.VarChar(50)
+  post_id            String?   @db.VarChar(100)
+  created_at         DateTime? @db.Timestamp(6)
+  updated_at         DateTime? @db.Timestamp(6)
+  miss_reason        String?
+  user_name          String?   @db.VarChar(255)
+  public_url         String?   @db.VarChar(500)
+  local_path         String?   @db.VarChar(500)
+  ai_analysis_raw    String?
+  pictures_full_info String?
+  pictures           String?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model ins_ai_filtered_content_backup_1755863566 {
+  id              BigInt?
+  user_id         Int?
+  content_url     String?
+  content_type    String?   @db.VarChar(50)
+  description     String?
+  use_status      Int?
+  usage_type      String?   @db.VarChar(50)
+  post_id         String?   @db.VarChar(100)
+  created_at      DateTime? @db.Timestamp(6)
+  updated_at      DateTime? @db.Timestamp(6)
+  miss_reason     String?
+  user_name       String?   @db.VarChar(255)
+  public_url      String?   @db.VarChar(500)
+  local_path      String?   @db.VarChar(500)
+  ai_analysis_raw String?
+  pictures        String?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model ins_ai_filtered_content_backup_1755863966 {
+  id                 BigInt?
+  user_id            Int?
+  content_url        String?
+  content_type       String?   @db.VarChar(50)
+  description        String?
+  use_status         Int?
+  usage_type         String?   @db.VarChar(50)
+  post_id            String?   @db.VarChar(100)
+  created_at         DateTime? @db.Timestamp(6)
+  updated_at         DateTime? @db.Timestamp(6)
+  miss_reason        String?
+  user_name          String?   @db.VarChar(255)
+  public_url         String?   @db.VarChar(500)
+  local_path         String?   @db.VarChar(500)
+  ai_analysis_raw    String?
+  pictures           String?
+  pictures_full_info String?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model ins_ai_filtered_content_backup_1755864037 {
+  id              BigInt?
+  user_id         Int?
+  content_url     String?
+  content_type    String?   @db.VarChar(50)
+  description     String?
+  use_status      Int?
+  usage_type      String?   @db.VarChar(50)
+  post_id         String?   @db.VarChar(100)
+  created_at      DateTime? @db.Timestamp(6)
+  updated_at      DateTime? @db.Timestamp(6)
+  miss_reason     String?
+  user_name       String?   @db.VarChar(255)
+  public_url      String?   @db.VarChar(500)
+  local_path      String?   @db.VarChar(500)
+  ai_analysis_raw String?
+  pictures        String?
+
+  @@ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model ins_ai_filtered_content_backup_1755864259 {
+  id              BigInt?
+  user_id         Int?
+  content_url     String?
+  content_type    String?   @db.VarChar(50)
+  description     String?
+  use_status      Int?
+  usage_type      String?   @db.VarChar(50)
+  post_id         String?   @db.VarChar(100)
+  created_at      DateTime? @db.Timestamp(6)
+  updated_at      DateTime? @db.Timestamp(6)
+  miss_reason     String?
+  user_name       String?   @db.VarChar(255)
+  public_url      String?   @db.VarChar(500)
+  local_path      String?   @db.VarChar(500)
+  ai_analysis_raw String?
+  pictures        String?
+
+  @@ignore
+}
+
+model ins_crawler_link {
+  id               BigInt   @id @default(autoincrement())
+  user_id          BigInt?
+  user_name        String?  @unique(map: "idx_user_name") @default("") @db.VarChar
+  link             String?  @default("") @db.VarChar
+  use_status       Int      @default(0)
+  created_at       DateTime @default(now()) @db.Timestamp(6)
+  profile_analyzed Boolean  @default(false)
+  analysis_result  String?
+}
+
+model ins_crawler_resource {
+  id            BigInt   @id @default(autoincrement())
+  user_id       BigInt?
+  user_name     String?  @default("") @db.VarChar
+  original_name String?  @default("") @db.VarChar
+  original_url  String?  @default("") @db.VarChar
+  url           String?  @default("") @db.VarChar
+  use_status    Int      @default(0)
+  created_at    DateTime @default(now()) @db.Timestamp(6)
+  local_path    String   @default("") @db.VarChar(255)
+  file_size     BigInt   @default(0)
+  pictures      Json?
+
+  @@unique([user_name, original_name], map: "idx_user_name_original_name")
+  @@index([created_at], map: "idx_created_at")
+}
+
+model ins_processing_task {
+  id            BigInt    @id @default(autoincrement())
+  user_name     String    @db.VarChar
+  task_type     String    @db.VarChar(50)
+  status        Int       @default(0)
+  result_data   String?
+  error_message String?
+  retry_count   Int?      @default(0)
+  scheduled_at  DateTime? @default(now()) @db.Timestamp(6)
+  started_at    DateTime? @db.Timestamp(6)
+  completed_at  DateTime? @db.Timestamp(6)
+  created_at    DateTime  @default(now()) @db.Timestamp(6)
+
+  @@index([status], map: "idx_ins_processing_task_status")
+  @@index([task_type], map: "idx_ins_processing_task_type")
+  @@index([user_name], map: "idx_ins_processing_task_user_name")
+}
+
+model ins_user_profile {
+  id                       BigInt   @id @default(autoincrement())
+  user_name                String   @unique(map: "idx_ins_user_profile_user_name") @db.VarChar
+  name                     String?  @db.VarChar
+  age                      Int?
+  zodiac                   String?  @db.VarChar
+  bio                      String?
+  education_and_profession String?
+  profile_analysis_raw     String?
+  created_user_id          Int?
+  created_at               DateTime @default(now()) @db.Timestamp(6)
+  updated_at               DateTime @default(now()) @db.Timestamp(6)
+  interest_tag             String?  @db.VarChar(255)
+}
+
+model male_user_archetypes {
+  id          BigInt  @id @default(autoincrement())
+  race        String? @db.VarChar
+  face_score  String? @db.VarChar
+  min_age     Int
+  max_age     Int
+  slide_queue Json?
+}
+
+model male_user_archetypes_new {
+  id          BigInt  @id @default(autoincrement())
+  race        String? @db.VarChar
+  face_score  String? @db.VarChar
+  min_age     Int
+  max_age     Int
+  slide_queue Json?
+}
+
+model manual_withdraw_request {
+  id        Int      @id(map: "manual_withdraw_request_pk") @default(autoincrement())
+  user_id   Int
+  amount    String   @db.VarChar
+  finished  Boolean?
+  create_at DateTime @default(now()) @db.Timestamp(6)
+  update_at DateTime @default(now()) @db.Timestamp(6)
+
+  @@index([user_id], map: "manual_withdraw_request_user_id_index")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model no_balance_task {
+  id                        BigInt    @id @default(autoincrement())
+  from_user_id              Int
+  to_user_id                Int
+  send_message_time         DateTime  @db.Timestamp(6)
+  no_balance_task_exec_time DateTime? @db.Timestamp(6)
+  task_status               Int       @default(1) @db.SmallInt
+  task_real_exec_time       DateTime? @db.Timestamp(6)
+  pre_reply                 String?   @db.VarChar(500)
+  ai_reply                  String?   @db.VarChar(500)
+  prompt_ctx                String?
+  created_at                DateTime  @default(now()) @db.Timestamp(6)
+  updated_at                DateTime  @default(now()) @db.Timestamp(6)
+
+  @@index([from_user_id, to_user_id, task_status], map: "idx_no_balance_task_from_to_user_status")
+}
+
+model phone_number {
+  id           Int     @id @default(autoincrement())
+  phone_number String  @db.VarChar(20)
+  state        String? @db.VarChar(50)
+}
+
+/// This table is a partition table and requires additional setup for migrations. Visit https://pris.ly/d/partition-tables for more info.
+model post {
+  id                BigInt    @default(autoincrement())
+  user_id           Int
+  created_at        DateTime  @default(now()) @db.Timestamp(6)
+  updated_at        DateTime? @default(now()) @db.Timestamp(6)
+  deleted_at        DateTime? @db.Timestamp(6)
+  banned_at         DateTime? @db.Timestamp(6)
+  pictures          String?   @db.VarChar
+  content           String?   @db.VarChar
+  partial_banned_at DateTime? @db.Timestamp(6)
+  pic_type          String?   @db.VarChar(50)
+
+  @@id([id, user_id])
+  @@index([deleted_at, banned_at, user_id, id(sort: Desc)], map: "idx_post_deleted_banned_userid_id")
+  @@index([created_at(sort: Desc)])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model post_ai_annotation {
+  id               Int       @id @default(autoincrement())
+  post_id          BigInt
+  image_url        String
+  image_index      Int
+  annotation_type  Int
+  description      String?
+  style_tags       Json?
+  confidence_score Float?    @default(0.0)
+  created_at       DateTime? @default(now()) @db.Timestamp(6)
+  updated_at       DateTime? @default(now()) @db.Timestamp(6)
+
+  @@index([created_at], map: "idx_post_ai_annotation_created_at")
+  @@index([post_id], map: "idx_post_ai_annotation_post_id")
+  @@index([annotation_type], map: "idx_post_ai_annotation_type")
+}
+
+/// This table is a partition table and requires additional setup for migrations. Visit https://pris.ly/d/partition-tables for more info.
+model post_comment {
+  id          BigInt    @default(autoincrement())
+  user_id     Int?
+  post_id     BigInt
+  parent_id   BigInt?
+  reply_id    BigInt?
+  content     String?
+  type        Int?      @default(0) @db.SmallInt
+  reply_count BigInt?   @default(0)
+  size        Int?      @default(0)
+  status      Int?      @default(0) @db.SmallInt
+  created_at  DateTime  @default(now()) @db.Timestamp(6)
+  updated_at  DateTime? @default(now()) @db.Timestamp(6)
+  deleted_at  DateTime? @db.Timestamp(6)
+  lang        String?   @db.VarChar(16)
+
+  @@id([id, post_id])
+  @@index([parent_id])
+  @@index([post_id])
+}
+
+/// This table is a partition table and requires additional setup for migrations. Visit https://pris.ly/d/partition-tables for more info.
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model post_comment_count {
+  id              BigInt    @default(autoincrement())
+  post_id         BigInt
+  count           BigInt?   @default(0)
+  male_count      BigInt?   @default(0)
+  female_count    BigInt?   @default(0)
+  nonbinary_count BigInt?   @default(0)
+  created_at      DateTime  @default(now()) @db.Timestamp(6)
+  updated_at      DateTime  @default(now()) @db.Timestamp(6)
+  deleted_at      DateTime? @db.Timestamp(6)
+
+  @@ignore
+}
+
+model post_interact {
+  id         BigInt    @id @default(autoincrement())
+  user_id    Int
+  created_at DateTime  @default(now()) @db.Timestamp(6)
+  deleted_at DateTime? @db.Timestamp(6)
+  type       Int
+  post_id    BigInt
+
+  @@index([post_id, deleted_at, created_at], map: "idx_post_interact_post_id_deleted_at_create_time")
+  @@index([post_id, user_id], map: "idx_post_interact_post_id_user_id")
+}
+
+/// This table is a partition table and requires additional setup for migrations. Visit https://pris.ly/d/partition-tables for more info.
+model post_interact_count {
+  id            BigInt             @default(autoincrement())
+  post_id       BigInt
+  interact_type post_interact_type @default(UNSPECIFIED)
+  count         Int                @default(0)
+  created_at    DateTime           @default(now()) @db.Timestamp(6)
+  updated_at    DateTime           @default(now()) @db.Timestamp(6)
+  deleted_at    DateTime?          @db.Timestamp(6)
+
+  @@id([id, post_id])
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model post_interaction_timeline {
+  id                  BigInt    @id @default(autoincrement())
+  post_id             BigInt
+  post_user_id        Int
+  digital_human_id    Int
+  interaction_type    Int
+  interaction_content String?
+  scheduled_time_utc  DateTime  @db.Timestamp(6)
+  executed_time       DateTime? @db.Timestamp(6)
+  status              Int?      @default(0)
+  created_at          DateTime? @default(now()) @db.Timestamp(6)
+  updated_at          DateTime? @default(now()) @db.Timestamp(6)
+  retry_count         Int?      @default(0)
+  last_retry_time     DateTime? @db.Timestamp(6)
+  error_message       String?
+
+  @@index([digital_human_id], map: "idx_post_interaction_timeline_digital_human_id")
+  @@index([interaction_type], map: "idx_post_interaction_timeline_interaction_type")
+  @@index([post_id], map: "idx_post_interaction_timeline_post_id")
+  @@index([post_user_id], map: "idx_post_interaction_timeline_post_user_id")
+  @@index([status], map: "idx_post_interaction_timeline_status")
+}
+
+/// This table is a partition table and requires additional setup for migrations. Visit https://pris.ly/d/partition-tables for more info.
+model post_like {
+  id         BigInt    @default(autoincrement())
+  post_id    BigInt
+  user_id    Int
+  is_like    Boolean   @default(false)
+  created_at DateTime  @default(now()) @db.Timestamp(6)
+  updated_at DateTime  @default(now()) @db.Timestamp(6)
+  deleted_at DateTime? @db.Timestamp(6)
+
+  @@id([id, post_id])
+}
+
+/// This table is a partition table and requires additional setup for migrations. Visit https://pris.ly/d/partition-tables for more info.
+model post_like_count {
+  id              BigInt    @default(autoincrement())
+  post_id         BigInt    @unique(map: "idx_post_like_count_post_id")
+  count           Int?      @default(0)
+  created_at      DateTime  @default(now()) @db.Timestamp(6)
+  updated_at      DateTime  @default(now()) @db.Timestamp(6)
+  deleted_at      DateTime? @db.Timestamp(6)
+  male_count      BigInt?   @default(0)
+  female_count    BigInt?   @default(0)
+  nonbinary_count BigInt?   @default(0)
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model post_report {
+  id          BigInt    @default(autoincrement())
+  post_id     BigInt
+  informer_id Int
+  reasons     Int[]     @default([])
+  description String?
+  created_at  DateTime  @default(now()) @db.Timestamp(6)
+  updated_at  DateTime  @default(now()) @db.Timestamp(6)
+  deleted_at  DateTime? @db.Timestamp(6)
+
+  @@ignore
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model presence_test {
+  user_id          BigInt    @id @default(autoincrement())
+  username         String    @unique @db.VarChar(50)
+  password_hash    String    @db.VarChar(255)
+  phone            String?   @unique @db.VarChar(20)
+  email            String?   @unique @db.VarChar(100)
+  presence_status  String    @default("offline") @db.VarChar(20)
+  last_online_time DateTime? @default(now()) @db.Timestamptz(6)
+  account_status   String    @default("enabled") @db.VarChar(10)
+  created_at       DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime  @default(now()) @db.Timestamptz(6)
+}
+
+model pwa_anchor_video {
+  id           BigInt   @id @default(autoincrement())
+  user_id      BigInt   @unique(map: "idx_user_id")
+  url          String?  @default("") @db.VarChar
+  audit_status String   @default("Auditing") @db.VarChar
+  created_at   DateTime @default(now()) @db.Timestamp(6)
+  update_at    DateTime @default(now()) @db.Timestamp(6)
+}
+
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model pwa_club {
+  id                Int       @id(map: "pwa_user_club_pk") @default(autoincrement())
+  invitation_code   String    @unique(map: "pwa_club_invitation_code_idx") @db.VarChar
+  club_name         String    @db.VarChar
+  club_email        String?   @unique(map: "uniq_club_email") @db.VarChar
+  club_master_name  String?   @db.VarChar
+  country           String?   @db.VarChar
+  club_master_phone String?   @unique(map: "uniq_club_phone") @db.VarChar
+  created_at        DateTime? @default(now()) @db.Timestamp(6)
+  created_by        Int?
+}
+
+model pwa_club_invite_codes {
+  id         Int       @id @default(autoincrement())
+  code       String    @unique @db.VarChar(4)
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  is_used    Boolean?  @default(false)
+}
+
+model pwa_distribution {
+  id                      BigInt    @id @default(autoincrement())
+  pwa_user_id             BigInt
+  pool_type               String    @db.VarChar(20)
+  is_second_withdraw      Boolean?  @default(false)
+  is_suspend_mock_video   Boolean?  @default(false)
+  performance_coefficient Decimal?  @default(1.0) @db.Decimal(3, 2)
+  click_count             BigInt?   @default(0)
+  receive_call_count      BigInt?   @default(0)
+  connected_call_count    BigInt?   @default(0)
+  created_at              DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at              DateTime? @default(now()) @db.Timestamptz(6)
+  deleted_at              DateTime? @db.Timestamptz(6)
+
+  @@index([pool_type, updated_at], map: "idx_pool_type_updated")
+}
+
+model pwa_distribution_stat {
+  id                   BigInt    @id @default(autoincrement())
+  pwa_user_id          BigInt
+  day_time             DateTime  @db.Timestamptz(6)
+  bottom_quarter       Boolean?  @default(false)
+  click_count          BigInt?   @default(0)
+  receive_call_count   BigInt?   @default(0)
+  connected_call_count BigInt?   @default(0)
+  created_at           DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime? @default(now()) @db.Timestamptz(6)
+  deleted_at           DateTime? @db.Timestamptz(6)
+
+  @@unique([pwa_user_id, day_time], map: "uq_pwa_stats")
+}
+
+model pwa_request_info {
+  id        Int       @id(map: "pwa_request_info_pk") @default(autoincrement())
+  user_id   Int
+  raw_ua    String?   @db.VarChar
+  create_at DateTime? @default(now()) @db.Timestamp(6)
+  update_at DateTime? @default(now()) @db.Timestamp(6)
+
+  @@unique([user_id, raw_ua], map: "pwa_request_info_uniq")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model pwa_user_balance_change_history {
+  id                    BigInt    @id(map: "pwa_user_balance_change_history_pk") @default(autoincrement())
+  from_user_id          Int
+  to_user_id            Int?
+  created_at            DateTime? @default(now()) @db.Timestamp(6)
+  balance_change        String    @db.VarChar
+  left_balance          String?   @db.VarChar
+  change_type           String?   @db.VarChar
+  call_order_id         Int?
+  ins_exchange_order_id BigInt?
+
+  @@index([from_user_id, to_user_id, change_type], map: "idx_pwa_balance_change_daily_messages")
+  @@index([created_at, from_user_id])
+  @@index([created_at, to_user_id])
+  @@index([from_user_id, created_at])
+  @@index([to_user_id, created_at])
+}
+
+model pwa_user_video {
+  id          Int       @id(map: "pwa_user_video_pk") @default(autoincrement())
+  user_id     Int
+  created_at  DateTime? @default(now()) @db.Timestamp(6)
+  url         String?   @db.VarChar
+  verify_pass Boolean?  @default(false)
+  fail_reason String?   @default("") @db.VarChar
+  order_id    Int?
+  tmp         Int?
+
+  @@index([user_id], map: "pwa_user_video_user_id_index")
+}
+
+model recycle_account_stats {
+  id                      Int      @id @default(autoincrement())
+  created_at              DateTime @default(now()) @db.Timestamp(6)
+  recycle_count           Int?
+  temp_remaining_count    Int?
+  outlook_remaining_count Int?
+}
+
+model referral_code {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  code       String   @db.VarChar
+  created_at DateTime @default(now()) @db.Timestamp(6)
+  updated_at DateTime @default(now()) @db.Timestamp(6)
+  deleted_at DateTime @default(now()) @db.Timestamp(6)
+
+  @@index([user_id], map: "referral_code_userid_idx")
+}
+
+model referral_code_usage {
+  id               Int      @id @default(autoincrement())
+  referral_code_id Int
+  invitee_user_id  Int      @unique(map: "referral_code_usage_invitee_user_id_idx")
+  state            Int
+  created_at       DateTime @default(now()) @db.Timestamp(6)
+  updated_at       DateTime @default(now()) @db.Timestamp(6)
+  deleted_at       DateTime @default(now()) @db.Timestamp(6)
+  inviter_user_id  Int?
+
+  @@index([inviter_user_id], map: "referral_code_usage_inviter_userid_index")
+  @@index([referral_code_id])
+}
+
+model register_state {
+  id   Int    @id @default(autoincrement())
+  name String @unique @db.VarChar(255)
+}
+
+model regulation_status {
+  id   Int    @id @default(autoincrement())
+  name String @unique @db.VarChar(255)
+}
+
+model reward_token_balance {
+  id         Int      @id @default(autoincrement())
+  user_id    Int      @unique(map: "reward_token_balance_userid_idx")
+  amount     Int
+  created_at DateTime @default(now()) @db.Timestamp(6)
+  updated_at DateTime @default(now()) @db.Timestamp(6)
+
+  @@index([user_id], map: "idx")
+}
+
+model reward_token_usage {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  number     Int
+  type       BigInt
+  mark       String?
+  created_at DateTime @default(now()) @db.Timestamp(6)
+
+  @@index([type])
+  @@index([user_id])
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model screenshot_detect {
+  id             BigInt   @id @default(autoincrement())
+  created_at     DateTime @default(now()) @db.Timestamp(6)
+  updated_at     DateTime @default(now()) @db.Timestamp(6)
+  male_user_id   Int
+  female_user_id Int
+  detect_result  String?  @db.VarChar
+  time_point     String?  @db.VarChar
+  room_id        String?  @db.VarChar
+  screenshot_url String?  @db.VarChar
+  is_violation   Boolean  @default(false)
+  need_deduction Boolean  @default(false)
+
+  @@index([female_user_id])
+  @@index([male_user_id])
+}
+
+model search_suggest {
+  id   Int     @id @default(autoincrement())
+  word String? @db.VarChar
+
+  @@index([word(ops: raw("gin_bigm_ops"))], map: "idx_search_suggest", type: Gin)
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model selfie_send_record {
+  id                BigInt    @id @default(autoincrement())
+  digital_human_id  BigInt
+  user_id           BigInt
+  selfie_content_id BigInt
+  sent_at           DateTime? @default(now()) @db.Timestamp(6)
+  status            Int?      @default(1) @db.SmallInt
+  created_at        DateTime? @default(now()) @db.Timestamp(6)
+  updated_at        DateTime? @default(now()) @db.Timestamp(6)
+
+  @@unique([user_id, digital_human_id, selfie_content_id], map: "uk_user_digital_human_content")
+  @@index([digital_human_id, user_id], map: "idx_digital_human_user")
+  @@index([selfie_content_id], map: "idx_selfie_content")
+  @@index([sent_at], map: "idx_sent_at")
+  @@index([status], map: "idx_status")
+}
+
+model share_record {
+  id         Int       @id @default(autoincrement())
+  user_id    Int
+  platform   Int?
+  created_at DateTime? @db.Timestamp(6)
+  updated_at DateTime? @db.Timestamp(6)
+  deleted_at DateTime? @db.Timestamp(6)
+
+  @@unique([user_id, platform], map: "share_record_user_id_platform_index")
+}
+
+model sign_up_type {
+  id   Int    @id @default(autoincrement())
+  name String @unique @db.VarChar(255)
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model simp_dog_7day_count {
+  user_id    Int
+  dh_user_id Int
+  count      Int       @default(0)
+  updated_at DateTime? @default(now()) @db.Timestamp(6)
+
+  @@id([user_id, dh_user_id])
+  @@index([updated_at], map: "idx_simp_dog_7day_count_updated_at")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model simp_dog_daily_task {
+  id                   BigInt    @id @default(autoincrement())
+  user_id              Int
+  dh_user_id           Int
+  dh_send_message_time DateTime  @db.Timestamp(6)
+  simp_task_exec_time  DateTime? @db.Timestamp(6)
+  task_status          Int       @default(1) @db.SmallInt
+  task_real_exec_time  DateTime? @db.Timestamp(6)
+  pre_reply            String?   @db.VarChar(500)
+  ai_reply             String?   @db.VarChar(500)
+  prompt_ctx           String?
+  created_at           DateTime  @default(now()) @db.Timestamp(6)
+  updated_at           DateTime  @default(now()) @db.Timestamp(6)
+
+  @@index([task_status, user_id], map: "idx_simp_dog_daily_task_status_user_id")
+  @@index([user_id, dh_user_id], map: "idx_simp_dog_daily_task_user_dh")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model simp_dog_hour_log {
+  id         BigInt   @id @default(autoincrement())
+  user_id    Int
+  dh_user_id Int
+  sent_time  DateTime @default(now()) @db.Timestamp(6)
+  success    Boolean  @default(true)
+  remark     String?  @db.VarChar(200)
+  created_at DateTime @default(now()) @db.Timestamp(6)
+
+  @@index([dh_user_id, sent_time(sort: Desc)], map: "idx_simp_dog_hour_log_dh_time")
+  @@index([user_id, dh_user_id, sent_time(sort: Desc)], map: "idx_simp_dog_hour_log_user_dh")
+  @@index([user_id, sent_time(sort: Desc)], map: "idx_simp_dog_hour_log_user_time")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model simp_dog_task {
+  id                   BigInt    @id @default(autoincrement())
+  dh_user_id           Int
+  user_id              Int
+  simp_type            Int       @default(1) @db.SmallInt
+  dh_send_message_time DateTime  @db.Timestamp(6)
+  monitor_expire_time  DateTime  @db.Timestamp(6)
+  hit_simp             Int       @default(2) @db.SmallInt
+  simp_task_exec_time  DateTime? @db.Timestamp(6)
+  task_status          Int       @default(1) @db.SmallInt
+  task_real_exec_time  DateTime? @db.Timestamp(6)
+  remark               String?   @db.VarChar(200)
+  created_at           DateTime  @default(now()) @db.Timestamp(6)
+  updated_at           DateTime  @default(now()) @db.Timestamp(6)
+
+  @@unique([dh_user_id, user_id, simp_type], map: "uk_simp_dog_task_dh_user_type")
+  @@index([task_status, monitor_expire_time], map: "idx_simp_dog_task_status_monitor_time")
+  @@index([task_status, user_id], map: "idx_simp_dog_task_status_user_id")
+  @@index([user_id, dh_user_id], map: "idx_simp_dog_task_user_dh")
+}
+
+model story {
+  id           BigInt    @default(autoincrement())
+  created_at   DateTime  @default(now()) @db.Timestamp(6)
+  updated_at   DateTime? @default(now()) @db.Timestamp(6)
+  deleted_at   DateTime? @db.Timestamp(6)
+  from_user_id Int
+  to_user_id   Int
+  title        String?   @db.VarChar
+  content      String?   @db.VarChar
+  pictures     String?   @db.VarChar
+
+  @@id([id, from_user_id, to_user_id])
+  @@index([created_at(sort: Desc)])
+  @@index([created_at(sort: Desc)], map: "video_test_history_created_at_idx")
+}
+
+model story_bless {
+  id         BigInt    @default(autoincrement())
+  created_at DateTime  @default(now()) @db.Timestamp(6)
+  updated_at DateTime? @default(now()) @db.Timestamp(6)
+  deleted_at DateTime? @db.Timestamp(6)
+  story_id   BigInt
+  user_id    Int
+  content    String?
+
+  @@id([id, story_id])
+  @@unique([user_id, story_id], map: "story_bless_unique_index")
+}
+
+model story_bless_count {
+  id         BigInt    @default(autoincrement())
+  created_at DateTime  @default(now()) @db.Timestamp(6)
+  updated_at DateTime? @default(now()) @db.Timestamp(6)
+  deleted_at DateTime? @db.Timestamp(6)
+  story_id   BigInt    @unique(map: "story_bless_count_story_id_uidx")
+  count      BigInt?   @default(0)
+}
+
+model subscription {
+  id                 Int                     @id @default(autoincrement())
+  name               String                  @db.VarChar(255)
+  description        String?
+  ios_product_id     String?                 @db.VarChar(255)
+  android_product_id String?                 @db.VarChar(255)
+  price              Decimal                 @db.Decimal(10, 2)
+  duration           Unsupported("interval")
+  tip                String?                 @db.VarChar(255)
+  entitlements       String?
+}
+
+model sus_behavior {
+  id            Int       @id @default(autoincrement())
+  user_id       Int?
+  device_id     String    @db.VarChar
+  sus_type      BigInt?
+  behavior_desc String?   @db.VarChar
+  created_at    DateTime  @default(now()) @db.Timestamp(6)
+  updated_at    DateTime? @default(now()) @db.Timestamp(6)
+
+  @@index([device_id], map: "idx_sus_behavior_device_id")
+}
+
+model task_schedule {
+  id           BigInt   @id @default(autoincrement())
+  created_at   DateTime @default(now()) @db.Timestamp(6)
+  execute_time DateTime @db.Timestamp(6)
+  scene        String?  @db.VarChar
+  from_user_id Int
+  to_user_id   Int
+  action       String?  @db.VarChar
+  like_content String?  @db.VarChar
+
+  @@index([created_at(sort: Desc)])
+  @@index([from_user_id])
+  @@index([to_user_id])
+}
+
+/// This table is a partition table and requires additional setup for migrations. Visit https://pris.ly/d/partition-tables for more info.
+model tim_conversation_info {
+  id           BigInt    @default(autoincrement())
+  user_id      Int
+  peer_user_id Int
+  created_time DateTime  @default(now()) @db.Timestamp(6)
+  source_type  String?   @db.VarChar(50)
+  ext          Json?
+  update_time  DateTime? @db.Timestamp(6)
+
+  @@id([user_id, id])
+  @@unique([user_id, peer_user_id], map: "tim_conversation_info_unique_user_peer")
+  @@index([source_type], map: "idx_tim_conversation_info_source_type")
+}
+
+/// This table is a partition table and requires additional setup for migrations. Visit https://pris.ly/d/partition-tables for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model tim_msg_record {
+  from_user_id   Int
+  to_user_id     Int
+  dh_user_id     Int
+  msg_time       BigInt
+  raw_msg        Json
+  session_key    String          @db.VarChar
+  msg_key        String          @db.VarChar
+  created_at     DateTime?       @default(now()) @db.Timestamp(6)
+  msg_seq        BigInt?         @default(0)
+  msg_desc       String?         @db.VarChar
+  delete_at      DateTime?       @db.Timestamp(6)
+  tim_msg_vector tim_msg_vector?
+
+  @@id([session_key, msg_key], map: "tim_msg_record_pk")
+}
+
+/// This table is a partition table and requires additional setup for migrations. Visit https://pris.ly/d/partition-tables for more info.
+model tim_msg_vector {
+  session_key    String                 @db.VarChar
+  msg_key        String                 @db.VarChar
+  msg_vector_768 Unsupported("vector")?
+  tim_msg_record tim_msg_record         @relation(fields: [session_key, msg_key], references: [session_key, msg_key], onDelete: Cascade, onUpdate: NoAction, map: "tim_msg_vector_fk")
+
+  @@id([session_key, msg_key], map: "tim_msg_vector_pk")
+  @@index([msg_vector_768], map: "idx_tim_msg_vector_hnsw")
+}
+
+model ugc_avatar {
+  id              Int     @id @default(autoincrement())
+  avatar_id       String  @unique(map: "ugc_avatar_avatar_id_unique_index") @db.VarChar(36)
+  avatar_name     String  @db.VarChar(100)
+  author_user_id  BigInt
+  author_username String  @db.VarChar(100)
+  is_enabled      Boolean
+  is_deleted      Boolean
+  create_time     BigInt
+  update_time     BigInt
+  description     String
+  usage_count     BigInt
+  urls            String
+  pic_url         String?
+  config          String?
+  is_recommend    Boolean @default(false)
+  sort_key        BigInt?
+
+  @@index([sort_key], map: "ugc_avatar_sort_key_index")
+}
+
+model ugc_premade {
+  id              Int     @id @default(autoincrement())
+  premade_id      String  @db.VarChar(36)
+  premade_name    String  @db.VarChar(100)
+  scene_id        String  @db.VarChar(36)
+  config          String?
+  author_user_id  BigInt
+  author_username String  @db.VarChar(100)
+  is_enabled      Boolean
+  is_deleted      Boolean
+  create_time     BigInt
+  update_time     BigInt
+  description     String
+  usage_count     BigInt
+}
+
+model ugc_scene {
+  id              Int     @id @default(autoincrement())
+  scene_id        String  @db.VarChar(36)
+  scene_name      String  @db.VarChar(100)
+  author_user_id  BigInt
+  author_username String  @db.VarChar(100)
+  is_enabled      Boolean
+  is_deleted      Boolean
+  create_time     BigInt
+  update_time     BigInt
+  description     String
+  urls            String
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model unified_payment_orders {
+  id                           String                         @id(map: "payment_orders_pkey") @db.VarChar(64)
+  user_id                      Int
+  biz_type                     String                         @db.VarChar(32)
+  product_id                   String                         @db.VarChar(128)
+  amount                       Decimal                        @db.Decimal(19, 4)
+  currency                     String                         @db.VarChar(3)
+  status                       String                         @db.VarChar(32)
+  provider                     String?                        @db.VarChar(32)
+  provider_order_id            String?                        @db.VarChar(128)
+  created_at                   DateTime?                      @default(now()) @db.Timestamp(6)
+  updated_at                   DateTime?                      @default(now()) @db.Timestamp(6)
+  unified_payment_transactions unified_payment_transactions[]
+
+  @@index([provider, provider_order_id], map: "idx_payment_orders_provider_id")
+  @@index([user_id], map: "idx_payment_orders_user")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model unified_payment_transactions {
+  id                     String                 @id @db.VarChar(64)
+  payment_order_id       String                 @db.VarChar(64)
+  provider               String                 @db.VarChar(32)
+  provider_tx_id         String?                @db.VarChar(128)
+  transaction_type       String                 @db.VarChar(32)
+  amount                 Decimal?               @db.Decimal(19, 4)
+  currency               String?                @db.VarChar(3)
+  status                 String                 @db.VarChar(32)
+  req_payload            String?
+  res_payload            String?
+  error_msg              String?
+  created_at             DateTime?              @default(now()) @db.Timestamp(6)
+  updated_at             DateTime?              @default(now()) @db.Timestamp(6)
+  payment_method         String?                @db.VarChar
+  ext                    Json?
+  unified_payment_orders unified_payment_orders @relation(fields: [payment_order_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([provider_tx_id, status], map: "idx_payment_tx_provider_tx_id_status")
+  @@index([payment_order_id], map: "idx_payment_tx_order_id")
+  @@index([provider_tx_id, created_at(sort: Desc)], map: "idx_payment_tx_provider_created")
+  @@index([provider, provider_tx_id], map: "idx_payment_tx_provider_ref")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model us_city_infos {
+  zip                   String   @id @db.VarChar(10)
+  lat                   Decimal  @db.Decimal(10, 5)
+  lng                   Decimal  @db.Decimal(10, 5)
+  city                  String?  @db.VarChar(100)
+  state_id              String?  @db.Char(2)
+  state_name            String?  @db.VarChar(100)
+  zcta                  Boolean?
+  parent_zcta           String?  @db.VarChar(10)
+  population            Int?
+  density               Decimal? @db.Decimal(10, 2)
+  county_fips           Int?
+  county_name           String?  @db.VarChar(100)
+  county_weights        Json?
+  county_names_all      String?
+  county_fips_all       String?
+  imprecise             Boolean?
+  military              Boolean?
+  timezone              String?  @db.VarChar(50)
+  nearby_cities         Json?
+  nearby_schools        Json?
+  city_total_population Int?
+
+  @@index([city], map: "idx_us_city_infos_city")
+  @@index([city, state_name, county_name], map: "idx_us_city_infos_city_state_county")
+}
+
+model user_activity {
+  id           Int       @id @default(autoincrement())
+  user_id      Int       @unique(map: "idx_user_activity_user_id")
+  last_open_at DateTime? @default(now()) @db.Timestamp(6)
+  created_at   DateTime  @default(now()) @db.Timestamp(6)
+  updated_at   DateTime? @default(now()) @db.Timestamp(6)
+  device_type  String?   @db.VarChar(255)
+
+  @@index([last_open_at(sort: Desc)], map: "idx_user_last_open")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model user_android_transaction_history {
+  id               Int       @id @default(autoincrement())
+  purchase_token   String    @db.VarChar(512)
+  created_at       DateTime  @default(now()) @db.Timestamp(6)
+  updated_at       DateTime  @default(now()) @db.Timestamp(6)
+  received_at      DateTime  @db.Timestamptz(6)
+  raw_notification Json?
+  processed_at     DateTime? @db.Timestamptz(6)
+
+  @@index([created_at(sort: Desc)], map: "idx_user_android_transaction_history_created_at")
+  @@index([purchase_token], map: "idx_user_android_transaction_history_purchase_token")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model user_android_transaction_history_backup {
+  id                Int?
+  user_id           Int?
+  purchase_date     DateTime? @db.Timestamp(6)
+  purchase_token    String?   @db.VarChar(512)
+  order_id          String?   @db.VarChar(255)
+  package_name      String?   @db.VarChar(255)
+  product_id        String?   @db.VarChar(255)
+  notification_type String?   @db.VarChar(50)
+  purchase_state    Int?
+  platform          Int?
+  app_name          Int?
+  expires_date      DateTime? @db.Timestamp(6)
+  created_at        DateTime? @db.Timestamp(6)
+  updated_at        DateTime? @db.Timestamp(6)
+
+  @@ignore
+}
+
+model user_appsflyer_info {
+  id           Int       @id @default(autoincrement())
+  userid       Int       @unique(map: "idx_user_user_appsflyer_info")
+  app_id       String    @db.VarChar
+  appsflyer_id String    @db.VarChar
+  create_time  DateTime? @default(now()) @db.Timestamp(6)
+  update_time  DateTime? @default(now()) @db.Timestamp(6)
+  app_name     Int?
+}
+
+model user_auto_pilot_status {
+  user_id      Int
+  chat_user_id Int
+  enabled      Boolean
+  create_at    DateTime @default(now()) @db.Timestamp(6)
+  update_at    DateTime @default(now()) @db.Timestamp(6)
+
+  @@unique([user_id, chat_user_id], map: "user_auto_pilot_status_pk")
+}
+
+model user_balance {
+  user_id   Int      @id(map: "user_balance_pk")
+  balance   String   @db.VarChar
+  create_at DateTime @default(now()) @db.Timestamp(6)
+  update_at DateTime @default(now()) @db.Timestamp(6)
+  frozen    String?  @db.VarChar
+}
+
+model user_behavior {
+  request_id String    @id(map: "user_behavior_pk") @default("") @db.VarChar
+  user_id    Int
+  content    Json?
+  created_at DateTime? @db.Timestamp(6)
+
+  @@index([created_at], map: "idx_user_behavior_created_at")
+}
+
+model user_block {
+  id         BigInt    @id(map: "user_block_list_pkey") @default(autoincrement())
+  user_id    Int
+  target_id  Int
+  created_at DateTime  @default(now()) @db.Timestamp(6)
+  deleted_at DateTime? @db.Timestamp(6)
+
+  @@index([target_id], map: "user_block_list_target_id_index")
+  @@index([user_id], map: "user_block_list_user_id_index")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model user_call_order {
+  id                 Int      @id(map: "user_call_order_pk") @default(autoincrement())
+  create_at          DateTime @default(now()) @db.Timestamp(6)
+  update_at          DateTime @default(now()) @db.Timestamp(6)
+  male_user_id       Int
+  female_user_id     Int
+  order_type         String   @db.VarChar
+  status             String   @db.VarChar
+  call_duration      Int?
+  amount             String?  @db.VarChar
+  reason_type        String?  @db.VarChar
+  free_call_duration Int?     @default(0)
+  price              String?  @db.VarChar(20)
+  call_order_rank    Int?
+
+  @@index([male_user_id, female_user_id, id], map: "idx_user_call_order_male_female_id")
+  @@index([female_user_id, status], map: "user_call_order_female_user_id_status_index")
+  @@index([status, order_type, create_at, female_user_id, call_duration, male_user_id], map: "idx_user_call_order_status_type_create_at")
+  @@index([create_at, status], map: "user_call_order_create_at_status")
+}
+
+model user_chat_order {
+  id         Int       @id(map: "user_chat_order_pk") @default(autoincrement())
+  user_id    Int
+  to_user_id Int?
+  create_at  DateTime  @default(now()) @db.Timestamp(6)
+  update_at  DateTime  @default(now()) @db.Timestamp(6)
+  accept_at  DateTime? @db.Timestamp(6)
+  amount     String    @db.VarChar
+  type       String?   @db.VarChar
+  status     String    @db.VarChar
+  end_score  Int?
+
+  @@index([status, accept_at], map: "user_chat_order_status_accept_at_index")
+  @@index([status, create_at], map: "user_chat_order_status_create_at_index")
+  @@index([to_user_id], map: "user_chat_order_to_user_id_index")
+  @@index([user_id, to_user_id], map: "user_chat_order_user_id_to_user_id_index")
+}
+
+model user_checkin {
+  id           BigInt    @id @default(autoincrement())
+  user_id      Int
+  checkin_time DateTime? @default(now()) @db.Timestamp(6)
+  checkin_date DateTime? @default(dbgenerated("(((checkin_time AT TIME ZONE 'UTC'::text) AT TIME ZONE 'America/Los_Angeles'::text))::date")) @db.Date
+
+  @@unique([user_id, checkin_date], map: "unique_user_checkin")
+  @@index([user_id], map: "idx_user_checkin_user_id")
+}
+
+model user_coin_change_history {
+  id           Int       @id @default(autoincrement())
+  from_user_id Int
+  to_user_id   Int
+  type         String?   @db.VarChar
+  created_at   DateTime? @default(now()) @db.Timestamp(6)
+  ext          String?   @db.VarChar
+  coin_value   BigInt?
+  left_coin    BigInt?
+
+  @@index([from_user_id, created_at(sort: Desc)], map: "idx_ucoin_from_created_at")
+  @@index([to_user_id, created_at(sort: Desc)], map: "idx_ucoin_to_created_at")
+  @@index([from_user_id], map: "idx_user_coin_change_history_from_user_id")
+}
+
+model user_coins {
+  id         Int       @id @default(autoincrement())
+  user_id    Int       @unique
+  coin_value BigInt
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  updated_at DateTime? @default(now()) @db.Timestamp(6)
+
+  @@index([user_id], map: "idx_user_coins_user_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model user_coins_buy_transactions {
+  id                   Int       @id(map: "user_coins_activity_pkey") @default(autoincrement())
+  user_id              Int
+  created_at           DateTime? @default(now()) @db.Timestamp(6)
+  updated_at           DateTime? @default(now()) @db.Timestamp(6)
+  coin_value           BigInt
+  coin_bundle_id       String    @db.VarChar
+  transaction_id       String?   @unique(map: "user_coins_activity_transaction_id_key") @db.VarChar
+  app_name             Int?
+  local_transaction_id Int?
+  client_type          Int?
+
+  @@index([user_id])
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model user_common_task {
+  user_id   Int
+  task_id   Int
+  task_kind String   @db.VarChar
+  status    String   @db.VarChar
+  create_at DateTime @default(now()) @db.Timestamp(6)
+  update_at DateTime @default(now()) @db.Timestamp(6)
+
+  @@index([user_id, task_id, create_at(sort: Desc)], map: "user_common_task_user_id_task_id_create_at_index")
+  @@index([user_id, task_kind, create_at(sort: Desc)], map: "user_common_task_user_id_task_kind_create_at_index")
+  @@ignore
+}
+
+model user_device_info {
+  user_id    Int?
+  device_id  String?   @db.VarChar
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  banned_at  DateTime? @db.Timestamp(6)
+  id         Int       @id @default(autoincrement())
+  updated_at DateTime? @db.Timestamp(6)
+}
+
+model user_dh_chat_history {
+  id          BigInt   @id @default(autoincrement())
+  user_id     Int      @unique(map: "unique_user_id")
+  dh_user_ids Int[]
+  created_at  DateTime @default(now()) @db.Timestamp(6)
+
+  @@index([user_id], map: "hidx_user_dh_chat_history_user_id", type: Hash)
+}
+
+model user_dh_phone_number {
+  id                         BigInt    @id @default(autoincrement())
+  user_id                    Int
+  digital_human_id           Int
+  flavor                     String?   @db.VarChar
+  user_phone_number          String?   @db.VarChar(20)
+  digital_human_phone_number String?   @db.VarChar(20)
+  digital_human_city         String?   @db.VarChar
+  is_onboarding              Boolean?
+  created_at                 DateTime? @default(now()) @db.Timestamp(6)
+
+  @@unique([user_id, digital_human_id], map: "uidx_user_dh_id")
+  @@unique([user_id, user_phone_number, digital_human_phone_number], map: "uidx_user_dh_id_phone_number")
+  @@index([user_phone_number, digital_human_phone_number], map: "idx_phone_numer_pair")
+}
+
+model user_double_check {
+  id            BigInt   @id @default(autoincrement())
+  from_user_id  Int
+  to_user_id    Int
+  from_to       String   @unique(map: "idx_from_to") @db.VarChar
+  switch        Boolean  @default(true)
+  trigger_round Int?
+  reason        String?  @db.VarChar
+  created_at    DateTime @default(now()) @db.Timestamp(6)
+  update_at     DateTime @default(now()) @db.Timestamp(6)
+
+  @@unique([from_user_id, to_user_id], map: "idx_from_to_user_id")
+}
+
+model user_entitlement {
+  id               BigInt    @id @default(autoincrement())
+  user_id          Int
+  entitlement_type String    @db.VarChar(50)
+  status           Int       @default(0)
+  created_at       DateTime  @default(now()) @db.Timestamp(6)
+  updated_at       DateTime  @default(now()) @db.Timestamp(6)
+  left_count       Int?      @default(0)
+  last_claim_at    DateTime? @default(now()) @db.Timestamp(6)
+  expires_at       DateTime? @db.Timestamp(6)
+  amount_count     Int?
+  activity_id      BigInt?
+
+  @@unique([user_id, entitlement_type], map: "uidx_user_entitlement_permanent")
+  @@index([user_id])
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model user_entitlement_v2 {
+  id               BigInt   @id @default(autoincrement())
+  user_id          Int
+  entitlement_type String   @db.VarChar(50)
+  initial_amount   Int
+  left_count       Int
+  status           Int      @default(0)
+  expires_at       DateTime @db.Timestamptz(6)
+  activity_id      BigInt?
+  created_at       DateTime @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([user_id, activity_id, expires_at], map: "idx_user_activity_expires_lookup")
+  @@index([expires_at, status], map: "idx_user_timed_entitlement_expiry_check")
+  @@index([user_id, entitlement_type, expires_at], map: "idx_user_timed_entitlement_lookup")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model user_entitlement_v2_expired {
+  id               BigInt   @id @default(autoincrement())
+  user_id          Int
+  entitlement_type String   @db.VarChar(50)
+  initial_amount   Int
+  left_count       Int
+  status           Int      @default(1)
+  expires_at       DateTime @db.Timestamptz(6)
+  activity_id      BigInt?
+  created_at       DateTime @db.Timestamptz(6)
+}
+
+model user_fcm_token {
+  id           Int       @id @default(autoincrement())
+  userid       Int       @unique(map: "idx_user_fcmtoken")
+  fcm_token    String    @db.VarChar
+  create_time  DateTime? @default(now()) @db.Timestamp(6)
+  update_time  DateTime? @default(now()) @db.Timestamp(6)
+  platform     String?   @db.VarChar
+  package_name String?   @db.VarChar
+  app_name     Int?
+}
+
+model user_flag_record {
+  id         Int       @id(map: "user_flag_record_pk") @default(autoincrement())
+  user_id    Int
+  flag       String?   @db.VarChar
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  extrainfo  String?   @db.VarChar
+
+  @@unique([user_id, flag], map: "user_flag_record_user_id_flag_uindex")
+}
+
+model user_free_coin_change_history {
+  id           Int       @id @default(autoincrement())
+  from_user_id Int
+  to_user_id   Int
+  type         String?   @db.VarChar
+  created_at   DateTime? @default(now()) @db.Timestamp(6)
+  ext          String?   @db.VarChar
+  coin_value   BigInt?
+  left_coin    BigInt?
+
+  @@index([from_user_id])
+}
+
+model user_free_coins {
+  id         Int       @id @default(autoincrement())
+  user_id    Int       @unique
+  coin_value BigInt
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  updated_at DateTime? @default(now()) @db.Timestamp(6)
+
+  @@index([user_id])
+}
+
+model user_geo_location {
+  id         Int       @id @default(autoincrement())
+  user_id    Int       @unique(map: "user_geo_location_user_id_idx")
+  ip         String?   @db.Inet
+  country    String?   @db.VarChar(255)
+  region     String?   @db.VarChar(255)
+  province   String?   @db.VarChar(255)
+  city       String?   @db.VarChar(255)
+  created_at DateTime  @default(now()) @db.Timestamp(6)
+  updated_at DateTime  @default(now()) @db.Timestamp(6)
+  deleted_at DateTime? @db.Timestamp(6)
+  zip_code   String?   @db.VarChar
+}
+
+model user_image_vec_data {
+  id        Int                    @id @default(autoincrement())
+  user_id   Int?
+  embedding Unsupported("vector")?
+
+  @@index([embedding])
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model user_ins_exchange_order {
+  id               BigInt    @id @default(autoincrement())
+  create_at        DateTime  @default(now()) @db.Timestamp(6)
+  update_at        DateTime  @default(now()) @db.Timestamp(6)
+  expire_at        DateTime? @db.Timestamp(6)
+  create_user_id   Int
+  male_user_id     Int
+  female_user_id   Int
+  status           String    @db.VarChar
+  followed         Boolean   @default(false)
+  relate_gift_id   String?   @db.VarChar
+  relate_gift_coin Int?
+  tim_message_id   String?   @db.VarChar
+
+  @@index([create_user_id])
+  @@index([female_user_id])
+  @@index([male_user_id])
+}
+
+model user_interest {
+  id      BigInt  @id(map: "user_interest_pk") @default(autoincrement())
+  tab_key String  @db.VarChar
+  tag_key String  @db.VarChar
+  user_id Int
+  pic_url String? @default("") @db.VarChar
+
+  @@index([user_id])
+}
+
+model user_intimacy_level_info {
+  id           Int       @id @default(autoincrement())
+  from_user_id Int
+  to_user_id   Int
+  level        Int
+  created_at   DateTime? @default(now()) @db.Timestamp(6)
+  updated_at   DateTime? @default(now()) @db.Timestamp(6)
+
+  @@unique([from_user_id, to_user_id], map: "idx_user_intimacy_level_info_from_to_user_id")
+}
+
+model user_ios_transaction_history {
+  id                          Int       @id @default(autoincrement())
+  user_id                     Int
+  purchase_date               DateTime  @db.Timestamp(6)
+  ios_transaction_id          String?   @db.VarChar(255)
+  platform                    Int
+  app_name                    Int
+  created_at                  DateTime  @default(now()) @db.Timestamp(6)
+  updated_at                  DateTime  @default(now()) @db.Timestamp(6)
+  ios_original_transaction_id String?   @db.VarChar(255)
+  ios_product_id              String?   @db.VarChar(255)
+  expires_date                DateTime? @db.Timestamp(6)
+  ops_type                    String?   @db.VarChar
+
+  @@index([user_id, ops_type], map: "idx_user_ios_transaction_history_userid")
+  @@index([user_id, created_at], map: "user_ios_transaction_history_user_id_created_at_index")
+}
+
+model user_last_operation {
+  id              BigInt    @id @default(autoincrement())
+  user_id         BigInt    @unique(map: "uk_user_id")
+  last_visit_time DateTime  @db.Timestamptz(6)
+  created_at      DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime  @default(now()) @db.Timestamptz(6)
+  deleted_at      DateTime? @db.Timestamptz(6)
+}
+
+/// This table is a partition table and requires additional setup for migrations. Visit https://pris.ly/d/partition-tables for more info.
+model user_likes {
+  id             BigInt    @default(autoincrement())
+  user_id        Int
+  target_user_id Int
+  like_type      Int
+  created_at     DateTime? @default(now()) @db.Timestamp(6)
+
+  @@id([id, target_user_id])
+  @@unique([user_id, target_user_id])
+  @@index([target_user_id, like_type])
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model user_match_like_record {
+  id               BigInt   @id @default(autoincrement())
+  like_user_id     Int
+  liked_user_id    Int
+  is_like          Boolean
+  is_unread        Boolean
+  view_duration    BigInt
+  match_time       DateTime @default(now()) @db.Timestamp(6)
+  user_action_desc String?  @db.VarChar
+  like_type        String?  @db.VarChar
+
+  @@unique([like_user_id, liked_user_id], map: "user_like_pair_unique")
+  @@index([liked_user_id, is_like, match_time(sort: Desc)], map: "idx_liked_user_like_time_desc")
+  @@index([like_user_id], map: "idx_user_match_like_record_like_user_id")
+  @@index([liked_user_id, like_user_id], map: "idx_liked_user_include_like_user")
+}
+
+model user_misc_json {
+  user_id   Int      @id(map: "user_misc_json_pk")
+  create_at DateTime @default(now()) @db.Timestamp(6)
+  update_at DateTime @default(now()) @db.Timestamp(6)
+  misc_json Json?
+}
+
+model user_mutual_evaluation {
+  id          Int       @id(map: "user_mutual_evaluation_pk") @default(autoincrement())
+  src_user_id Int
+  to_user_id  Int
+  score       Int
+  create_at   DateTime? @default(now()) @db.Timestamp(6)
+  update_at   DateTime? @default(now()) @db.Timestamp(6)
+
+  @@unique([src_user_id, to_user_id], map: "user_mutual_evaluation_uniq")
+  @@index([score], map: "user_mutual_evaluation_score_index")
+  @@index([to_user_id], map: "user_mutual_evaluation_to_user_id_index")
+}
+
+model user_onboarding_task {
+  user_id   Int      @id(map: "user_onboarding_task_pk")
+  create_at DateTime @default(now()) @db.Timestamp(6)
+  update_at DateTime @default(now()) @db.Timestamp(6)
+  status    String   @db.VarChar
+}
+
+model user_onboarding_task_v2 {
+  user_id   Int      @id(map: "user_onboarding_task_v2_pk")
+  create_at DateTime @default(now()) @db.Timestamp(6)
+  update_at DateTime @default(now()) @db.Timestamp(6)
+  cashouted Boolean  @default(false)
+}
+
+model user_online_status_record {
+  id            Int       @id @default(autoincrement())
+  user_id       Int       @unique
+  self_status   Int       @default(-1)
+  server_status Int       @default(0)
+  updated_at    DateTime? @default(now()) @db.Timestamp(6)
+  created_at    DateTime? @default(now()) @db.Timestamp(6)
+  pwa_status    String?   @default("PWA_STATUS_UNKNOWN") @db.VarChar
+}
+
+model user_paypal_id {
+  user_id         Int      @id(map: "user_paypal_id_pk")
+  paypal_id       String   @db.VarChar
+  create_at       DateTime @default(now()) @db.Timestamp(6)
+  update_at       DateTime @default(now()) @db.Timestamp(6)
+  paypal_raw_data Json?
+
+  @@index([paypal_id], map: "user_paypal_id_paypal_id_index")
+}
+
+model user_photos {
+  user_id     Int
+  user_photo  String? @db.VarChar
+  admin_label String? @db.VarChar
+  id          Int     @id @default(autoincrement())
+}
+
+model user_profile_likes {
+  id            BigInt    @id @default(autoincrement())
+  user_id       Int
+  liked_user_id Int
+  created_at    DateTime? @default(now()) @db.Timestamp(6)
+
+  @@unique([liked_user_id, user_id], map: "idx_user_id_liked_user_id")
+}
+
+model user_prompt {
+  id      Int   @id(map: "user_prompt_pk") @default(autoincrement())
+  user_id Int   @unique(map: "user_prompt_user_id_uindex")
+  prompts Json?
+}
+
+model user_push_text {
+  id         Int     @id(map: "user_push_text_pk") @default(autoincrement())
+  push_title String? @db.VarChar
+  push_body  String? @db.VarChar
+  push_type  String? @db.VarChar
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model user_rating {
+  user_id Int?
+  bot_id  String? @db.VarChar
+  rating  Float?
+
+  @@unique([user_id, bot_id], map: "rating_user_bot_index")
+  @@index([bot_id], map: "idx_user_rating_bot_id")
+  @@ignore
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model user_recent_chats {
+  id             BigInt   @id @default(autoincrement())
+  user_id        Int
+  chat_user_id   Int
+  last_chat_time BigInt
+  created_at     DateTime @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([user_id, chat_user_id])
+  @@index([updated_at], map: "idx_user_recent_chats_updated_at")
+  @@index([user_id], map: "idx_user_recent_chats_user_id")
+  @@index([user_id, last_chat_time(sort: Desc)], map: "idx_user_recent_chats_user_time")
+}
+
+model user_regulation_status {
+  id                Int       @default(autoincrement())
+  user_id           Int       @unique(map: "idx_user_regulation_user_id")
+  regulation_status Int
+  create_at         DateTime? @default(now()) @db.Timestamp(6)
+  update_at         DateTime? @db.Timestamp(6)
+}
+
+model user_report_history {
+  id         BigInt    @id @default(autoincrement())
+  user_id    Int
+  target_id  Int
+  content    String?
+  reason     Int
+  created_at DateTime  @default(now()) @db.Timestamp(6)
+  deleted_at DateTime? @db.Timestamp(6)
+
+  @@index([target_id], map: "user_report_history_target_id_index")
+  @@index([user_id], map: "user_report_history_user_id_index")
+}
+
+model user_reports {
+  user_id          Int
+  reporter_user_id Int
+  reason           String?  @db.VarChar
+  comment          String?  @db.VarChar
+  reported_at      DateTime @default(now()) @db.Timestamp(6)
+  pictures         String?  @default("[]") @db.VarChar
+  reasons          String?  @default("[]") @db.VarChar
+  id               Int      @id @default(autoincrement())
+
+  @@index([reported_at], map: "user_reports_reported_at_index")
+  @@index([user_id], map: "user_reports_user_id_index")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model user_room_record {
+  id             BigInt    @id @default(autoincrement())
+  room_id        Int       @unique(map: "uniq_roomid")
+  order_id       Int?
+  female_user_id Int?
+  male_user_id   Int?
+  start_time     DateTime? @db.Timestamp(6)
+  end_time       DateTime? @db.Timestamp(6)
+  event_message  String?
+  media_url      String?   @default("") @db.VarChar(255)
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model user_slide_dislike {
+  id             BigInt   @id @default(autoincrement())
+  user_id        Int
+  target_user_id Int
+  dislike_time   BigInt
+  created_at     DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([user_id, target_user_id])
+  @@index([dislike_time], map: "idx_user_slide_dislike_time")
+  @@index([user_id], map: "idx_user_slide_dislike_user_id")
+  @@index([user_id, dislike_time(sort: Desc)], map: "idx_user_slide_dislike_user_time")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model user_streak_checkin {
+  id                       BigInt    @id @default(autoincrement())
+  user_id                  BigInt    @unique
+  streak_days              Int       @default(1)
+  last_checkin_date        DateTime  @db.Date
+  total_streak_count       Int       @default(1)
+  max_streak_days          Int       @default(1)
+  current_cycle_start_date DateTime  @db.Date
+  completed_cycles         Int       @default(0)
+  created_at               DateTime? @default(now()) @db.Timestamp(6)
+  updated_at               DateTime? @default(now()) @db.Timestamp(6)
+
+  @@index([last_checkin_date], map: "idx_user_streak_checkin_last_checkin")
+  @@index([user_id], map: "idx_user_streak_checkin_user_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model user_streak_reward_history {
+  id               BigInt    @id @default(autoincrement())
+  user_id          BigInt
+  checkin_date     DateTime  @db.Date
+  streak_day       Int
+  reward_coins     Int
+  is_chest         Boolean?  @default(false)
+  reward_config_id Int?
+  created_at       DateTime? @default(now()) @db.Timestamp(6)
+
+  @@index([checkin_date], map: "idx_user_streak_reward_history_date")
+  @@index([user_id], map: "idx_user_streak_reward_history_user_id")
+}
+
+model user_subscription {
+  id                    Int       @id @default(autoincrement())
+  user_id               Int
+  subscription_id       Int
+  expiration_date       DateTime  @db.Timestamp(6)
+  transaction_id        BigInt?
+  platform              Int
+  app_name              Int
+  remaining_msgs        Int?      @default(0)
+  remaining_match_count Int?      @default(0)
+  created_at            DateTime  @default(now()) @db.Timestamp(6)
+  updated_at            DateTime  @default(now()) @db.Timestamp(6)
+  deleted_at            DateTime? @db.Timestamp(6)
+  android_order_id      String?   @db.VarChar
+  android_product_id    String?   @db.VarChar
+  unified_order_id      String?   @db.VarChar(64)
+
+  @@index([user_id, subscription_id])
+}
+
+model user_tags {
+  id            Int     @id(map: "user_id_pk")
+  tab_key       String  @db.VarChar
+  tag_key       String  @db.VarChar
+  pic_urls      String?
+  sort_key      Int
+  emoji_content String? @db.VarChar(512)
+
+  @@unique([tag_key, tab_key], map: "user_tags_tab_and_tag_unique_key")
+}
+
+model user_text_earning {
+  female_user_id Int
+  male_user_id   Int
+  cents          Int
+  id             Int      @id(map: "user_text_earning_pk") @default(autoincrement())
+  create_at      DateTime @default(now()) @db.Timestamp(6)
+  update_at      DateTime @default(now()) @db.Timestamp(6)
+
+  @@unique([female_user_id, male_user_id], map: "user_text_earning_female_user_id_male_user_id_uindex")
+}
+
+model user_third_party_registration {
+  user_id                   Int
+  third_party_login_user_id String    @db.VarChar
+  registered_at             DateTime  @default(now()) @db.Timestamp(6)
+  id                        Int       @id @default(autoincrement())
+  deleted_at                DateTime? @db.Timestamp(6)
+  sign_up_type              Int?
+  updated_at                DateTime? @db.Timestamp(6)
+
+  @@index([user_id], map: "idx_user_third_party_registration_user_id")
+  @@index([third_party_login_user_id], map: "user_third_party_registration_third_party_login_user_id_index")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model user_transaction {
+  id                          Int       @id @default(autoincrement())
+  user_id                     Int
+  subscription_id             Int?
+  purchase_date               DateTime  @db.Timestamp(6)
+  ios_key_id                  String?   @db.VarChar(255)
+  ios_issuer_id               String?   @db.VarChar(255)
+  ios_bundle_id               String?   @db.VarChar(255)
+  ios_transaction_id          String?   @db.VarChar(255)
+  purchase_token              String?   @db.VarChar(255)
+  platform                    Int
+  app_name                    Int
+  created_at                  DateTime  @default(now()) @db.Timestamp(6)
+  updated_at                  DateTime  @default(now()) @db.Timestamp(6)
+  deleted_at                  DateTime? @db.Timestamp(6)
+  ios_original_transaction_id String?   @db.VarChar(255)
+  ios_product_id              String?   @db.VarChar(255)
+  expires_date                DateTime? @db.Timestamp(6)
+  ops_type                    Int       @default(0)
+  android_package_name        String?   @db.VarChar
+  android_product_id          String?   @db.VarChar
+
+  @@index([user_id])
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model user_transaction_android {
+  id                    Int       @id @default(autoincrement())
+  user_id               Int
+  purchase_date         DateTime  @db.Timestamp(6)
+  purchase_token        String?   @db.VarChar(255)
+  linked_purchase_token String?   @db.VarChar(255)
+  app_name              Int
+  created_at            DateTime  @default(now()) @db.Timestamp(6)
+  updated_at            DateTime  @default(now()) @db.Timestamp(6)
+  deleted_at            DateTime? @db.Timestamp(6)
+  package_name          String?   @db.VarChar
+  product_id            String?   @db.VarChar
+  expires_date          DateTime? @db.Timestamp(6)
+  ops_type              Int       @default(0)
+  payment_state         Int?
+  order_id              String    @unique(map: "user_transaction_android_order_id_index") @db.VarChar(100)
+  acknowledgement_state Int       @default(0)
+  original_order_id     String?   @db.VarChar(100)
+  raw_google_response   Json?
+
+  @@index([app_name])
+  @@index([purchase_date])
+  @@index([user_id])
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model user_transaction_android_backup {
+  id                    Int?
+  user_id               Int?
+  subscription_id       Int?
+  purchase_date         DateTime? @db.Timestamp(6)
+  purchase_token        String?   @db.VarChar(255)
+  linked_purchase_token String?   @db.VarChar(255)
+  app_name              Int?
+  created_at            DateTime? @db.Timestamp(6)
+  updated_at            DateTime? @db.Timestamp(6)
+  deleted_at            DateTime? @db.Timestamp(6)
+  package_name          String?   @db.VarChar
+  product_id            String?   @db.VarChar
+  expires_date          DateTime? @db.Timestamp(6)
+  ops_type              Int?
+  payment_state         Int?
+  order_id              String?   @db.VarChar(100)
+
+  @@ignore
+}
+
+model user_tutorial_task {
+  user_id   Int      @id(map: "user_tutorial_task_pk")
+  status    String   @db.VarChar
+  create_at DateTime @default(now()) @db.Timestamp(6)
+  update_at DateTime @default(now()) @db.Timestamp(6)
+}
+
+model user_visit_records {
+  id              BigInt   @id @default(autoincrement())
+  visitor_id      Int
+  visited_id      Int
+  visit_type      String   @db.VarChar(20)
+  visit_time      DateTime @default(now()) @db.Timestamp(6)
+  additional_info Json?
+
+  @@index([visited_id, visit_time])
+  @@index([visited_id, visit_time], map: "user_visit_records_visited_id_visit_time_idx1")
+}
+
+model user_visitor_subscription {
+  id               BigInt    @id @default(autoincrement())
+  user_id          Int
+  expiration_date  DateTime  @db.Timestamp(6)
+  transaction_id   BigInt?
+  platform         Int
+  app_name         Int
+  created_at       DateTime  @default(now()) @db.Timestamp(6)
+  updated_at       DateTime  @default(now()) @db.Timestamp(6)
+  deleted_at       DateTime? @db.Timestamp(6)
+  subscription_id  String?   @db.VarChar
+  unified_order_id String?   @db.VarChar(64)
+}
+
+model user_voice_greeting {
+  user_id    Int
+  url        String    @db.VarChar
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  id         Int       @id @default(autoincrement())
+
+  @@index([user_id])
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model user_withdraw_task {
+  id                   Int      @id(map: "user_withdraw_task_pk") @default(autoincrement())
+  create_at            DateTime @default(now()) @db.Timestamp(6)
+  update_at            DateTime @default(now()) @db.Timestamp(6)
+  user_id              Int
+  amount               String   @db.VarChar
+  platform             String   @db.VarChar
+  status               String   @db.VarChar
+  reason               String?  @db.VarChar
+  external_withdraw_id String?  @db.VarChar
+  extras               Json?
+  allow_payment        Boolean? @default(true)
+
+  @@index([external_withdraw_id], map: "user_withdraw_task_external_withdraw_id_index")
+  @@index([user_id], map: "user_withdraw_task_user_id_index")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model userinfo {
+  user_id              Int       @id @default(autoincrement())
+  created_at           DateTime  @default(now()) @db.Timestamp(6)
+  updated_at           DateTime? @default(now()) @db.Timestamp(6)
+  deleted_at           DateTime? @db.Timestamp(6)
+  age                  Int?
+  avatar_id            String?   @db.VarChar
+  username             String    @db.VarChar
+  bio                  String?   @db.VarChar
+  profile_image        String?   @db.VarChar
+  apps_flyer_id        String?   @db.VarChar
+  nickname             String?   @db.VarChar(50)
+  gender               Int?      @default(0)
+  cai_user_type        Int?      @default(1)
+  regulation_status    Int       @default(0)
+  pending              Boolean?
+  locale               BigInt    @default(0)
+  profession           String?
+  custom_avatar        String?   @db.VarChar
+  review_custom_avatar String?   @db.VarChar
+  user_source          String?   @db.VarChar(255)
+  preferred_location   String?   @db.VarChar(255)
+  education            String?   @db.VarChar
+  zip_code             String?   @db.VarChar(20)
+  phone_number         String?   @db.VarChar(20)
+  app_name             Int?
+  selfie               String?   @db.VarChar
+  race                 Int?
+  beautified_avatar    String?   @db.VarChar
+  sus_bot              Int       @default(0)
+  platform             Int?
+  face_score           Int?      @default(0)
+  is_face_verified     Boolean?  @default(false)
+  height               Int?      @default(0)
+  birthday             String?   @default("") @db.VarChar
+  is_pwa_video_verify  Boolean   @default(false)
+  zodiac               String?   @db.VarChar(50)
+  sexual_score         Int?      @default(0)
+  photo_style          String?   @db.VarChar
+  photo_describe       String?   @db.VarChar
+  condition            Int?      @default(0)
+  avatar_desc          String?   @db.VarChar
+  ins_id               String?   @db.VarChar
+  ins_avatar           String?   @db.VarChar
+  emoji_avatar         String?   @db.VarChar
+  emoji_avatar_grey    String?   @db.VarChar
+  emoji_avatar_work    String?   @db.VarChar
+  geo_location         Json?
+
+  @@index([user_id, pending], map: "idx_user_id_pending")
+  @@index([app_name, regulation_status, pending, deleted_at, user_id], map: "idx_userinfo_app_regulation_pending_deleted")
+  @@index([created_at], map: "idx_userinfo_create_at")
+  @@index([cai_user_type, regulation_status], map: "idx_userinfo_user_type")
+  @@index([username(ops: raw("gin_trgm_ops"))], map: "idx_userinfo_username_gin", type: Gin)
+  @@index([phone_number], map: "userinfo_phone_number_index")
+}
+
+model userinfo_pwa_club_mapping {
+  id          Int       @id(map: "userinfo_pwa_club_mapping_pk") @default(autoincrement())
+  user_id     Int       @unique(map: "userinfo_pwa_club_mapping_user_id_idx")
+  pwa_club_id Int?
+  created_at  DateTime? @default(now()) @db.Timestamp(6)
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model video_call_transcripts {
+  id           BigInt    @id @default(autoincrement())
+  message_id   String    @unique @db.VarChar(255)
+  from_user_id Int
+  to_user_id   Int
+  start_time   BigInt
+  end_time     BigInt
+  content_json String
+  submitter_id Int?
+  created_at   DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime? @default(now()) @db.Timestamptz(6)
+  deleted_at   DateTime? @db.Timestamptz(6)
+
+  @@index([from_user_id], map: "idx_video_call_transcripts_from_user_id")
+  @@index([message_id], map: "idx_video_call_transcripts_message_id")
+  @@index([to_user_id], map: "idx_video_call_transcripts_to_user_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model video_match_pair {
+  id             BigInt    @id @default(autoincrement())
+  created_at     DateTime  @default(now()) @db.Timestamp(6)
+  updated_at     DateTime  @default(now()) @db.Timestamp(6)
+  user_id        Int
+  target_user_id Int
+  expire_at      DateTime? @db.Timestamp(6)
+
+  @@unique([user_id, target_user_id], map: "video_match_pair_user_id_target_user_id_unique_idx")
+  @@index([expire_at])
+}
+
+model video_test_history {
+  id         BigInt   @id @default(autoincrement())
+  created_at DateTime @default(now()) @db.Timestamp(6)
+  video_id   Int
+  user_id    Int
+  order_id   Int      @default(0)
+  source     String?  @db.VarChar(50)
+  video_url  String?  @db.VarChar(255)
+  pass       Boolean  @default(true)
+
+  @@index([order_id], map: "idx_order_id")
+  @@index([created_at, user_id], map: "idx_userid_create_ate")
+}
+
+model watch_ads_record {
+  id               BigInt   @id @default(autoincrement())
+  user_id          Int
+  ads_id           String?  @db.VarChar
+  ads_duration     BigInt?
+  ads_type         Int?
+  created_at       DateTime @default(now()) @db.Timestamp(6)
+  watch_local_date String?  @db.VarChar
+
+  @@index([user_id], map: "watch_ads_record_user_id_index")
+  @@index([watch_local_date], map: "watch_ads_record_watch_local_date_index")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model love_ring_pair {
+  id             BigInt    @id @default(autoincrement())
+  created_at     DateTime  @default(now()) @db.Timestamp(6)
+  updated_at     DateTime  @default(now()) @db.Timestamp(6)
+  user_id        Int
+  target_user_id Int
+  expire_at      DateTime? @db.Timestamp(6)
+
+  @@unique([user_id, target_user_id], map: "love_ring_pair_user_id_target_user_id_unique_idx")
+  @@index([expire_at])
+}
+
+model pwa_data_operation_log {
+  id          BigInt   @id @default(autoincrement())
+  user_id     Int
+  operator    String   @default("") @db.VarChar(20)
+  create_time DateTime @default(now()) @db.Timestamp(6)
+  content     String?  @db.VarChar
+}
+
+model pwa_recall_pair {
+  id             BigInt    @id @default(autoincrement())
+  created_at     DateTime  @default(now()) @db.Timestamp(6)
+  updated_at     DateTime  @default(now()) @db.Timestamp(6)
+  user_id        Int
+  target_user_id Int
+  expire_at      DateTime? @db.Timestamp(6)
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model pwa_stock_record {
+  id           BigInt    @id @default(autoincrement())
+  pwa_user_id  Int
+  user_id      Int
+  channel_type String    @db.VarChar(20)
+  amount       Int
+  created_at   DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@index([pwa_user_id, user_id, channel_type], map: "idx_pwa_user_id_user_id_channel_type")
+  @@index([user_id], map: "idx_user_id_1")
+}
+
+/// This table is a partition table and requires additional setup for migrations. Visit https://pris.ly/d/partition-tables for more info.
+model user_event_record {
+  id             BigInt   @default(autoincrement())
+  user_id        Int
+  target_user_id Int
+  user_event     Int
+  created_at     DateTime @default(now()) @db.Timestamp(6)
+
+  @@id([id, created_at], map: "user_event_record_pk")
+  @@index([created_at], map: "idx_uer_created_at")
+  @@index([target_user_id], map: "idx_uer_target_user_id")
+  @@index([user_id], map: "idx_uer_user_id")
+  @@index([user_event], map: "idx_user_event")
+}
+
+model user_expand_info {
+  id           BigInt   @id @default(autoincrement())
+  user_id      Int
+  stage        String?  @db.VarChar
+  score_weight Decimal? @default(1) @db.Decimal(10, 2)
+}
+
+model image_upload_record {
+  id         BigInt    @id @default(autoincrement())
+  md5        String    @unique @db.VarChar(32)
+  base64     String
+  image_url  String
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+}
+
+enum UserType {
+  SYSTEM
+  FEISHU
+}
+
+enum ai_call_status {
+  STARTED
+  SUCCESS
+  FAILED
+  TIMEOUT
+}
+
+enum bot_from_type {
+  USER
+  CAI
+  USER_FAKE
+  DIGITAL_HUMAN
+}
+
+enum post_interact_type {
+  UNSPECIFIED
+  MALE_LIKE
+  FEMALE_LIKE
+  NON_BINARY_LIKE
+  MALE_COMMENT
+  FEMALE_COMMENT
+  NON_BINARY_COMMENT
+}
+
+// ============================================================
+// Union Ops — AI 工会运营系统
+// ============================================================
+
+enum UnionUserStatus {
+  pending_device
+  pending_contact
+  in_conversation
+  paused
+  silent
+  converted
+  opted_out
+  invalid_number
+  rejected
+  dead
+}
+
+enum UnionUserSource {
+  tiktok
+  facebook
+  manual
+  other
+}
+
+enum UnionPhase {
+  activation
+  retention
+  conversion
+  recall
+}
+
+enum UnionMsgDirection {
+  inbound
+  outbound
+}
+
+enum UnionMsgStatus {
+  pending
+  sent
+  delivered
+  failed
+}
+
+enum UnionTemplateStatus {
+  draft
+  reviewing
+  published
+  archived
+}
+
+enum UnionTriggerType {
+  user_reply
+  scheduled_followup
+  manual
+  initial_contact
+}
+
+enum UnionAlertLevel {
+  critical
+  warning
+  info
+}
+
+enum UnionDecisionAction {
+  send_now
+  schedule_followup
+  mark_converted
+  mark_dead
+  escalate_to_human
+}
+
+enum UnionDeviceStatus {
+  online
+  offline
+  maintenance
+}
+
+/// Union user pool — each row is a female user acquired from ads
+model UnionUser {
+  id            String          @id @default(cuid())
+  phone         String          @unique @db.VarChar(20)
+  source        UnionUserSource @default(other)
+  status        UnionUserStatus @default(pending_device)
+  phase         UnionPhase      @default(activation)
+  deviceId      String?         @map("device_id")
+  abGroup       String?         @map("ab_group") @db.VarChar(50)
+  refCode       String?         @unique @map("ref_code") @db.VarChar(8)
+  qualityScore  Float?          @default(0) @map("quality_score")
+  isTest        Boolean         @default(false) @map("is_test")
+  sourceDetail  Json?           @map("source_detail")
+  zipCode       String?         @map("zip_code") @db.VarChar(10)
+  lastContactAt DateTime?       @map("last_contact_at")
+  convertedAt   DateTime?       @map("converted_at")
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+
+  device        UnionDevice?        @relation(fields: [deviceId], references: [id])
+  conversations UnionConversation[]
+  statusLogs    UnionStatusLog[]
+  tags          UnionUserTag[]
+  messages      UnionMessage[]
+  decisionLogs  UnionDecisionLog[]
+
+  @@index([status])
+  @@index([phase])
+  @@index([deviceId])
+  @@index([source])
+  @@index([createdAt])
+  @@map("union_users")
+}
+
+/// Conversation messages between AI/operator and union user
+model UnionConversation {
+  id         String            @id @default(cuid())
+  userId     String            @map("user_id")
+  direction  UnionMsgDirection
+  content    String
+  deviceId   String?           @map("device_id")
+  decisionId String?           @map("decision_id")
+  sendStatus UnionMsgStatus    @default(pending) @map("send_status")
+  metadata   Json?
+  createdAt  DateTime          @default(now()) @map("created_at")
+
+  user   UnionUser           @relation(fields: [userId], references: [id])
+  traces UnionMessageTrace[]
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("union_conversations")
+}
+
+/// Status transition audit log
+model UnionStatusLog {
+  id         String          @id @default(cuid())
+  userId     String          @map("user_id")
+  fromStatus UnionUserStatus @map("from_status")
+  toStatus   UnionUserStatus @map("to_status")
+  trigger    String          @db.VarChar(50)
+  operatorId String?         @map("operator_id")
+  note       String?
+  createdAt  DateTime        @default(now()) @map("created_at")
+
+  user UnionUser @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("union_status_logs")
+}
+
+/// User tags (system-generated or manual)
+model UnionUserTag {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  tagName   String   @map("tag_name") @db.VarChar(50)
+  tagType   String   @default("system") @map("tag_type") @db.VarChar(20)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user UnionUser @relation(fields: [userId], references: [id])
+
+  @@unique([userId, tagName])
+  @@index([tagName])
+  @@map("union_user_tags")
+}
+
+/// Script templates organized by phase → scene → version
+model UnionTemplate {
+  id           String              @id @default(cuid())
+  phase        UnionPhase
+  scene        String              @db.VarChar(50)
+  versionCode  String              @map("version_code") @db.VarChar(20)
+  status       UnionTemplateStatus @default(draft)
+  content      String
+  variables    Json?
+  dialogueTree Json?               @map("dialogue_tree")
+  creatorId    String?             @map("creator_id")
+  reviewerId   String?             @map("reviewer_id")
+  reviewNote   String?             @map("review_note")
+  publishedAt  DateTime?           @map("published_at")
+  createdAt    DateTime            @default(now()) @map("created_at")
+  updatedAt    DateTime            @updatedAt @map("updated_at")
+
+  @@unique([phase, scene, versionCode])
+  @@index([status])
+  @@map("union_templates")
+}
+
+/// AB test experiments
+model UnionExperiment {
+  id             String     @id @default(cuid())
+  name           String     @db.VarChar(100)
+  phase          UnionPhase
+  scene          String     @db.VarChar(50)
+  variants       Json
+  allocationRule Json       @map("allocation_rule")
+  status         String     @default("draft") @db.VarChar(20)
+  startedAt      DateTime?  @map("started_at")
+  endedAt        DateTime?  @map("ended_at")
+  createdAt      DateTime   @default(now()) @map("created_at")
+  updatedAt      DateTime   @updatedAt @map("updated_at")
+
+  @@map("union_experiments")
+}
+
+/// Physical phone devices used for SMS
+model UnionDevice {
+  id                 String            @id @default(cuid())
+  deviceId           String            @unique @map("device_id") @db.VarChar(100)
+  phoneNumber        String            @map("phone_number") @db.VarChar(20)
+  status             UnionDeviceStatus @default(offline)
+  dailyLimit         Int               @default(200) @map("daily_limit")
+  todaySentCount     Int               @default(0) @map("today_sent_count")
+  assignedUsersCount Int               @default(0) @map("assigned_users_count")
+  lastHeartbeatAt    DateTime?         @map("last_heartbeat_at")
+  metadata           Json?
+  createdAt          DateTime          @default(now()) @map("created_at")
+  updatedAt          DateTime          @updatedAt @map("updated_at")
+
+  users    UnionUser[]
+  messages UnionMessage[]
+
+  @@index([status])
+  @@map("union_devices")
+}
+
+/// WebSocket communication log per device (raw frames, excludes heartbeat)
+model UnionDeviceLog {
+  id        String   @id @default(cuid())
+  deviceId  String   @map("device_id") @db.VarChar(100)
+  direction String   @db.VarChar(20) // "inbound" | "outbound"
+  frameType String   @map("frame_type") @db.VarChar(50)
+  payload   Json
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([deviceId, createdAt])
+  @@map("union_device_logs")
+}
+
+/// Message queue for reliable delivery
+model UnionMessage {
+  id          String         @id @default(cuid())
+  userId      String         @map("user_id")
+  deviceId    String?        @map("device_id")
+  content     String
+  priority    Int            @default(0)
+  sendStatus  UnionMsgStatus @default(pending) @map("send_status")
+  retryCount  Int            @default(0) @map("retry_count")
+  scheduledAt DateTime?      @map("scheduled_at")
+  sentAt      DateTime?      @map("sent_at")
+  failReason  String?        @map("fail_reason")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  user   UnionUser           @relation(fields: [userId], references: [id])
+  device UnionDevice?        @relation(fields: [deviceId], references: [id])
+  traces UnionMessageTrace[]
+
+  @@index([sendStatus])
+  @@index([scheduledAt])
+  @@index([userId])
+  @@map("union_messages")
+}
+
+/// Message trace log - tracks message lifecycle across the entire pipeline
+/// Message trace log - tracks message lifecycle across the entire pipeline
+model UnionMessageTrace {
+  id             String   @id @default(cuid())
+  messageId      String?  @map("message_id")
+  conversationId String?  @map("conversation_id")
+  stage          String   @db.VarChar(50)
+  status         String   @db.VarChar(20)
+  latencyMs      Int?     @map("latency_ms")
+  metadata       Json?
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  message      UnionMessage?      @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  conversation UnionConversation? @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+  @@index([conversationId])
+  @@index([stage])
+  @@index([createdAt])
+  @@map("union_message_traces")
+}
+
+/// Brain engine decision log
+model UnionDecisionLog {
+  id           String              @id @default(cuid())
+  userId       String              @map("user_id")
+  triggerType  UnionTriggerType    @map("trigger_type")
+  modelUsed    String?             @map("model_used") @db.VarChar(50)
+  confidence   Float?
+  action       UnionDecisionAction
+  replyText    String?             @map("reply_text")
+  reasoning    String?
+  promptTokens Int?                @map("prompt_tokens")
+  outputTokens Int?                @map("output_tokens")
+  latencyMs    Int?                @map("latency_ms")
+  rawInput     Json?               @map("raw_input")
+  rawOutput    Json?               @map("raw_output")
+  createdAt    DateTime            @default(now()) @map("created_at")
+
+  user UnionUser @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("union_decision_logs")
+}
+
+/// Prompt version management (4-layer structure)
+model UnionPromptVersion {
+  id        String      @id @default(cuid())
+  layer     String      @db.VarChar(30)
+  phase     UnionPhase?
+  scene     String?     @db.VarChar(50)
+  content   String
+  version   Int         @default(1)
+  status    String      @default("draft") @db.VarChar(20)
+  creatorId String?     @map("creator_id")
+  createdAt DateTime    @default(now()) @map("created_at")
+  updatedAt DateTime    @updatedAt @map("updated_at")
+
+  @@unique([layer, phase, scene, version])
+  @@map("union_prompt_versions")
+}
+
+/// AI model configuration with priority-based fallback
+model UnionModelConfig {
+  id          String   @id @default(cuid())
+  displayName String   @map("display_name") @db.VarChar(100)
+  modelName   String   @map("model_name") @db.VarChar(50)
+  provider    String   @db.VarChar(30)
+  priority    Int      @default(0)
+  apiKey      String   @map("api_key") @db.VarChar(500)
+  endpoint    String?  @db.VarChar(500)
+  params      Json?
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@unique([displayName])
+  @@map("union_model_configs")
+}
+
+/// Alert rules for monitoring
+model UnionAlertRule {
+  id             String          @id @default(cuid())
+  name           String          @db.VarChar(100)
+  condition      String          @db.VarChar(200)
+  threshold      Float
+  level          UnionAlertLevel @default(warning)
+  enabled        Boolean         @default(true)
+  silenceMinutes Int             @default(30) @map("silence_minutes")
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+
+  alerts UnionAlertLog[]
+
+  @@map("union_alert_rules")
+}
+
+/// Alert history
+model UnionAlertLog {
+  id         String          @id @default(cuid())
+  ruleId     String          @map("rule_id")
+  level      UnionAlertLevel
+  message    String
+  resolvedAt DateTime?       @map("resolved_at")
+  createdAt  DateTime        @default(now()) @map("created_at")
+
+  rule UnionAlertRule @relation(fields: [ruleId], references: [id])
+
+  @@index([ruleId])
+  @@index([createdAt])
+  @@map("union_alert_logs")
+}
+
+/// Import history log
+model UnionImportLog {
+  id         String   @id @default(cuid())
+  operatorId String   @map("operator_id")
+  filename   String   @db.VarChar(255)
+  total      Int      @default(0)
+  success    Int      @default(0)
+  failed     Int      @default(0)
+  errors     Json?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@map("union_import_logs")
+}
+
+/// AI call log — 大模型调用记录（持久化统计）
+model UnionAiCallLog {
+  id        String   @id @default(cuid())
+  source    String   @db.VarChar(30)
+  model     String   @db.VarChar(80)
+  success   Boolean
+  latencyMs Int      @map("latency_ms")
+  error     String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@index([success])
+  @@map("union_ai_call_logs")
+}
+
+/// Global configuration (key-value), decoupled from templates
+model UnionGlobalConfig {
+  key       String   @id @db.VarChar(100)
+  value     String
+  label     String?  @db.VarChar(200)
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("union_global_config")
+}

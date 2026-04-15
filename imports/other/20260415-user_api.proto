@@ -1,0 +1,6368 @@
+syntax = "proto3";
+
+package UserServiceProto;
+
+import "archat_api/post_api.proto";
+
+// Unity/C# namespace
+option csharp_namespace = "UserServiceApi";
+option java_multiple_files = true;
+option java_outer_classname = "UserServiceProto";
+option java_package = "com.pserver.proto.archat";
+
+// ========== ! ! ! WARNING ! ! ! ===========
+// Make sure you are not adding protos into the
+// deprecated block (started from L1450)
+
+enum UserRegulationStatus {
+  Active = 0;
+  KGroup = 1;
+  Banned = 2;
+  Admin = 3;
+  Collaborator = 4;
+  Suspended = 5;
+  Reported = 6; // reported by another user in human chat
+}
+
+// https://presence.feishu.cn/docx/Sbxddtcgzo6kSHx9DaIc5P3fn1b
+// 蜜罐需求引入的概念
+enum ProductLevel {
+  ProductLevelNone = 0;
+  LowAge = 1;
+  ChinaSim = 2;
+  PotentialCompetitor = 3;
+  FullFunction = 4;
+}
+
+enum ThirdPartyLoginUser {
+  TestUser = 0;
+  iOS = 1;
+  Android = 2;
+  Null = 3; // for legacy code
+  Local = 4; // for k-server
+  iOSGuest = 5;
+  AndroidGuest = 6;
+}
+
+enum ClientType {
+  TYPE_UNKNOWN = 0;
+  IOS = 1;
+  ANDROID = 2;
+  PC = 3;
+}
+
+enum Relationship {
+  Unknown = 0;
+  Stranger = 1;
+  Following = 2;
+  Follower = 3;
+  Friend = 4;
+  Blocked = 5;
+  NoUser = 6;
+  Self = 7;
+  BlockedBy = 8; // 被别人block
+  BlockedTwoWay = 9; // 双向block
+}
+
+// post /userApi/updateProfileImage
+message UploadPicture {
+  string name = 1;
+  bytes file = 2;
+}
+
+enum PictureState {
+  PICTURE_NORMAL = 0;
+  PICTURE_BANNED = 1;
+  PICTURE_SUSPICIOUS = 2;
+  PICTURE_EMPTY = 3;
+}
+
+message PictureInQuery {
+  string url = 1;
+  int32 width = 2;
+  int32 height = 3;
+  string minUrl = 4;
+  int32 min_width = 5;
+  int32 min_height = 6;
+  string mid_url = 7;
+  int32 mid_width = 8;
+  int32 mid_height = 9;
+  PictureState state = 20;
+}
+
+// post /userApi/loginUser
+message LoginUserRequest {
+  string third_party_login_user_id = 1;
+  ThirdPartyLoginUser platform = 2;
+  string device_id = 3; // optional
+}
+
+message LoginUserResponse {
+  bool is_new_user = 1;
+  GetUserInfoResponse userinfo = 2;
+  string token = 3;
+  string tim_usersig = 4;
+  PostLoginAction post_login_action = 5;
+  UserServiceCommonCode code = 6;
+  int64 next_token_refresh_time = 7;
+  int32 balance = 10;
+}
+
+// post /userApi/fastLogin
+message FastLoginRequest {
+  string device_id = 1; // mandatory
+  int32 user_id = 2; // optional
+  string third_party_login_user_id = 3; // optional
+  ThirdPartyLoginUser platform = 4; // optional
+  string referral_code = 5; // optional, invite code for BFF relationship
+}
+
+message FastLoginResponse {
+  UserInfo user_info = 1; // backfilled user
+  CaiAccount cai_account = 2; // registed or unregisted
+  string token = 3; // jwt
+  string tim_usersig = 4; // tencent tim
+  UserServiceCommonCode code = 5;
+  int64 next_token_refresh_time = 6;
+}
+
+message UserInfo {
+  int32 user_id = 1;
+  string avatar_url = 2;
+  string username = 3;
+  string bio = 4;
+  int32 age = 5;
+  Gender gender = 6;
+  ProductLevel product_level = 7;
+  string nickname = 8;
+  int32 created_days = 9;
+  UserStatus user_status = 10; // optional
+  int32 balance = 11;
+  bool pending = 12;
+  UserType user_type = 13;
+  string profession = 14;
+  UserGeoLocation geo_location = 15;
+  string bot_id = 16;
+  PictureInQuery custom_avatar = 17;
+  string user_source = 18;
+  repeated PostServiceProto.PostPictureInQuery post_pictures = 19;
+  repeated InterestTab interest_tabs = 20;
+  bool is_online = 21;
+  ProfileImage profile_image = 22;
+  int32 post_count = 23;
+  int64 last_active_time = 24;
+  string education = 25;
+  bool is_vip = 26;
+  string phone_number = 27;
+  PictureInQuery selfie = 28;
+  Race race = 29;
+  string tim_usersig = 30;
+  string beautified_avatar = 31;
+  int32 sus_bot = 32;
+  bool trigger_match = 33; // 这个默认只有match feed有
+  UserFromType userFromType = 34; // 用户来源类型
+  int32 appType = 35; // 用户app类型
+  bool isFaceVerified = 36; // 用户人脸是否校验 - 其他所有拉取用户信息的接口都带改字段
+  bool isPaid = 37; // 用户是否支付过
+  int32 faceScore = 38; // 用户颜值分
+  int32 height = 39;
+  string birthday = 40;
+  bool isVideoTest = 41; // pwa用户是否是视频测试用户, 否就是 文字
+  string score = 42;
+  string invitationCode = 43; // 工会邀请码
+  string emoji_avatar = 44; // 用户的emoji头像
+  string emoji_avatar_grey = 45; // 用户的emoji grey头像
+  string ins_id = 46; // 用户INS id
+  string ins_avatar = 47; // 用户INS头像
+  string emoji_avatar_work = 48; // 用户的emoji work头像
+  bool is_ins_pwa = 49; // 用户是否是INS PWA用户
+  bool is_club_user = 50; // 是否为主播
+  int64 call_pwa_time = 51; //拨打pwa忙线时间
+  int32 call_order_rank = 52; //视频等级
+  bool is_eliminated_xiaoli = 53; // 是否是被淘汰的小利女
+  bool is_official = 54; // 是否是官方账号
+  UserThirdPartyLoginState user_third_party_login_state = 55; //是否已授权google登陆
+  int64 created_at = 56;
+}
+
+enum UserThirdPartyLoginState {
+  //0:未授权google；1:已授权google登陆
+  USER_UNAUTHORIZED = 0;
+  USER_AUTHORIZED = 1;
+}
+
+enum UserFromType {
+  USER_FROM_TYPE_UNSPECIFIED = 0;
+  USER_FROM_TYPE_PWA = 1;
+}
+
+enum Race {
+  unrecognized = 0;
+  white = 1;
+  black = 2;
+  hispanic = 3;
+  asian = 4;
+  non_black = 5;
+  brown = 6;
+}
+
+enum PostLoginAction {
+  NONE = 0;
+  NEED_TO_DETECT_FACE = 1;
+  NEED_TO_UPLOAD_PICTURE = 2;
+  GET_RELEASE_TIME = 3;
+}
+
+// post /userApi/getReleaseTime
+message GetReleaseTimeRequest {
+  int32 user_id = 1;
+}
+
+message GetReleaseTimeResponse {
+  int64 release_time = 1;
+}
+
+// post /userApi/checkUsernameAvailability
+message CheckUsernameAvailabilityRequest {
+  string username = 1;
+}
+
+message CheckUsernameAvailabilityResponse {
+  bool is_registered = 1;
+}
+
+// post /userApi/createUser
+message CreateUserRequest {
+  string third_party_login_user_id = 1;
+  ThirdPartyLoginUser platform = 2;
+  string username = 3;
+  string avatar_id = 4;
+  int32 age = 5;
+  int32 detected_age = 6; // -1, -2
+  bool detected_is_male = 7; // deprecated
+  repeated InterestTab interests = 8;
+  Gender gender = 9;
+  Gender detected_gender = 10;
+  string bio = 11;
+  string device_id = 12;
+  string apps_flyer_id = 13;
+  string referral_code = 20;
+  string profession = 21;
+}
+
+message CreateUserResponse {
+  bool creation_successful = 1;
+  int32 user_id = 2;
+  string token = 3;
+  string first_avatar_id = 4;
+  string tim_usersig = 5;
+  string regulation_status = 6;
+  bool is_upload_photo_enabled = 7;
+  UserServiceCommonCode code = 8;
+  ProductLevel product_level = 9;
+  int64 next_token_refresh_time = 10;
+  int32 reward_token = 20;
+  int32 created_at = 21;
+  int32 updated_at = 22;
+}
+
+message UploadPhotoRequest {
+  int32 user_id = 1;
+  string rsa_encoded = 2;
+}
+
+message UploadPhotoResponse {
+  bool is_successful = 1;
+}
+
+message GetPhotosRequest {
+  int32 user_id = 1;
+}
+
+message GetPhotosResponse {
+  repeated string rsa_decoded_list = 1;
+}
+
+// post /userApi/updateAvatar
+message UpdateAvatarRequest {
+  int32 user_id = 1;
+  string avatar_id = 2;
+  UploadPicture upload_avatar = 3;
+  UpdateAvatarExtraInfo extra_info = 4;
+  bool isFaceVerified = 5;
+}
+
+message UpdateAvatarExtraInfo {
+  UpdateAvatarRequestType type = 1;
+  int32 ai_gen_avatar_task_id = 2;
+}
+
+enum UpdateAvatarRequestType {
+  UPDATE_AVATAR_REQUEST_TYPE_NULL = 0;
+  PICK_AI_GEN_AVATAR = 1;
+}
+
+message UpdateAvatarResponse {
+  bool is_successful = 1;
+  string message = 2;
+}
+
+// post /userApi/deleteUser
+message DeleteUserRequest {
+  int32 user_id = 1;
+}
+
+message DeleteUserResponse {
+  bool is_successful = 1;
+}
+
+// post /userApi/getOtherUserRelationshipInfos
+message GetOtherUserRelationshipInfosRequest {
+  int32 user_id = 1;
+  repeated int32 other_user_ids = 2;
+}
+
+message GetOtherUserRelationshipInfosResponse {
+  repeated GetOtherUserRelationshipInfoResponse other_user_infos = 1;
+}
+
+// post /userApi/report - user_id reports user_id_to_report
+message ReportUserRequest {
+  int32 user_id = 1;
+  int32 user_id_to_report = 2;
+  string reason = 3;
+  string comment = 4;
+  repeated PostServiceProto.PostPicture pictures = 5;
+  repeated string reasons = 6;
+}
+
+message ReportUserResponse {
+  bool success = 1;
+  string errorMessage = 2;
+}
+
+// post /userApi/getUserBasicInfos
+message GetUserBasicInfosRequest {
+  repeated int32 user_ids = 1;
+  bool with_online_info = 2;
+}
+
+message GetUserBasicInfosResponse {
+  repeated GetUserBasicInfoResponse user_basic_infos = 1;
+}
+
+// post /userApi/getUserProfilePageInfo
+message GetUserProfilePageInfoRequest {
+  int32 user_id = 1;
+}
+
+message GetUserProfilePageInfoResponse {
+  int32 user_id = 1;
+  string avatar_id = 2;
+  string avatar_img_url = 3;
+  string username = 4;
+  int32 following_count = 5;
+  int32 follower_count = 6;
+  string bio = 7;
+  int32 age = 8;
+  Gender gender = 9;
+  repeated InterestTab interest_tabs = 10;
+  UserServiceCommonCode code = 11;
+  ProfileImage profile_image = 12;
+  int32 created_days = 13;
+  int32 post_count = 14;
+  string nickname = 15;
+  string message = 16;
+  UserGeoLocation geo_location = 17;
+  string profession = 18;
+  UserType user_type = 19;
+  string bot_id = 20;
+  PictureInQuery custom_avatar = 21;
+  string user_source = 22;
+}
+
+message ProfileImage {
+  string url = 1;
+  int32 width = 2;
+  int32 height = 3;
+}
+
+// post /userApi/editProfilePageBio @Deprecated
+message EditProfilePageBioRequest {
+  int32 user_id = 1;
+  string bio = 2;
+}
+
+message EditProfilePageBioResponse {
+  bool is_successful = 1;
+}
+
+// post /userApi/editProfile
+message EditProfileRequest {
+  string bio = 1;
+  int32 age = 2;
+  Gender gender = 3;
+  repeated InterestTab interests = 4;
+  string nickname = 5;
+  string username = 6;
+  string profession = 7;
+  string education = 8;
+  UserGeoLocation location = 9;
+  string phone_number = 10;
+  bool isFaceVerified = 11;
+  int32 height = 12;
+  string birthday = 13;
+}
+
+message EditProfileResponse {
+  UserServiceCommonCode code = 1;
+}
+
+// post /friendRecommendationApi/getFriendMatchCardInfo
+message GetFriendMatchCardInfoRequest {
+  int32 user_id = 1;
+}
+
+message GetFriendMatchCardInfoResponse {
+  int32 user_id = 1;
+  string avatar_id = 2;
+  string avatar_url = 3;
+  string username = 4;
+  string bio = 6;
+  int32 age = 7;
+  Gender gender = 8;
+  repeated string image_url = 9;
+  bool should_crop_from_top = 10;
+  repeated InterestTab interests = 11;
+  float match_score = 12;
+  PictureInQuery custom_avatar = 13;
+}
+
+// post /friendRecommendationApi/getFriendMatchCardInfoV2
+message GetFriendMatchCardInfoV2Request {
+  int32 user_id = 1;
+}
+
+message GetFriendMatchCardInfoV2Response {
+  int32 user_id = 1;
+  string avatar_id = 2;
+  string avatar_url = 3;
+  string username = 4;
+  Gender gender = 5;
+  repeated InterestTab common_interests = 6;
+  repeated InterestTab peer_interests = 7;
+  repeated string suggestions = 8;
+  float match_score = 9;
+  UserServiceCommonCode code = 10;
+  PictureInQuery custom_avatar = 13;
+}
+
+// post /userApi/refreshToken
+message RefreshTokenRequest {}
+
+message RefreshTokenResponse {
+  string token = 1;
+  string tim_usersig = 2;
+  int64 next_token_refresh_time = 3;
+  UserServiceCommonCode code = 4;
+}
+
+/*
+   --------------------------------------------------------------------------------
+     < Athena Specific APIs >
+   --------------------------------------------------------------------------------
+*/
+
+// post /userApi/setUserRegulationStatus
+message SetUserRegulationStatusRequest {
+  int32 user_id = 1;
+  UserRegulationStatus regulation_status = 2;
+  int64 release_time = 3; // only needed when regulation_status is Suspended
+}
+
+message SetUserRegulationStatusResponse {
+  bool success = 1;
+  string errorMessage = 2;
+}
+
+// post /userApi/AdminGetUserFullInfo
+message AdminGetUserFullInfoRequest {
+  int32 user_id = 1;
+  string username = 2;
+}
+
+message AdminGetUserFullInfoResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  AdminDigitalHumanInfo digital_human_info = 3;
+  repeated int32 user_ids = 4;
+}
+
+enum Gender {
+  UNSPECIFIED = 0;
+  MALE = 1;
+  FEMALE = 2;
+  NON_BINARY = 3;
+}
+
+// for getUserViolationInfo : admin console usage
+message UserBlockedInfo {
+  int32 blocker_user_id = 1;
+  string reason = 2;
+  string comment = 3;
+  string created_at = 4;
+}
+
+message UserReportedInfo {
+  int32 reporter_user_id = 1;
+  string reason = 2;
+  string comment = 3;
+  string created_at = 4;
+  repeated PostServiceProto.PostPictureInQuery pictures = 5;
+  int32 user_id = 6;
+  repeated string reasons = 7;
+}
+
+message UserReportListItem {
+  int32 reporter_user_id = 1;
+  int32 reason = 2;
+  string content = 3;
+  string created_at = 4;
+  int32 user_id = 5;
+  string deleted_at = 6;
+}
+
+enum SuspiciousUserType {
+  MOST_REPORTED = 0;
+  MOST_BLOCKED = 1;
+  MOST_SUS_BOT = 2;
+  MOST_SUSPICIOUS = 3;
+}
+
+message SuspiciousUserListItem {
+  int32 user_id = 1;
+  int32 count_of_reports = 2;
+  int32 count_of_blockings = 3;
+  int32 sus_bot = 4;
+  int64 last_active_time = 5;
+  int64 user_created_at = 6;
+  int64 user_deleted_at = 7;
+  string regulation_status = 8;
+}
+
+message AdminGetSuspiciousUserListRequest {
+  SuspiciousUserType suspicious_user_type = 1;
+  int32 active_with_in_days = 2;
+  int32 limit = 3;
+  bool include_deleted = 4;
+  bool include_banned = 5;
+  Gender gender = 6;
+}
+
+message AdminGetSuspiciousUserListResponse {
+  repeated SuspiciousUserListItem suspicious_user_list_items = 1;
+  UserServiceCommonCode code = 2;
+}
+
+// post /userApi/getUserViolationInfo
+message GetUserViolationInfoRequest {
+  int32 user_id = 1;
+}
+
+message GetUserViolationInfoResponse {
+  repeated UserBlockListItem userBlockedInfos = 1;
+  repeated UserReportListItem userReportedInfos = 2;
+}
+
+// post /userApi/getPagedUserReports
+message AdminGetPagedUserReportsRequest {
+  int32 page_number = 1;
+  int32 page_size = 2;
+}
+
+message UserReportWithUser {
+  AdminUserInfo reporter = 1;
+  AdminUserInfo reported = 2;
+  string reason = 3;
+  string comment = 4;
+  string created_at = 5;
+  repeated PostServiceProto.PostPictureInQuery pictures = 6;
+  repeated string reasons = 7;
+}
+
+message AdminGetPagedUserReportsResponse {
+  int32 total_page = 1;
+  int32 current_page = 2;
+  repeated UserReportWithUser reports = 3;
+}
+
+// post /userApi/getNewUserCounts
+message NewUserCountInfo {
+  string timestamp = 1;
+  int32 num_of_new_male_users = 2;
+  int32 num_of_new_female_users = 3;
+  int32 num_of_new_non_binary_users = 4;
+  int32 num_of_new_unspecified_users = 5;
+}
+
+message GetNewUserCountsRequest {
+  string start_time = 1;
+  string end_time = 2;
+  int32 app_name = 3; // 对应userinfo里的app_name
+  int64 start_timestamp = 4;
+  int64 end_timestamp = 5;
+}
+
+message GetNewUserCountsResponse {
+  repeated NewUserCountInfo new_user_count_infos = 1;
+  int32 deletedUserCount = 2;
+}
+
+// post /userApi/searchUsername
+message SearchUsernameRequest {
+  string username = 1;
+  int32 limit = 2;
+}
+
+message SearchUsernameResponse {
+  repeated string usernames = 1;
+}
+
+// post /userApi/getAdminStatistics
+message GetAdminStatisticsRequest {
+  string start_time = 1;
+  string end_time = 2;
+}
+
+message AdminUserCountByRegulationStatus {
+  string regulation_status = 1;
+  int32 count = 2;
+}
+
+message GetAdminStatisticsResponse {
+  int32 total_user_count = 1;
+  int32 max_user_id = 2;
+  repeated AdminUserCountByRegulationStatus user_count_by_regulation_status = 3;
+  int32 deletedCount = 4;
+}
+
+// post /userApi/deleteUserAdmin
+message DeleteUserAdminRequest {
+  int32 user_id = 1;
+}
+
+message DeleteUserAdminResponse {
+  UserServiceCommonCode code = 1;
+}
+
+// post /userApi/setAdminLabels
+message SetAdminLabelsRequest {
+  repeated int32 k_group_label_user_ids = 1;
+  repeated int32 adult_label_user_ids = 2;
+}
+
+message SetAdminLabelsResponse {
+  bool is_successful = 1;
+}
+
+enum InterestTabType {
+  UNSPECIFIED_TABS = 0;
+  TEXT_TABS = 1;
+  IMAGE_TABS = 2;
+}
+
+// post /userApi/getInterestTabs
+message GetInterestTabsRequest {
+  InterestTabType interest_tab_type = 1;
+}
+
+message GetInterestTabsResponse {
+  repeated InterestTab tabs = 1;
+}
+
+message InterestTab {
+  string key = 1;
+  int32 sort_key = 2;
+  repeated InterestTag tags = 3;
+}
+
+message InterestTag {
+  string key = 1;
+  int32 sort_key = 2;
+  repeated string pic_urls = 3;
+  string emoji_content = 4;
+}
+
+// post /userApi/setDAURangeAdmin
+message SetDAURangeAdminRequest {
+  int32 lower_bound = 1;
+  int32 upper_bound = 2;
+}
+
+message SetDAURangeAdminResponse {
+  bool is_successful = 1;
+}
+
+// post /userApi/getDailyActiveUserIdsAdmin
+message GetDailyActiveUserIdsAdminRequest {
+  string date_time_string = 1; // 2023-04-01-23
+}
+
+message GetDailyActiveUserIdsAdminResponse {
+  repeated int32 user_ids = 1;
+  UserServiceCommonCode code = 2;
+}
+
+enum UserStatus {
+  NEW = 0;
+  NOT_FOUND = 1;
+  BANNED = 2;
+  SUSPENDED = 3;
+}
+
+enum UserServiceCommonCode {
+  UserServiceCommonCodeNone = 0;
+  Success = 1;
+  Reject = 2;
+  INVALID_PARAM = 3;
+  DUPLICATE_REQ = 4;
+  Failed = 99;
+  // TODO
+  // Remove these once frontend has migrated to UserStatus
+  USER_NOT_FOUND = 100;
+  USER_BANNED = 101;
+  USER_SUSPENDED = 102;
+  USER_NOT_ELIGIBLE = 103;
+  INS_PWA_ORDER_NOT_FINISH = 105;
+  // 订阅相关
+  USER_BALANCE_INSUFFICIENT = 110;
+  USER_FREE_COUNT_NEED_REFRESH = 111;
+  // 报错
+  USER_FETCH_FAILED = 120;
+  //用户已经签到过
+  USER_HAS_SIGNED_IN_TODAY = 121;
+  // giftid 是无效的
+  USER_GIFT_ID_INVALID = 130;
+  // 用户金币不够
+  USER_COIN_NOT_ENOUGH = 131;
+  // 用户余额不够
+  USER_BALANCE_NOT_ENOUGH = 132;
+  // 用户次数超了快
+  USER_WAITING_EARN_LIMIT_EXCEEDED = 133;
+  // 体现单金额重复
+  USER_WITHDRAW_OVER_LIMIT = 134;
+  // 用户聊天加钱次数超了
+  USER_TEXT_EARN_LIMIT_EXCEEDED = 135;
+  // 权益相关 Entitlement
+  USER_ENTITLEMENT_HAS_CLAIMED = 200;
+  USER_ENTITLEMENT_PERMISSION_DENIED = 201;
+
+  // 邀请码相关
+  USER_INVITE_CODE_INVALID = 300; // 无效邀请码
+  USER_HAS_BIND_INVITE_CODE = 301; // 已经绑定过邀请码
+  // 安全相关
+  USER_UNSAFE_CONTENT = 400; // 违规内容，文字or图片or视频or音频等
+  USER_VOICE_NOMATCH_SCENE_CONTENT = 401; // 内容不符合场景的
+}
+
+// post /userApi/updateProfileImage
+message UpdateProfileImageRequest {
+  string name = 1;
+  bytes file = 2;
+}
+
+message UpdateProfileImageResponse {
+  UserServiceCommonCode code = 1;
+}
+
+// post /userApi/updateUserSource
+message UpdateUserSourceRequest {
+  string user_source = 1;
+}
+
+message UpdateUserSourceResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  UserInfo userinfo = 3;
+}
+
+// =============  start bot 相关 分界线 ============
+message Bot {
+  int32 user_id = 1;
+  string bot_id = 2;
+  string title = 3;
+  string greeting = 4;
+  string original_avatar_url = 5;
+  string avatar_url = 6;
+  string visibility = 7;
+  string participant_name = 8;
+  string user_username = 14;
+  string bot_tag = 15;
+  int32 priority = 16;
+  int32 sort = 17;
+  string ip = 18;
+  string category = 19;
+  string title_new = 20;
+  int64 participant_num_interactions = 21;
+  string chat_url = 22;
+}
+
+message GetBotTagsRequest {
+  int32 offset = 1;
+  int32 limit = 2; // 雅典娜专用
+  ClientType client_type = 4;
+  string app_version = 5;
+}
+
+message GetBotTagsResponse {
+  repeated BotTag tags = 1;
+  int32 next_offset = 2;
+  int32 total = 3;
+  UserServiceCommonCode code = 4;
+  string message = 5; // if fail
+}
+
+message BotTag {
+  int32 id = 1;
+  string name = 2;
+  int32 sort = 3;
+}
+
+message SendMessageFromBotRequest {
+  int32 from_id = 1;
+  int32 to_id = 2;
+  string content = 3;
+  string custom_data = 4;
+  int32 push_flag = 5; // 0 - 推送； 1 - 不推送
+  TimMessageType message_type = 6;
+  string custom_desc_type = 7;
+  OfflinePushInfo OfflinePushInfo = 8;
+  int32 OnlineOnlyFlag = 9;
+  repeated string SendMsgControl = 10;
+}
+
+enum TimMessageType {
+  TIMTextElem = 0;
+  TIMGifElem = 1;
+  TIMCustomElem = 2;
+  TIMImageElem = 3;
+  TIMSoundElem = 4;
+}
+
+message OfflinePushInfo {
+  int32 PushFlag = 1;
+  string Title = 2;
+  string Desc = 3;
+  string Ext = 4;
+  AndroidInfo AndroidInfo = 5;
+  ApnsInfo ApnsInfo = 6;
+}
+
+message AndroidInfo {
+  string Sound = 1;
+  string OPPOChannelID = 2;
+  int32 VIVOClassification = 3;
+  string HuaWeiImage = 4;
+  string HonorImage = 5;
+  string GoogleImage = 6;
+}
+
+message ApnsInfo {
+  string Sound = 1;
+  int32 BadgeMode = 2;
+  string Title = 3;
+  string SubTitle = 4;
+  string Image = 5;
+  int32 MutableContent = 6;
+  string ext = 7;
+}
+
+message SendMessageFromBotResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2; // if fail
+  int32 count = 3;
+}
+
+message GetTempEmailMessageRequest {
+  string email = 1;
+  bool force_refresh = 2;
+}
+
+message GetTempEmailMessageResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  string email_message = 3;
+}
+
+enum CaiAccountState {
+  UNKNOWN = 0;
+  Registered = 1;
+  NotRegistered = 2;
+  StateSignUpSubmitted = 3;
+  StateConfirmationUrlSent = 4;
+  StateVerified = 5;
+  Invalid = 6;
+}
+
+message CaiAccount {
+  CaiAccountState state = 1;
+  int32 user_id = 2;
+  string email = 3;
+  string password = 4;
+  int32 id = 5;
+  string cai_username = 6;
+  string third_party_login_user_id = 10;
+  ThirdPartyLoginUser platform = 11;
+  string confirm_url = 12;
+  int32 available_cai_account_id = 13;
+  string cookie = 14;
+  string user_agent = 15;
+}
+
+message AddRegisteredCaiAccountRequest {
+  CaiAccount account = 1;
+}
+
+message AddRegisteredCaiAccountResponse {
+  UserServiceCommonCode code = 1;
+}
+
+message UpdateCaiAccountStateRequest {
+  CaiAccountState state = 1;
+  string third_party_login_user_id = 2;
+  string cai_username = 3;
+  ThirdPartyLoginUser platform = 4;
+}
+
+message UpdateCaiAccountStateResponse {
+  CaiAccount account = 1;
+  UserServiceCommonCode code = 4;
+  string message = 5;
+}
+
+// =============  end bot 相关 分界线 ============
+// =============  start 分裂 相关 分界线 ============
+
+message DeductRewardTokenRequest {
+  int32 reward_token = 1;
+}
+
+message DeductRewardTokenResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  int32 balance = 3;
+}
+
+message VerifyReferralCodeRequest {
+  string referral_code = 1;
+}
+
+message VerifyReferralCodeResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  int32 reward_token = 3;
+  int32 balance = 4;
+}
+
+enum SharePlatform {
+  UNKNOWN_PLATFORM = 0;
+  TIKTOK = 1;
+  FACEBOOK = 2;
+  TWITTER = 3;
+  WHATSAPP = 4;
+  INSTAGRAM = 5;
+  SNAPCHAT = 6;
+  REDDIT = 7;
+}
+message AddAppShareRecordRequest {
+  SharePlatform platform = 1;
+}
+message AddAppShareRecordResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2; // if fail
+  int32 reward_token = 3;
+  int32 balance = 4;
+}
+
+message AddWatchAdsRequest {
+  string ad_id = 1;
+  int64 duration = 2;
+}
+message AddWatchAdsResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2; // if fail
+  int32 balance = 3;
+  int32 reward_token = 4;
+  int32 remaining_count = 5;
+}
+
+message CheckUpgradeRequest {
+  ClientType client_type = 1;
+  string current_version = 2;
+}
+
+message CheckUpgradeResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2; // if fail
+  bool need_upgrade = 3;
+  bool is_forced = 4;
+  string latest_version = 5;
+  string download_link = 6;
+  string release_notes = 7;
+}
+
+message AppVersionAdmin {
+  int32 id = 1;
+  ClientType client_type = 2;
+  string version_code = 3;
+  string min_supported_version = 4;
+  bool is_forced = 5;
+  string download_link = 6;
+  string release_notes = 7;
+  string created_at = 8;
+  string updated_at = 9;
+  string deleted_at = 10;
+}
+
+message BotDetail {
+  string bot_id = 1;
+  string participant_name = 2;
+  string avatar_url = 3;
+  string title = 4;
+  string greeting = 5;
+  Visibility visibility = 6;
+  string chat_url = 7;
+  int32 user_id = 8;
+  string ip = 10;
+  string category = 11;
+  int64 msg_received_count = 12;
+  int32 conversation_count = 13;
+  double fantasy_score = 20;
+  double popularity = 21;
+  string author_name = 22;
+  int32 author_user_id = 23;
+  string short_description = 24;
+  string long_description = 25;
+  string advanced = 26;
+  string source_type = 27; // 客户端不用处理，仅用作排查问题
+  double chat_depth = 28;
+  int32 popularity_new = 29;
+  UserLocale lang = 30;
+}
+
+message GetBotDetailRequest {
+  string bot_id = 1;
+}
+
+message GetBotDetailAdminRequest {
+  int32 user_id = 1;
+  string bot_id = 2;
+}
+
+message GetBotDetailResponse {
+  BotDetail bot = 1;
+  UserServiceCommonCode code = 2;
+  string message = 3; // if fail
+}
+message GetRelatedBotsRequest {
+  string bot_id = 1;
+  GetRelatedBotsOffset offset = 2;
+  ClientType client_type = 3;
+  string app_version = 4;
+}
+message GetRelatedBotsResponse {
+  repeated BotDetail bots = 1;
+  UserServiceCommonCode code = 2;
+  string message = 3; // if fail
+  GetRelatedBotsOffset next_offset = 4;
+  string request_id = 5;
+}
+
+message GetRelatedBotsOffset {
+  int32 same_ip_offset = 1;
+  int32 similar_name_offset = 2;
+  bool has_more = 3;
+}
+
+message GetBotsByCreatorRequest {
+  int32 offset = 1;
+}
+
+message GetBotsByCreatorResponse {
+  repeated BotDetail bots = 1;
+  UserServiceCommonCode code = 2;
+  string message = 3; // if fail
+  int32 next_offset = 4;
+}
+
+message GetBotsByTagRequest {
+  GetBotsByTagOffset offset = 1;
+  string bot_tag = 2;
+  ClientType client_type = 3;
+  string app_version = 5;
+}
+
+message GetBotsByTagOffset {
+  int32 category_offset = 1;
+  int32 same_ip_offset = 2;
+  int32 similar_name_offset = 3;
+  int32 request_times = 4;
+  bool has_more = 5;
+}
+
+// This should be Picture, not BotAvatar
+message BotAvatar {
+  string name = 1;
+  bytes file = 2;
+}
+
+enum Visibility {
+  UNKNOWN_VISIBILITY = 0;
+  PUBLIC = 1;
+  PRIVATE = 2;
+  DELETE = 3;
+}
+
+message DeleteBotRequest {
+  string bot_id = 1;
+}
+message DeleteBotResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2; // if fail
+}
+message GetBotDetailByUserIdsRequest {
+  repeated int32 user_ids = 1;
+}
+message GetBotDetailByUserIdsResponse {
+  repeated BotDetail bots = 1;
+  UserServiceCommonCode code = 2;
+  string message = 3; // if fail
+}
+message SearchBotsV2Request {
+  int32 offset = 1;
+  string search_string = 2;
+}
+
+message SearchBotsV2Response {
+  repeated BotDetail bots = 1;
+  int32 next_offset = 2;
+  UserServiceCommonCode code = 3;
+  string message = 4; // if fail
+  string request_id = 5;
+}
+
+message CountBotConversationRequest {
+  string bot_id = 1;
+}
+message CountBotConversationResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2; // if fail
+  int32 count = 3;
+}
+message CountBotMsgReceivedRequest {
+  string bot_id = 1;
+  string content = 2;
+}
+
+message CountBotMsgReceivedResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2; // if fail
+  int32 count = 3;
+}
+
+message GetNameForCAIRequest {
+  string participant_name = 1;
+  string greeting = 2;
+}
+
+message GetNameForCAIResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2; // if fail
+  string participant_name = 3;
+}
+
+message LoginAdminRequest {
+  string username = 1;
+  string password = 2;
+}
+
+message LoginAdminResponse {
+  string code = 1; // 0 - ok, 1 - wrong username, 2 - wrong password
+  string token = 2;
+  string timAppId = 3;
+  string timSecretKey = 4;
+}
+message AuthorizeAdminRequest {
+  string token = 1;
+}
+
+message AuthorizeAdminResponse {
+  string code = 1; // # 0 - ok, 1 - not ok
+}
+
+enum LLMProvider {
+  UNDEFINED = 0;
+  TOGETHER_AI = 1;
+  MANCER_TECH = 2;
+  OPENROUTER_AI = 3;
+}
+
+message GetLLMRoutingRequest {}
+
+message LLMRoutingInfo {
+  LLMProvider LLM_provider = 1;
+  int32 priority = 2;
+}
+
+message GetLLMRoutingResponse {
+  repeated LLMRoutingInfo LLM_routing_infos = 1;
+}
+
+message SetLLMRoutingConfigRequest {
+  repeated LLMRoutingInfo LLM_routing_infos = 1;
+}
+
+message SetLLMRoutingConfigResponse {
+  UserServiceCommonCode code = 1;
+}
+
+message DeleteAndGetNewCaiAccountRequest {
+  string error_message = 1; // 报错信息
+}
+
+message DeleteAndGetNewCaiAccountResponse {
+  CaiAccount account = 1;
+  UserServiceCommonCode code = 4;
+  string message = 5;
+}
+
+// for json request
+message GetExecutablePackageInfoRequest {
+  string app_version = 1;
+  ClientType client_type = 2;
+}
+
+message GetExecutablePackageInfoResponse {
+  string app_version = 1;
+  ClientType client_type = 2;
+  repeated ExecutablePackageInfo config_jsons = 3; // serialized json string
+}
+
+message GetAthenaConfigRequest {
+  string app_version = 1;
+  ClientType client_type = 2;
+}
+
+message GetAthenaConfigResponse {
+  string app_version = 1;
+  ClientType client_type = 2;
+  repeated ExecutablePackageInfo config_jsons = 3; // serialized json string
+  UserServiceCommonCode code = 4;
+  string message = 5;
+}
+
+message ExecutablePackageInfo {
+  int32 info_version = 1;
+  string key = 2;
+  string config_json_string = 3; // url or json string
+  string app_version = 4;
+}
+
+message SetExecutablePackageInfoAdminRequest {
+  string app_version = 1;
+  ClientType client_type = 2;
+  repeated ExecutablePackageInfo config_jsons = 3; // serialized json string
+}
+
+message SetExecutablePackageInfoAdminResponse {
+  string app_version = 1;
+  ClientType client_type = 2;
+  repeated ExecutablePackageInfo config_jsons = 3; // serialized json string
+}
+
+message GetBotsByTagGuestRequest {
+  int32 user_id = 1;
+  GetBotsByTagOffset offset = 2;
+  string bot_tag = 3;
+  ClientType client_type = 4;
+  string app_version = 5;
+}
+
+message GetBotsByTagGuestResponse {
+  repeated BotDetail bots = 1;
+  GetBotsByTagOffset next_offset = 2;
+  int32 total = 3;
+  UserServiceCommonCode code = 4;
+  string message = 5; // if fail
+  string request_id = 6;
+}
+
+message EditBotAdminRequest {
+  BotAvatar avatar = 1;
+  string participant_name = 2;
+  string greeting = 3;
+  string short_description = 4;
+  string long_description = 5;
+  Visibility visibility = 6;
+  string title = 7;
+  string bot_id = 8;
+}
+
+message EditBotAdminResponse {
+  BotDetail bot = 1;
+  UserServiceCommonCode code = 2;
+  string message = 3; // if fail
+}
+
+message UploadUserInfoRequest {
+  string username = 1;
+  int32 age = 2;
+  repeated InterestTab interests = 5;
+  Gender gender = 6;
+  string bio = 8;
+  string apps_flyer_id = 9;
+  string referral_code = 10;
+  string profession = 11;
+  string education = 12;
+  UserGeoLocation location = 13;
+  int32 height = 14;
+  string birthday = 15;
+}
+
+message UploadUserInfoResponse {
+  UserInfo user_info = 1; // backfilled user
+  UserServiceCommonCode code = 2;
+  string message = 3;
+}
+
+message DeleteCaiAccountRequest {
+  string error_message = 3; // 报错信息
+}
+
+message DeleteCaiAccountResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+// 视频排队申请
+message VideoCallQueueApplyRequest {
+  int32 male_user_id = 1; // 男性用户ID
+  int32 female_user_id = 2; // 女性用户ID
+}
+
+message VideoCallQueueApplyResponse {
+  UserServiceCommonCode code = 1;
+}
+
+// PWA获取新的回拨用户
+message PwaLoadVideoCallRequest {
+  int32 female_user_id = 1; // Pwa用户ID
+}
+
+message PwaLoadVideoCallResponse {
+  UserServiceCommonCode code = 1;
+  int32 user_total = 2; // 男性数量
+  repeated UserInfo user_infos = 3; //前三个用户的信息
+}
+
+// PWA申请视频回拨
+message PwaApplyVideoCallRequest {
+  int32 male_user_id = 1; // 男用户ID
+}
+
+message PwaApplyVideoCallResponse {
+  UserServiceCommonCode code = 1;
+}
+
+message PwaQueueRemoveUserRequest {
+  int32 male_user_id = 1; // 男用户ID
+}
+
+message PwaQueueRemoveUserResponse {
+  UserServiceCommonCode code = 1;
+}
+
+message UpdateCaiAccountStateV2Request {
+  CaiAccountState state = 1;
+  string cai_username = 2;
+}
+
+message UpdateCaiAccountStateV2Response {
+  CaiAccount account = 1;
+  UserServiceCommonCode code = 4;
+  string message = 5;
+}
+
+message SetUserLocaleRequest {
+  UserLocale locale = 1;
+}
+enum UserLocale {
+  en = 0;
+  es = 1;
+  de = 2;
+  id = 3;
+  fil = 4;
+  it = 5;
+  fr = 6;
+  pt = 7;
+  in = 8;
+}
+message UserServiceResult {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+message SetUserLocaleResponse {
+  UserServiceResult result = 1;
+}
+
+message ReportSusBehaviorRequest {
+  repeated SusBehaviorType type = 1;
+  int32 score = 3;
+  string device_id = 4;
+}
+
+enum SusBehaviorType {
+  UNKNOWN_BEHAVIOR = 0;
+  SYSTEM_LOCALE = 1; // CN 100分
+  SYSTEM_TIMEZONE = 2; // CN 100分
+  SYSTEM_LANGUAGE = 3; // zh 100分
+  VPN_ON = 4; // 50分
+  SCREENSHOT_COUNT = 5; // 截屏>=2次 +30分
+  CHARGING_STATE = 6; // charging +5分，full+30分
+  SIM_CARD = 7; // 30分
+  PROXY_ON = 8; // 100分
+  ROOT_ON = 9;
+  EMULATOR_ON = 10;
+  ORGANIC = 11;
+}
+
+message ReportSusBehaviorResponse {
+  UserServiceResult result = 1;
+}
+
+message GetMatchingScoreRequest {
+  int32 user_id = 1;
+  int32 target_user_id = 2;
+}
+
+message GetMatchingScoreResponse {
+  double score = 1;
+  UserServiceCommonCode code = 2;
+  string message = 3;
+}
+
+enum HumanChatReason {
+  HC_READY = 0;
+  HC_UNDERAGE = 1;
+  HC_REPORTED = 2;
+  HC_LOCALE = 3;
+  HC_NOT_EXIST = 4;
+  HC_REVIEWING = 5;
+}
+
+message GetHumanChatEligibilityRequest {}
+
+message GetHumanChatEligibilityResponse {
+  bool eligible = 1;
+  HumanChatReason reason = 2;
+  UserServiceCommonCode code = 3;
+  string message = 4;
+}
+
+enum ReportReason {
+  /*
+     refers to violence, sexual, insult
+     harm, weapons, safety, health, drugs, war
+     and politics.
+  */
+  R_SPEECH = 0;
+  R_PROFILE = 1;
+  R_UNDERAGE = 2; // user under 16
+  R_LEGAL = 3; // Law-related content
+  R_SPAM = 4; // spams and ads.
+  R_PEDOPHILE = 5;
+  R_OTHERS = 6;
+}
+
+message UserReportHistory {
+  int64 id = 1;
+  int32 user_id = 2;
+  int32 target_id = 3;
+  string content = 4;
+  ReportReason reason = 5;
+  int64 created_at = 6;
+  int64 deleted_at = 7;
+}
+
+message ReportHumanChatUserRequest {
+  int32 target_user_id = 1;
+  // 1. string of speech or comments
+  // 2. url to image.
+  string content = 2;
+  ReportReason reason = 3;
+}
+
+message ReportHumanChatUserResponse {
+  repeated ReportReason reason = 1; // optional
+  UserServiceCommonCode code = 2;
+  string message = 3;
+}
+
+message GetHumanChatReportHistoryAdminRequest {
+  int32 limit = 1;
+  int32 offset_id = 2;
+}
+
+message GetHumanChatReportHistoryAdminResponse {
+  repeated UserReportHistory reports = 1;
+  UserServiceCommonCode code = 2;
+}
+
+message UserBlockListItem {
+  int32 id = 1;
+  int32 user_id = 2;
+  int32 target_id = 3;
+  int64 created_at = 4;
+  UserInfo target_user = 5; // optional
+}
+
+message BlockHumanChatUserRequest {
+  int32 target_user_id = 1;
+  int32 from_user_id = 2; // 可选，如果大于0，则 是from_user_id 拉黑 target_user_id
+  int32 delayTime = 3; // 延迟时间，单位秒，大于0时生效。eg：60s，就是延迟60s。
+}
+
+message BlockHumanChatUserResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+message UnblockHumanChatUserRequest {
+  int32 target_user_id = 1;
+  int32 from_user_id = 2; // 可选，如果大于0，则 是from_user_id 拉黑 target_user_id
+}
+
+message UnblockHumanChatUserResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+message GetHumanChatUserBlockListRequest {
+  int32 limit = 1;
+  int32 offset_id = 2;
+}
+
+message GetHumanChatUserBlockListResponse {
+  repeated UserBlockListItem users = 1;
+  UserServiceCommonCode code = 2;
+  string message = 3;
+}
+
+message GetHumanChatFriendMatchCardInfoRequest {
+  int32 user_id = 1;
+}
+
+message GetHumanChatFriendMatchCardInfoResponse {
+  int32 user_id = 1;
+  string avatar_url = 2;
+  string username = 3;
+  Gender gender = 4;
+  repeated InterestTab common_interests = 5;
+  repeated InterestTab peer_interests = 6;
+  repeated string suggestions = 7;
+  double match_score = 8;
+  UserServiceCommonCode code = 9;
+  string message = 10;
+  PictureInQuery custom_avatar = 11;
+  bool is_boost_like = 12;
+  string topic = 13;
+}
+
+message GetHumanChatFriendMatchCardInfosRequest {
+  repeated int32 user_ids = 1;
+}
+
+message GetHumanChatFriendMatchCardInfosResponse {
+  repeated HumanChatFriendMatchCardInfo card_infos = 1;
+  UserServiceCommonCode code = 2;
+  string message = 3;
+}
+
+message HumanChatFriendMatchCardInfo {
+  int32 user_id = 1;
+  string avatar_url = 2;
+  string username = 3;
+  Gender gender = 4;
+  repeated InterestTab common_interests = 5;
+  repeated InterestTab peer_interests = 6;
+  repeated string suggestions = 7;
+  double match_score = 8;
+  PictureInQuery custom_avatar = 9;
+  bool is_boost_like = 10;
+  UserRegulationStatus regulation_status = 11;
+  Race race = 12;
+  string beautified_avatar = 13;
+  string topic = 14;
+}
+
+// post /userApi/getUserAvatars
+message GetUserAvatarsRequest {
+  Gender gender = 1;
+}
+
+message GetUserAvatarsResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated string avatar_urls = 3;
+}
+
+message DigitalHumanInfo {
+  UserServiceProto.BotDetail bot = 1;
+  UserServiceProto.UserInfo user_info = 2;
+}
+
+message GetDigitalHumansRequest {
+  int32 femaleUserId = 1;
+}
+
+message GetDigitalHumansResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated DigitalHumanInfo digital_humans = 3;
+}
+
+message GetBlockedStatusInfoRequest {
+  int32 female_user_id = 1;
+}
+
+message GetBlockedStatusInfoResponse {
+  bool is_blocked = 1;
+  bool is_cooldown = 2;
+  UserServiceCommonCode code = 3;
+}
+
+// ------------- digital human -------------
+message AdminUserInfo {
+  int32 user_id = 1;
+  string username = 2;
+  string regulation_status = 3;
+  int32 age = 4;
+  int32 detected_age = 5;
+  string rsa_encoded = 6;
+  string admin_label = 7;
+  Gender gender = 8;
+  Gender detected_gender = 9;
+  UserType user_type = 10;
+  string nickname = 11;
+  string avatar_url = 12;
+  string third_party_login_user_id = 14;
+  string bio = 15;
+  repeated InterestTab text_interests = 16;
+  repeated InterestTab image_interests = 17;
+  bool is_online = 18;
+  repeated string device_ids = 19;
+  int64 created_at = 20;
+  int64 updated_at = 21;
+  int64 deleted_at = 22;
+  string platform = 23;
+  int64 last_active_time = 24;
+  ProductLevel product_level = 25;
+  int64 suspension_release_time = 26;
+  UserGeoLocation geo_location = 27;
+  string profession = 28;
+  string bot_id = 29;
+  PictureInQuery custom_avatar = 30;
+  string user_source = 31;
+  string education = 32;
+  PictureInQuery selfie = 33;
+  Race race = 34;
+  string phone_numbers = 35;
+  int32 sus_bot = 36;
+  string beautified_avatar = 37;
+  int32 app_name = 38;
+  ThirdPartyLoginUser thid_party_login_platform = 39;
+  bool isFaceVerified = 40; // 用户人脸是否校验 - 其他所有拉取用户信息的接口都带改字段
+  bool isPaid = 41; // 用户是否支付过
+  int32 faceScore = 42; // 用户颜值分
+  bool is_pwa_video_verify = 43; // 是否通过pwa视频认证
+  int32 sort_score = 44; // 排序分
+  string invitation_code = 45;
+  int32 call_order_rank = 46;
+}
+
+message AdminGetUserInfosRequest {
+  int32 cursor = 1;
+  int32 limit = 2;
+  repeated UserRegulationStatus regulation_status_filter = 3;
+  bool has_rsa_encoded = 4;
+  UserType user_type = 5;
+}
+
+enum UserType {
+  UserTypeUnknown = 0;
+  User = 1;
+  CaiBot = 2;
+  DigitalHuman = 3;
+  USER_FAKE = 4;
+}
+
+message AdminGetUserInfosResponse {
+  repeated AdminUserInfo user_infos = 1;
+  int32 next_cursor = 2;
+}
+
+message AdminCreateDigitalHumanRequest {
+  string username = 1;
+  repeated InterestTab interests = 3;
+  Gender gender = 4;
+  int32 age = 5;
+  UploadPicture avatar = 7;
+  string bio = 8;
+  string profession = 9;
+  UserGeoLocation geo_location = 10;
+  string education = 11;
+  repeated UploadPicture post_pictures = 12;
+  Race race = 13;
+  int32 app_name = 14;
+}
+
+message AdminCreateDigitalHumanResponse {
+  AdminUserInfo user_info = 1; // backfilled user
+  UserServiceCommonCode code = 2;
+  string message = 3;
+}
+
+message AdminEditDigitalHumanRequest {
+  int32 user_id = 1;
+  string username = 2;
+  repeated InterestTab interests = 3;
+  Gender gender = 4;
+  int32 age = 5;
+  UploadPicture avatar = 7; // 来自上面的创建bot的头像连接?
+  string bio = 8;
+  string profession = 9;
+  UserGeoLocation geo_location = 10;
+  string avatar_id = 11;
+  string education = 12;
+  Race race = 13;
+  bool is_pwa_video_verify = 14;
+}
+
+message AdminEditDigitalHumanResponse {
+  AdminUserInfo user_info = 1; // backfilled user
+  UserServiceCommonCode code = 2;
+  string message = 3;
+}
+
+message AdminDeleteDigitalHumanRequest {
+  int32 user_id = 1;
+}
+
+message AdminDeleteDigitalHumanResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+message AdminDigitalHumanInfo {
+  UserServiceProto.BotDetail bot = 1;
+  UserServiceProto.AdminUserInfo user_info = 2;
+  repeated AdminUserSubscriptionInfo user_subscription_infos = 3;
+  repeated AdminUserIOSSubscriptionInfo user_ios_subscription_infos = 4;
+}
+
+message AdminUserIOSSubscriptionInfo {
+  int32 user_id = 1;
+  string purchase_date = 2;
+  string ios_transaction_id = 3;
+  int32 platform = 4;
+  int32 app_name = 5;
+  string created_at = 6;
+  string updated_at = 7;
+  string ios_original_transaction_id = 8;
+  string ios_product_id = 9;
+  string expires_date = 10;
+  string ops_type = 11;
+}
+
+message AdminGetDigitalHumansRequest {
+  int32 cursor = 1;
+  int32 limit = 2;
+  bool include_deleted = 3;
+}
+
+message AdminGetDigitalHumansResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  int32 next_cursor = 3;
+  repeated AdminDigitalHumanInfo digital_humans = 4;
+}
+
+// post /userApi/getInterestTabs
+message AdminGetInterestTabsRequest {
+  InterestTabType interest_tab_type = 1;
+}
+
+message AdminGetInterestTabsResponse {
+  repeated InterestTab tabs = 1;
+}
+
+message UserGeoLocation {
+  int32 user_id = 1;
+  string ip = 2;
+  string country = 3;
+  string region = 4;
+  string province = 5;
+  string city = 6;
+  string zip_code = 7;
+}
+
+message GetUserInfoResponse {
+  int32 user_id = 1;
+  string avatar_id = 2;
+  string avatar_img_url = 3;
+  string username = 4;
+  bool is_online = 5;
+  int32 room_id = 6;
+  string regulation_status = 7;
+  string first_avatar_id = 8;
+  string bio = 9;
+  string premade_id = 10;
+  int32 age = 11;
+  Gender gender = 12;
+  bool is_in_private_room = 13;
+  UserServiceCommonCode code = 14;
+  ProductLevel product_level = 15;
+  bool is_friend = 16;
+  int64 deleted_at = 17;
+  string nickname = 18;
+  int32 created_days = 19;
+  string profession = 20;
+  UserGeoLocation geo_location = 21;
+  UserType user_type = 22;
+  string bot_id = 23;
+  PictureInQuery custom_avatar = 24;
+  string user_source = 25;
+}
+
+// =======================================================
+// ======= !!! Following Protos Are Deprecated !!! =======
+// =======================================================
+
+// post /userApi/block - user_id blocks user_id_to_block
+message BlockUserRequest {
+  int32 user_id = 1;
+  int32 user_id_to_block = 2;
+  string reason = 3;
+  string comment = 4;
+}
+
+message BlockUserResponse {
+  bool success = 1;
+  int32 other_user_id = 2;
+  Relationship relationship = 3;
+  string errorMessage = 4;
+}
+
+// post /userApi/unblock - user_id unblocks user_id_to_block
+message UnblockUserRequest {
+  int32 user_id = 1;
+  int32 user_id_to_unblock = 2;
+}
+
+message UnblockUserResponse {
+  bool success = 1;
+  int32 other_user_id = 2;
+  Relationship relationship = 3;
+  string errorMessage = 4;
+}
+
+// post /userApi/createUserInKServer
+message CreateUserInKServerRequest {
+  int32 age = 1;
+  string username = 2;
+  string apps_flyer_id = 13;
+}
+
+message CreateUserInKServerResponse {
+  UserServiceCommonCode code = 1;
+  int32 user_id = 2;
+  string username = 3;
+  string token = 4;
+  string first_avatar_id = 5;
+  string regulation_status = 6;
+  ProductLevel product_level = 7;
+}
+
+// post /userApi/followUser
+message FollowUserRequest {
+  int32 user_id = 1;
+  int32 followee_id = 2;
+}
+
+message FollowUserResponse {
+  bool success = 1;
+  int32 other_user_id = 2;
+  Relationship relationship = 3;
+  string errorMessage = 4;
+}
+
+// post /userApi/unfollowUser
+message UnfollowUserRequest {
+  int32 user_id = 1;
+  int32 unfollow_user_id = 2;
+}
+
+message UnfollowUserResponse {
+  bool success = 1;
+  int32 other_user_id = 2;
+  Relationship relationship = 3;
+  string errorMessage = 4;
+}
+
+// post /userApi/getUserInfo
+message GetUserInfoRequest {
+  int32 user_id = 1;
+}
+
+// post /userApi/getOtherUserRelationshipInfo
+message GetOtherUserRelationshipInfoRequest {
+  int32 user_id = 1;
+  int32 other_user_id = 2;
+}
+
+message GetOtherUserRelationshipInfoResponse {
+  int32 other_user_id = 1;
+  Relationship relationship = 4;
+}
+
+// post /userApi/getFollowings - returns all the users I follow
+message GetUserFollowingsRequest {
+  int32 user_id = 1;
+  int32 offset = 2;
+  int32 limit = 3;
+}
+
+message GetUserFollowingsResponse {
+  repeated GetUserInfoResponse followings = 1;
+  int32 total = 2;
+  int32 offset = 3;
+  int32 limit = 4;
+}
+
+// post /userApi/getFollowers - returns all the users that follow me
+message GetUserFollowersRequest {
+  int32 user_id = 1;
+  int32 offset = 2;
+  int32 limit = 3;
+}
+
+message GetUserFollowersResponse {
+  repeated GetUserInfoResponse followers = 1;
+  int32 total = 2;
+  int32 offset = 3;
+  int32 limit = 4;
+}
+
+// post /userApi/getFriends - returns all the mutually following users of me
+message GetUserFriendsRequest {
+  int32 user_id = 1;
+  int32 offset = 2;
+  int32 limit = 3;
+}
+
+message GetUserFriendsResponse {
+  repeated GetUserInfoResponse friends = 1;
+  int32 total = 2;
+  int32 offset = 3;
+  int32 limit = 4;
+}
+
+// post /userApi/getAllRelationships
+message GetAllRelationshipsRequest {
+  int32 user_id = 1;
+}
+
+message GetAllRelationshipsResponse {
+  repeated GetUserBasicInfoResponse followings = 1;
+  repeated GetUserBasicInfoResponse followers = 2;
+  repeated GetUserBasicInfoResponse blockings = 3;
+  repeated GetUserBasicInfoResponse blocked_bys = 4;
+}
+
+message GetUserBasicInfoResponse {
+  int32 user_id = 1;
+  string username = 2;
+  string avatar_id = 3;
+  int32 age = 4;
+  Gender gender = 5;
+  string bio = 6;
+  int64 last_active_time = 7; // epoch
+  bool is_online = 8;
+  UserServiceCommonCode code = 9;
+  string nickname = 10;
+  string profession = 11;
+  UserGeoLocation geo_location = 12;
+  UserType user_type = 13;
+  string bot_id = 14;
+  PictureInQuery custom_avatar = 15;
+  string user_source = 16;
+}
+
+// post /userApi/getDAUInfo
+message GetDAUInfoRequest {}
+
+message GetDAUInfoResponse {
+  int32 dau_count = 1;
+}
+
+message BuildUserRelationshipAdminRequest {}
+
+message BuildUserRelationshipAdminResponse {
+  UserServiceCommonCode userServiceCommonCode = 1;
+  string message = 2;
+}
+
+message GetBotInfoRequest {
+  string external_id = 1;
+  string title = 2;
+  string greeting = 3;
+  string original_avatar_url = 4;
+  string visibility = 5;
+  string participant_name = 6;
+  string user_username = 8;
+  int32 priority = 9;
+}
+
+message GetBotInfoResponse {
+  Bot bot = 1;
+  UserServiceCommonCode code = 2;
+  string message = 3; // if fail
+}
+
+message GetBotInfosRequest {
+  int32 offset = 1;
+  string bot_tag = 2;
+  int32 limit = 3; // 雅典娜专用
+  ClientType client_type = 4;
+}
+
+message GetBotInfosResponse {
+  repeated Bot bots = 1;
+  int32 next_offset = 2;
+  int32 total = 3;
+  UserServiceCommonCode code = 4;
+  string message = 5; // if fail
+}
+
+message SearchBotsRequest {
+  int32 offset = 1;
+  string search_string = 2;
+  int32 limit = 3; // 雅典娜专用
+}
+
+message SearchBotsResponse {
+  repeated Bot bots = 1;
+  int32 next_offset = 2;
+  UserServiceCommonCode code = 3;
+  string message = 4; // if fail
+}
+
+message GetBotInfoByUserIdsRequest {
+  repeated int32 user_ids = 1;
+}
+
+message GetBotInfoByUserIdsResponse {
+  repeated Bot bots = 1;
+  UserServiceCommonCode code = 2;
+  string message = 3; // if fail
+}
+
+// ==== 上传bot excel ====
+message UploadBotExcelRequest {
+  string name = 1;
+  bytes file = 2;
+}
+
+message UploadBotExcelResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+message UploadBotCoverRequest {
+  string name = 1;
+  bytes file = 4;
+  string bot_id = 5;
+  string participant_name = 6;
+}
+
+message UploadBotCoverResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  Bot bot = 3;
+}
+
+message GetTempEmailDomainsRequest {}
+
+message GetTempEmailDomainsResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated string domains = 3;
+}
+
+message GetCaiAccountInfoByThirdPartyLoginRequest {
+  string third_party_login_user_id = 1;
+  ThirdPartyLoginUser platform = 2;
+}
+
+message GetCaiAccountInfoByThirdPartyLoginV2Request {
+  string third_party_login_user_id = 1;
+  ThirdPartyLoginUser platform = 2;
+  bool is_debug = 3;
+}
+
+message GetCaiAccountInfoResponse {
+  CaiAccount account = 1;
+  UserServiceCommonCode code = 4;
+  string message = 5;
+}
+
+message GetNewEmailRequest {}
+
+message GetNewEmailResponse {
+  UserServiceCommonCode code = 1;
+  CaiAccount account = 2;
+}
+
+message GetRewardTokenBalanceRequest {}
+
+message GetRewardTokenBalanceResponse {
+  int32 balance = 1;
+  UserServiceCommonCode code = 2;
+  string message = 3;
+}
+
+message GetReferralCodeRequest {}
+
+message GetReferralCodeResponse {
+  string referral_code = 1;
+  string referral_link = 2;
+  UserServiceCommonCode code = 3;
+  string message = 4;
+}
+
+message CheckIfUserRedeemedRequest {}
+
+message CheckIfUserRedeemedResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  int32 times = 3;
+}
+
+message GetSuccessfulInvitationRequest {}
+
+message SuccessfulInvitation {
+  string username = 1;
+  int32 reward_token = 2;
+}
+
+message GetSuccessfulInvitationResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated SuccessfulInvitation invitations = 3;
+  int32 total_reward_token = 4;
+  int32 balance = 5;
+}
+message GetAppShareRecordRequest {}
+
+message GetAppShareRecordResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2; // if fail
+  repeated SharePlatform platform = 3;
+}
+message GetWatchAdsCountRequest {}
+
+message GetWatchAdsCountResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2; // if fail
+  int32 count = 3;
+}
+message GetAppVersionsAdminRequest {
+  int32 offset = 1;
+  int32 limit = 2;
+  ClientType client_type = 3;
+}
+message GetAppVersionsAdminResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2; // if fail
+  repeated AppVersionAdmin app_versions = 3;
+  int32 next_offset = 4;
+}
+
+message AddAppVersionAdminRequest {
+  AppVersionAdmin app_version = 1;
+}
+message AddAppVersionAdminResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2; // if fail
+  AppVersionAdmin app_version = 3;
+}
+message ModifyAppVersionAdminRequest {
+  AppVersionAdmin app_version = 1;
+}
+
+message ModifyAppVersionAdminResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2; // if fail
+  AppVersionAdmin app_version = 3;
+}
+
+message UploadCAIHtmlRequest {
+  string content = 1;
+  string bot_id = 2;
+}
+
+message UploadCAIHtmlResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2; // if fail
+}
+
+message GetPopularSearchRequest {}
+
+message GetPopularSearchResponse {
+  repeated string popular_searches = 1;
+  UserServiceCommonCode code = 2;
+}
+message GetLeaderBoardRequest {}
+
+message GetLeaderBoardResponse {
+  repeated BotDetail leader_board_infos = 1;
+  UserServiceCommonCode code = 2;
+  string message = 3; // if fail
+}
+
+message GetNewEmailV2Request {}
+
+message GetNewEmailV2Response {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  CaiAccount account = 3;
+}
+message GetTempEmailMessageV2Request {
+  string email = 1;
+}
+
+message GetTempEmailMessageV2Response {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  string email_message = 3;
+}
+message GetCaiAccountInfoByThirdPartyLoginV3Request {
+  string third_party_login_user_id = 1;
+  ThirdPartyLoginUser platform = 2;
+  bool is_debug = 3;
+}
+
+message GetCaiAccountInfoByThirdPartyLoginV3Response {
+  CaiAccount account = 1;
+  UserServiceCommonCode code = 4;
+  string message = 5;
+}
+
+message DeleteAndGetNewCaiAccountRequestV2 {
+  string third_party_login_user_id = 1;
+  ThirdPartyLoginUser platform = 2;
+  string error_message = 3; // 报错信息
+}
+
+message DeleteAndGetNewCaiAccountResponseV2 {
+  CaiAccount account = 1;
+  UserServiceCommonCode code = 4;
+  string message = 5;
+}
+
+message UpdateCaiAccountStateRequestV2 {
+  CaiAccountState state = 1;
+  int32 cai_account_id = 2;
+  string third_party_login_user_id = 3;
+  ThirdPartyLoginUser platform = 4;
+}
+
+message UpdateCaiAccountStateResponseV2 {
+  CaiAccount account = 1;
+  UserServiceCommonCode code = 4;
+  string message = 5;
+}
+
+message GetAllConfigRequest {}
+
+message ConfigItemDto {
+  int32 id = 1;
+  string key = 2;
+  string value = 3;
+  string service = 4;
+}
+
+message GetAllConfigResponse {
+  UserServiceCommonCode code = 1;
+  repeated ConfigItemDto configs = 2;
+}
+
+message UpdateConfigRequest {
+  ConfigItemDto item = 1;
+}
+
+message UpdateConfigResponse {
+  UserServiceCommonCode code = 1;
+}
+message AddConfigRequest {
+  ConfigItemDto item = 1;
+}
+
+message AddConfigResponse {
+  UserServiceCommonCode code = 1;
+  ConfigItemDto item = 2;
+}
+
+message GetCaiAccountRequest {
+  string user_agent = 1;
+}
+message GetCaiAccountResponse {
+  CaiAccount account = 1;
+  UserServiceCommonCode code = 4;
+  string message = 5;
+}
+message GetReviewVersionRequest {}
+
+message GetReviewVersionResponse {
+  repeated string review_version = 1;
+  UserServiceCommonCode code = 2;
+  string message = 3;
+}
+
+// ================================================
+// The above protos are deprecated, do not add.
+// ================================================
+
+message AddInitChatHistoryRequest {
+  int32 user_id = 1;
+}
+
+message AddInitChatHistoryResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+message VerifyIOSRequest {
+  int32 subscription_id = 1;
+  string issuer_id = 2;
+  string key_id = 3;
+  string bundle_id = 4;
+  string transaction_id = 5;
+  int64 app_apple_id = 6;
+}
+
+message VerifyIOSResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  UserSubscription subscriptions = 3;
+}
+
+// 用户订阅信息
+message UserSubscription {
+  int32 id = 1;
+  int32 subscription_id = 2;
+  string name = 3;
+  string description = 4;
+  double price = 5;
+  string duration = 6;
+  int32 remaining_msgs = 7;
+  int32 remaining_match_count = 8;
+  int64 expiry_time = 9;
+  int32 remaining_boost_count = 10;
+  int32 remaining_like_count = 11;
+}
+
+message GetUserSubscriptionRequest {}
+
+message GetUserSubscriptionResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  UserSubscription subscription = 3;
+}
+
+message GetSubscriptionsV2Request {}
+
+message GetSubscriptionsV2Response {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated SubscriptionInfo subscriptions = 3;
+}
+
+message GetSubscriptionsRequest {}
+
+message GetSubscriptionsResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated SubscriptionInfo subscriptions = 3;
+  double discount_level = 4;
+}
+
+message SubscriptionEntitlement {
+  string title = 1;
+  string description = 2;
+}
+
+// 订阅信息
+message SubscriptionInfo {
+  int32 id = 1;
+  string name = 2;
+  string description = 3;
+  string price = 4;
+  string duration = 5;
+  string ios_product_id = 6;
+  string tip = 7;
+  repeated SubscriptionEntitlement entitlements = 8;
+  string discount_price = 9;
+  string discount_description = 10;
+  string discount_tip = 11;
+  string android_product_id = 12;
+  double discount_level = 13;
+  int64 sub_coins = 14; // 订阅送的金币
+}
+
+message DeductMsgCountRequest {}
+
+message DeductMsgCountResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  int32 remaining_msg_count = 3;
+}
+
+message DeductMatchCountRequest {}
+
+message DeductMatchCountResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  int32 remaining_match_count = 3;
+}
+
+message EditUserLocationRequest {
+  string location = 1;
+  UserGeoLocation geo_location = 2;
+}
+
+message EditUserLocationResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+enum RemainingCountType {
+  r_msgs = 0;
+  r_match = 1;
+  r_boost = 2;
+  r_like = 3;
+}
+
+message DeductCountRequest {
+  RemainingCountType type = 1;
+}
+
+message DeductCountResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  int32 remaining_count = 3;
+}
+
+message AdminSetDHSubscriptionRequest {
+  int32 user_id = 1;
+  int32 subscription_id = 2;
+}
+
+message AdminSetDHSubscriptionResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+message LikeUserRequest {
+  int32 user_id = 1;
+  int32 target_user_id = 2;
+  bool is_like = 3;
+  bool is_boost = 4;
+}
+message LikeUserResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+message MatchFeedFilter {
+  Gender gender = 1;
+  // 下发的 userinfo 的 age 应按满足[min_age, max_age]
+  int32 min_age = 2;
+  int32 max_age = 3;
+  int32 user_score = 4; // 当前的用户分 [0-100]
+}
+
+message GetMatchFeedsRequest {
+  int32 limit = 1;
+  MatchFeedFilter filter = 2;
+}
+
+message GetMatchFeedsResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated UserInfo user_infos = 3;
+}
+
+message GetUserBasicInfosV2Request {
+  repeated int32 user_ids = 1;
+  bool with_online_info = 2;
+}
+
+message GetUserBasicInfosV2Response {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated UserInfo user_basic_infos = 3;
+}
+
+message GetUserCallOrderRankRequest {
+  int32 user_id = 1;
+}
+
+message getUserCallOrderRankResponse {
+  UserServiceCommonCode code = 1;
+  int32 call_order_rank = 2; //视频等级
+}
+
+message GetUserInfosRequest {
+  repeated int32 user_ids = 1;
+}
+
+message GetUserInfosResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated UserInfo user_infos = 3;
+}
+
+message GetUserProfilePageInfoV2Request {
+  int32 user_id = 1;
+}
+
+message GetUserProfilePageInfoV2Response {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  UserInfo user_info = 3;
+}
+
+// Dh 是 digital human
+message GetDhPhoneNumberRequest {
+  int32 user_id = 1;
+  int32 digital_human_id = 2;
+  string flavor = 3;
+  string user_state = 4;
+  string user_phone_number = 5;
+  string digital_human_city = 6;
+  bool is_onboarding = 7;
+}
+
+message GetDhPhoneNumberResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  string digital_human_phone_number = 3;
+}
+
+message GetSMSContextRequest {
+  string user_phone_number = 1;
+  string digital_human_phone_number = 2;
+}
+
+message GetSMSContextResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  string flavor = 3;
+  UserInfo user_info = 4;
+  UserInfo digital_human_info = 5;
+  string digital_human_city = 6;
+  bool is_onboarding = 7;
+}
+
+// 请求
+message AdminGetActionCountsInRangeRequest {
+  string start_time = 1; // 开始时间，格式：2024-07-16T00:00:00Z (ISO 8601)
+  string end_time = 2; // 结束时间，格式：2024-07-16T23:59:59Z (ISO 8601)
+  ActionType type = 3; // 行为类型：PAID 或 REFUND
+}
+
+// 单个时间点的行为数量快照
+message ActionCountSnapshot {
+  string timestamp = 1; // 时间戳，格式：2024-07-16T00:00:00Z (ISO 8601)
+  int32 total_count = 2; // 该时间点的总数（付费用户总数或总退款数）
+  int32 increased_count = 3; // 该时间点新增的数量（新增付费用户数或新增退款数）
+}
+
+// 响应
+message AdminGetActionCountsInRangeResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  // 在请求的时间范围内，每个小时的行为数量快照
+  repeated ActionCountSnapshot action_count_snapshots = 3;
+}
+
+// 行为类型枚举
+enum ActionType {
+  PAID = 0;
+  RENEW = 1;
+  REFUND = 2;
+  EXPIRE = 3;
+}
+
+// 请求
+message AdminGetActionUserListInRangeRequest {
+  string start_time = 1; // 开始时间，格式：2024-07-16T00:00:00Z (ISO 8601)
+  string end_time = 2; // 结束时间，格式：2024-07-16T23:59:59Z (ISO 8601)
+  ActionType type = 3; // 行为类型：PAID 或 REFUND
+  int32 cursor = 4;
+  int32 page_size = 5;
+  int32 sort_key = 6; // 0 = Created_at, 1 = Updated_at
+  int32 app_name = 7; // 对应userinfo里的app_name
+}
+
+// 响应
+message AdminGetActionUserListInRangeResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated AdminUserSubscriptionInfo action_user_list = 3; // 时间范围内的行为用户列表（付费或退款）
+  int32 next_cursor = 4;
+  int32 total_count = 5;
+}
+
+message AdminUserSubscriptionInfo {
+  AdminUserInfo user_info = 1;
+  int32 user_id = 2;
+  string purchase_date = 3;
+  ActionType action_type = 4;
+  string ios_product_id = 5;
+  double amount = 6;
+  string ios_key_id = 7;
+  string ios_bundle_id = 8;
+  string ios_transaction_id = 9;
+  string ios_original_transaction_id = 10;
+  string updated_at = 11;
+  string expire_date = 12;
+  string android_package_name = 13;
+  string android_product_id = 14;
+  string payment_provider = 15; // 支付渠道：Google Pay，Apple Pay，Waffo
+  string payment_method = 16; // 第三方支付的支付方式：GOOGLEPAY，APPLEPAY，VISA_CREDITCARD
+}
+
+message AdminGetPwaActionUserListInRangeRequest {
+  int64 start_time = 1; // 开始时间戳（ms）
+  int64 end_time = 2; // 结束时间戳（ms）
+  int32 cursor = 3;
+  int32 page_size = 4;
+  int32 sort_key = 5; // 0 = Created_at, 1 = Updated_at
+}
+
+// 响应
+message AdminGetPwaActionUserListInRangeResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated AdminPwaUserCashOutInfo action_user_list = 3; // 时间范围内的行为用户列表（提现）
+  int32 next_cursor = 4;
+}
+
+//enum Status {
+//  PENDING("pending"), // 等待审核
+//  APPROVED("approved"), // 等待出金
+//  SENDING("sending"), // 平台(paypal)出金中
+//  FINISHED("finished"), // 出金完成
+//  FAILED("failed"), // 失败
+//  REJECTED("rejected"), // 拒绝
+//  UNKNOWN("unknown") // 未知, 人工处理
+//;
+
+message AdminPwaUserCashOutInfo {
+  AdminUserInfo user_info = 1;
+  int32 id = 2;
+  string create_at = 3;
+  string update_at = 4;
+  string amount = 5; // 单位：美元
+  string platform = 6;
+  string status = 7; // 参考上面的枚举
+  string reason = 8;
+  string external_withdraw_id = 9;
+  string extras = 10; // json字符串
+  bool allow_payment = 11;
+}
+
+message GetLikeMeFeedsRequest {
+  int32 limit = 1;
+  MatchFeedFilter filter = 2;
+}
+
+message GetLikeMeFeedsResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated UserInfo user_infos = 3;
+}
+
+message UploadNewMatchRequest {
+  int32 dh_userid = 1;
+}
+
+message UploadNewMatchResponse {
+  UserServiceCommonCode code = 1;
+}
+
+message UploadFcmTokenRequest {
+  string fcm_token = 1;
+}
+
+message UploadFcmTokenResponse {
+  UserServiceCommonCode code = 1;
+}
+
+message CreateDelayMessageWithPushRequest {
+  SendMessageFromBotRequest task_data = 1; // json字符串
+  DelayTaskType type = 2;
+  int64 schedule_time = 3; // 计划执行时间，单位：毫秒
+}
+
+enum DelayTaskType {
+  UNKNOWN_TASK = 0;
+  LIKES_ME_TASK = 1; // 只推送
+  MATCH_TASK = 2; // 只推送
+  CHAT_TASK = 3; // 推送 + 发消息
+  GREETING_TASK = 4; // 推送 + 发消息
+}
+
+message CreateDelayMessageWithPushResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  int32 delay_task_id = 3;
+}
+
+message CancelDelayMessageWithPushRequest {
+  int32 delay_task_id = 1;
+}
+
+message CancelDelayMessageWithPushResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+message FakeFireBasePushRequest {
+  string fcm_token = 1; // 给谁发
+  int32 type = 2; // 1 是模拟match推送，2是模拟like推送
+  int32 fake_user_id = 3; // 模拟推送下去的userid
+  int32 from_user_id = 4;
+}
+
+message FakeFireBasePushResponse {
+  UserServiceCommonCode code = 1;
+}
+
+message GetClientConfigRequest {}
+
+message GetClientConfigResponse {
+  // json字符串
+  string clientConfig = 1;
+}
+
+message UpdateUserSusBotRequest {
+  int32 sus_bot = 1;
+}
+
+message UpdateUserSusBotResponse {
+  UserServiceCommonCode code = 1;
+  int32 sus_bot = 2;
+}
+
+message VerifyAndroidRequest {
+  string android_product_id = 1; // 同android下发的productId
+  string token = 2; // 安卓api 需要校验的token
+  string plan_id = 3;
+}
+
+message VerifyAndroidResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  UserSubscription subscriptions = 3;
+}
+
+message GetRealManFeedsRequest {
+  int32 limit = 1;
+}
+
+message GetRealManFeedsResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated UserInfo user_infos = 3;
+}
+
+//==== 更新及获取用户状态 ====
+enum ClientUserStatus {
+  CLIENT_USER_STATUS_UNKNOWN = 0;
+  CLIENT_USER_STATUS_INIT = 1;
+  CLIENT_USER_STATUS_REVIEW = 2;
+  CLIENT_USER_STATUS_BANNED = 3;
+  CLIENT_USER_STATUS_ACTIVE = 4;
+}
+
+message GetClientUserStatusRequest {}
+
+message GetClientUserStatusResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  ClientUserStatus status = 3;
+}
+
+message UpdateClientUserStatusRequest {
+  ClientUserStatus new_status = 1;
+}
+
+message UpdateClientUserStatusResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+message GetUserIdsWithPhoneNumberRequest {
+  string phone_number = 1;
+  int32 user_id = 2;
+}
+
+message GetUserIdsWithPhoneNumberResponse {
+  UserServiceCommonCode code = 1;
+  repeated int32 user_ids = 2;
+}
+
+message StoreUserMutualEvaluationRequest {
+  int32 to_user_id = 1;
+  int32 score = 2;
+}
+
+message StoreUserMutualEvaluationResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+message QueryUserMutualEvaluationRequest {
+  int32 score = 1;
+  int32 user_id = 2;
+  int32 limit = 3;
+}
+
+message QueryUserMutualEvaluationResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated UserMutualEvaluationInfo result = 3;
+}
+
+message UserMutualEvaluationInfo {
+  int32 src_user_id = 1;
+  int32 to_user_id = 2;
+  int32 score = 3;
+  string create_at = 4;
+  string update_at = 5;
+}
+
+message SendTIMMsgFromSMSRequest {
+  string content = 1;
+}
+message SendTIMMsgFromSMSResponse {
+  string tim_response = 1;
+}
+
+message QueryUserTransactionHistoryRequest {
+  int32 user_id = 1;
+}
+
+message QueryUserTransactionHistoryResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated IOSTransactionInfo ios_transaction_infos = 3;
+  // 后续可扩展查询别的平台的付款
+  // repeated AndroidXXX
+}
+
+message IOSTransactionInfo {
+  int32 user_id = 1;
+  string purchase_date = 2;
+  string ios_transaction_id = 3;
+  ClientType platform = 4;
+  string app_name = 5;
+  string created_at = 6;
+  string updated_at = 7;
+  string ios_original_transaction_id = 8;
+  string ios_product_id = 9;
+  string expire_date = 10;
+  string ops_type = 11;
+}
+
+// 小利女 Onboarding 相关
+
+// 通用的修改 paypal binding 的接口
+message RegisterUserPaypalIdRequest {
+  string paypal_id = 1;
+  bool force_update = 2; // 第二次绑定时需要传 true
+}
+
+message RegisterUserPaypalIdResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+message BindPaypalIdRequest {
+  string paypal_id = 1;
+  string raw_data = 2;
+}
+
+message BindPaypalIdResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+message AdminDeletePaypalIdRequest {
+  string paypal_id = 1;
+  int32 user_id = 2;
+}
+
+message AdminDeletePaypalIdResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+message OnboardingBindPaypalIdRequest {
+  string paypal_id = 1;
+  string raw_data = 2;
+}
+
+message OnboardingBindPaypalIdResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+message OnboardingInitTaskRequest {
+  // empty
+}
+
+message OnboardingInitTaskResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+message OnboardingCashoutRequest {
+  // empty
+}
+
+message OnboardingCashoutResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+message OnboardingPhoneVerifiedRequest {
+  int32 user_id = 1;
+  int32 dh_user_id = 2;
+}
+
+message OnboardingPhoneVerifiedResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+message QueryOnboardingTaskStatusRequest {
+  // empty
+}
+
+message QueryOnboardingTaskStatusResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  string status = 3;
+}
+
+message UploadVoiceGreetingRequest {
+  bytes file = 1;
+  // 仅支持
+  // WAV - audio/wav
+  // MP3 - audio/mp3
+  // AIFF - audio/aiff
+  // AAC - audio/aac
+  // OGG Vorbis - audio/ogg
+  // FLAC - audio/flac
+  string fileType = 2; // mp3, wav...
+  int64 second = 3; // 单位秒
+  int64 size = 4; // 单位 字节
+}
+
+message UploadVoiceGreetingResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2; // if fail
+  string url = 3;
+  string content = 4; // 音频里的文字内容
+  string topic = 5; // 1-4 分别对应场景1-4
+}
+
+message QueryVoiceGreetingRequest {
+  int32 user_id = 1;
+}
+
+message QueryVoiceGreetingResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2; // if fail
+  repeated string urls = 3;
+}
+
+// onboarding v2
+
+message FinishOnboardingV2Request {
+  // empty
+}
+
+message FinishOnboardingV2Response {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+message OnboardingCashoutV2Request {
+  // empty
+}
+
+message OnboardingCashoutV2Response {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+// 配置
+message CommonTaskInfo {
+  int32 task_id = 1;
+  string title = 2;
+  string reward = 3;
+  int32 estimated_duration = 4;
+  CommonTaskKind kind = 5;
+}
+
+// user finished
+message UserCommonTaskInfo {
+  int32 user_id = 1;
+  int32 task_id = 2;
+  CommonTaskKind kind = 3;
+  string status = 4;
+  int64 create_at = 5;
+  int64 update_at = 6;
+}
+
+enum CommonTaskKind {
+  onboarding = 0;
+  daily = 1;
+}
+
+message ListAllCommonTaskRequest {
+  // empty
+}
+
+message ListAllCommonTaskResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated CommonTaskInfo tasks = 3;
+}
+
+message ListUserCommonTaskRequest {
+  // empty
+}
+
+message ListUserCommonTaskResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated UserCommonTaskInfo tasks = 3;
+}
+
+message FinishUserCommonTaskRequest {
+  int32 task_id = 1;
+}
+
+message FinishUserCommonTaskResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+message InitUserTutorialTaskRequest {
+  // empty
+}
+
+message InitUserTutorialTaskResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+message QueryUserTutorialTaskRequest {
+  // empty
+}
+
+message QueryUserTutorialTaskResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  string status = 3;
+}
+
+message FinishUserTutorialTaskOneRequest {
+  // empty
+}
+
+message FinishUserTutorialTaskOneResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+message ClaimUserTutorialTaskRequest {
+  // empty
+}
+
+message ClaimUserTutorialTaskResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+message UploadUserTutorialTaskRecentPicsRequest {
+  repeated PostServiceProto.PostPicture pictures = 1;
+}
+
+message UploadUserTutorialTaskRecentPicsResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+message QueryUserTutorialTaskRecentPostsRequest {
+  // empty
+}
+
+message QueryUserTutorialTaskRecentPostsResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  bool day_one = 3;
+  bool day_two = 4;
+  bool today = 5;
+}
+
+message TurnOnAutoPilotRequest {
+  bool turn_on = 1;
+  int32 chat_user_id = 2;
+}
+
+message TurnOnAutoPilotResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+message QueryAutoPilotStatusRequest {
+  repeated int32 chat_user_ids = 1;
+}
+
+message QueryAutoPilotStatusResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated AutoPilotStatus auto_pilot_status = 3;
+}
+
+message AutoPilotStatus {
+  int32 chat_user_id = 1;
+  bool enabled = 2;
+}
+
+message QueryUserPaypalInfoRequest {
+  // empty
+}
+
+message QueryUserPaypalInfoResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  string paypal_id = 3;
+  string paypal_raw_json = 4;
+}
+
+message QueryUserWithdrawTasksRequest {
+  // empty
+}
+
+message QueryUserWithdrawTasksResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated UserWithdrawInfo user_withdraw_infos = 3;
+}
+
+message QueryUserMiscRequest {
+  repeated string keys = 1;
+}
+
+message QueryUserMiscResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  string misc = 3;
+}
+
+message StoreUserMiscRequest {
+  repeated string keys = 1;
+  repeated string values = 2;
+}
+
+message StoreUserMiscResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+message QueryUserBalanceRequest {
+  // empty
+}
+
+message QueryUserBalanceResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  string balance = 3;
+}
+
+message IncreaseBalanceForLiveStreamRequest {}
+
+message IncreaseBalanceForLiveStreamResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  int32 cents = 3;
+}
+
+// 语音订单相关
+message CreateCallOrderRequest {
+  int32 male_user_id = 1;
+  int32 female_user_id = 2;
+  CallOrderType order_type = 3;
+}
+
+message CreateCallOrderResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  int32 order_id = 3;
+}
+
+enum CallOrderType {
+  VOICE_CALL = 0;
+  VIDEO_CALL = 1;
+  MOCK_VIDEO = 2;
+  INS_ORDER = 3;
+}
+
+message MarkMissCallRequest {
+  int32 order_id = 1;
+}
+
+message MarkMissCallResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+enum CallOrderBalanceType {
+  CALL_ORDER_UNKNOWN = 0; // 老版本的逻辑，完成订单&加钱
+  CALL_ORDER_REAL_TIME = 1; // 新版本 实时加钱
+  CALL_ORDER_FINISHED = 2; // 新版本 订单完成，但是不加钱，因为实时加过了
+}
+message FinishCallOrderRequest {
+  int32 order_id = 1;
+  int32 call_duration = 2;
+  CallOrderBalanceType balance_type = 3;
+  CallOrderFinishReasonType reason_type = 4;
+  double price = 5;
+}
+
+enum CallOrderFinishReasonType {
+  NORMAL = 0; // 默认正常
+  INIT_MALE_CANCEL = 1; // init男用户取消
+  INIT_FEMALE_CANCEL = 2; // init女用户取消
+  NORMAL_MALE_HANG_UP = 3; // 正常接通男用户不足一秒挂断
+  NORMAL_FEMALE_HANG_UP = 4; // 正常接通女用户不足一秒挂断
+  TIM_CALLBACK_FINISH = 5;
+  // 女拒接
+  FEMALE_CALL_REJECT = 6;
+  // 女 busy
+  FEMALE_BUSY = 7;
+  // 女未响应
+  FEMALE_NO_RESPONSE = 8;
+  // 5s内男取消
+  MALE_CANCEL_WITHIN_5S = 9;
+  // 超时5s男取消
+  MALE_CANCEL_TIMEOUT_5S = 10;
+}
+
+message FinishCallOrderResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+message ListMissCallOrderRequest {
+  // empty
+}
+
+message ListMissCallOrderResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated CallOrderInfo orders = 3;
+}
+
+message ListCallOrderRequest {
+  int32 page_token = 1;
+  int32 limit = 2;
+}
+
+message ListCallOrderResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated CallOrderInfo orders = 3;
+  int32 page_token = 4;
+  bool has_more = 5;
+}
+
+message CallOrderInfo {
+  int32 id = 1;
+  int64 create_at = 2;
+  int64 update_at = 3;
+  int32 male_user_id = 4;
+  int32 female_user_id = 5;
+  CallOrderType order_type = 6;
+  string status = 7;
+  int32 call_duration = 8;
+  string amount = 9;
+  string reasonType = 10;
+  int32 free_call_duration = 11;
+  string free_amount = 12;
+  string price = 13;
+  bool mock_video = 14;
+  string video_url = 15;
+}
+
+message ListTextEarningRequest {
+  int32 page_token = 1;
+  int32 limit = 2;
+}
+
+message ListTextEarningResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated TextEarningInfo earnings = 3;
+  int32 page_token = 4;
+  bool has_more = 5;
+}
+
+message TextEarningInfo {
+  int32 male_user_id = 1;
+  int32 female_user_id = 2;
+  int32 cents = 3;
+  int64 create_at = 4;
+  int64 update_at = 5;
+}
+
+message MarkCallBackRequest {
+  int32 order_id = 1;
+}
+
+message MarkCallBackResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+// 聊天订单相关
+
+message InitChatOrderRequest {
+  int32 to_user_id = 1;
+}
+
+message InitChatOrderResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+message CreateChatOrderRequest {
+  int32 to_user_id = 1;
+  ChatOrderType order_type = 2;
+}
+
+enum ChatOrderType {
+  EXCHANGE_PHONE = 0;
+}
+
+message CreateChatOrderResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+message ChatOrderAcceptRequest {
+  int32 order_id = 1;
+  bool accept = 2;
+}
+
+message ChatOrderAcceptResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+message ChatOrderEndRequest {
+  int32 order_id = 1;
+  int32 score = 2;
+}
+
+message ChatOrderEndResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+message ChatOrderClaimRequest {
+  int32 order_id = 1;
+}
+
+message ChatOrderClaimResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+message QueryChatOrderRequest {
+  int32 order_id = 1;
+}
+
+message QueryChatOrderResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  ChatOrderInfo chat_order_info = 3;
+}
+
+message ListChatOrderRequest {
+  int32 page_token = 1;
+  int32 limit = 2;
+}
+
+message ListChatOrderResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated ChatOrderInfo chat_order_infos = 3;
+  int32 page_toekn = 4;
+  bool has_more = 5;
+}
+
+message ListChatOrderWithUserRequest {
+  int32 to_user_id = 1;
+}
+
+message ListChatOrderWithUserResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated ChatOrderInfo chat_order_infos = 3;
+}
+
+message ChatOrderInfo {
+  int32 id = 1;
+  int64 create_at = 2;
+  int64 update_at = 3;
+  int64 accept_at = 4;
+  int32 user_id = 5;
+  int32 to_user_id = 6;
+  string amount = 7;
+  ChatOrderType type = 8;
+  string status = 9;
+  int32 end_score = 10;
+}
+
+// withdraw 相关
+
+// admin 拒绝
+message AdminRejectUserWithdrawRequest {
+  int32 id = 1;
+}
+
+message AdminRejectUserWithdrawResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+// admin 批准
+message AdminApproveUserWithdrawRequest {
+  repeated int32 id_list = 1;
+}
+
+message AdminApproveUserWithdrawResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+// admin 拉取待处理的 withdraw 请求
+message AdminListPendingUserWithdrawRequest {
+  int32 page_token = 1;
+  int32 limit = 2;
+}
+
+message AdminListPendingUserWithdrawResponse {
+  repeated UserWithdrawInfo user_withdraw_infos = 1;
+  int32 page_token = 2;
+  bool has_more = 3;
+  int32 total_count = 4;
+  UserServiceCommonCode code = 5;
+}
+
+message UserWithdrawInfo {
+  int32 id = 1;
+  string create_at = 2;
+  string update_at = 3;
+  int32 user_id = 4;
+  string amount = 5;
+  string status = 6;
+  string reason = 7;
+}
+
+message AdminGetUserWithdrawDetailRequest {
+  int32 id = 3;
+}
+
+message AdminGetUserWithdrawDetailResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  UserWithdrawDetail detail = 3;
+}
+
+message UserWithdrawDetail {
+  int32 id = 1;
+  string amount = 2;
+  int32 user_id = 3;
+  string avatar_url = 4;
+  string paypal_raw_json = 5;
+  string phone_number = 6;
+  bool phone_number_verified = 7;
+  int32 inactive_chat_order_cnt = 8;
+  repeated SimpleChatOrderInfo latest_inactive_chat_orders = 9;
+}
+
+message SimpleChatOrderInfo {
+  int32 id = 1;
+  string status = 2;
+}
+
+/**
+   用户签到
+*/
+message UserCheckInRequest {}
+
+message UserCheckInResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  // 后面加一下 金币值
+  int64 leftCoinValue = 3;
+}
+
+// 用户签到信息
+message UserCheckInInfo {
+  int32 day_of_week = 1; // 一周中的第几天（0 表示周日，1 表示周一，依此类推）
+  bool has_signed_in_today = 2; // 当天是否已经签到
+  WeekState week_state = 3;
+}
+enum WeekState {
+  WEEK_STATE_UNKNOWN = 0;
+  WEEK_STATE_CUR_DAY = 1;
+  WEEK_STATE_BEFORE_DAY = 2;
+  WEEK_STATE_AFTER_DAY = 3;
+}
+
+// 获取用户近七天签到信息请求
+message GetUserCheckInInfoRequest {}
+
+message GetUserCheckInInfoResponse {
+  UserServiceCommonCode code = 1;
+  repeated UserCheckInInfo checkin_infos = 2; // 签到信息列表
+}
+
+message StatChatRoundRequest {
+  // 跟谁聊天
+  int32 toUserId = 1;
+  // 新增的聊天轮数，总计round = 当前用户跟 toUserId的聊天轮数 + count;
+  int32 count = 2;
+}
+message StatChatRoundResponse {
+  UserServiceCommonCode code = 1;
+  int32 count = 2;
+  UserLevelInfo levelInfo = 3;
+}
+
+// 获取当前用户的coin数量
+message GetUserCoinInfoRequest {}
+
+message GetUserCoinInfoResponse {
+  UserServiceCommonCode code = 1;
+  int64 coin = 2;
+}
+
+enum BUY_COIN_SCENE {
+  GENERAL = 0;
+  RETENTION = 1;
+}
+
+message BuyCoinRequest {
+  string coin_bundle_id = 1;
+  string transaction_id = 2;
+  BUY_COIN_SCENE scene = 3;
+  // Android payment fields (optional for backward compatibility)
+  string android_product_id = 4;
+  string android_purchase_token = 5;
+}
+
+message BuyCoinResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  int64 coin = 3;
+}
+
+// getCoinProductInfos
+
+message CoinProductInfo {
+  string coin_bundle_id = 1;
+  int64 coin = 2;
+  double price = 3;
+  repeated string pages = 4; // eg: [wallet....]
+  int64 first_coin = 5; // 首充金币值
+  int64 retention_coin = 6; // 挽留赠送的
+}
+
+message GetCoinProductInfosRequest {}
+message GetCoinProductInfosResponse {
+  repeated CoinProductInfo coin_product_infos = 1;
+  bool isFirst = 2; // 服务端检索是否是首充
+  repeated CoinProductInfo dtc_coin_product_infos = 3; // 三方支付(DTC)独立金币档位
+}
+
+enum PaymentBizType {
+  BIZ_UNKNOWN = 0;
+  BIZ_COIN = 1; // 一次性购买 (金币)
+  BIZ_SUBSCRIPTION = 2; // 周期性订阅
+  BIZ_SUBSCRIPTION_VISITOR = 3; // visitor 订阅
+}
+
+enum PaymentMethod {
+  CREDIT_CARD = 0;
+  DEBIT_CARD = 1;
+  GOOGLE_PAY = 2;
+  APPLE_PAY = 3;
+  PAYMENT_METHOD_UNKNOWN = 5;
+}
+
+message WaffoPaymentParams {
+  string success_url = 1;
+  string failed_url = 2;
+}
+
+// === 新增：第三方支付下单接口 ===
+message CreatePaymentRequest {
+  string product_id = 1; // 商品ID (coin_bundle_id 或 subscription_id)
+  string provider = 2; // 渠道标识: "WAFFO"
+  PaymentBizType biz_type = 3; // 明确业务类型，决定调用渠道的哪个接口
+  repeated PaymentMethod payment_methods = 4; // 支持使用的支付方式
+  WaffoPaymentParams waffo_params = 5; // waffo渠道的配置
+  bool use_internal_cashier = 6; // 新增：是否使用内部收银台
+}
+
+message CreatePaymentResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  string order_id = 3; // 系统订单号
+  string redirect_url = 4; // 跳转支付收银台的 URL
+}
+
+//S2S 支付执行请求 (前端内部收银台 -> 后端)
+message ExecutePaymentRequest {
+  string order_id = 1; // 业务订单号
+  string provider = 2;
+  // 支付要素 (注意传输安全 HTTPS)
+  string card_number = 3;
+  string expiry_month = 4;
+  string expiry_year = 5;
+  string cvc = 6;
+  string card_first_name = 7; // 账单姓氏
+  string card_last_name = 8; // 账单名字
+
+  // 账单地址 (S2S 必填)
+  string email = 9; //账单邮箱
+  string country_code = 10; // ISO 2位代码, e.g. "US"
+  string state = 11; //州或省代码（如 ISO 3166-2中定义）。例如，美国的 CA
+  string city = 12; //账单城市
+  string street = 13; //账单街道
+  string zip_code = 14; //账单邮政编码美国的地址最多为五位数字，其他国家的地址最多为十个字符
+  string phone = 15; //账单电话
+}
+
+// S2S 支付响应
+message ExecutePaymentResponse {
+  int32 code = 1;
+  string message = 2;
+
+  // 支付状态: SUCCESS, FAILED, REQUIRE_3DS
+  string status = 3;
+
+  // 如果需要 3DS 验证，这里返回银行页面 URL
+  string redirect_url = 4;
+
+  // 回显订单信息，方便前端展示结果页
+  string order_id = 5;
+  string currency = 6; // 币种，例如 "USD"
+  string price = 7; // 价格，建议使用 string 传输 (e.g. "3.99") 保证精度
+  string provider_tx_id = 8; //  渠道流水号，方便前端排查问题
+}
+
+// 查询订单状态
+message QueryPaymentOrderStatusRequest {
+  string order_id = 1;
+}
+
+message QueryPaymentOrderStatusResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  string status = 3; // CREATE/PENDING/SUCCESS/FAILED/ACTIVE/EXPIRE/CANCEL
+  string product_id = 4;
+  float price = 5;
+  PaymentBizType biz_type = 6;
+  string provider = 7;
+  PaymentMethod payment_method = 8;
+  int32 coins = 9;
+  string failedReason = 10;
+  int64 purchaseTime = 11; // 时间戳ms
+}
+
+// 上传用户的appsflyer_id
+message UploadAppsflyerInfoRequest {
+  string app_id = 1;
+  string appsflyer_id = 2;
+}
+
+message UploadAppsflyerInfoResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+// 查询请求 (通常为空，依赖 Session 获取 userId)
+message AdminCleanUserSubscriptionRequest {
+  int32 user_id = 1;
+  bool cleanSub = 2;
+  bool cleanVisitorSub = 3;
+}
+
+// 查询响应
+message AdminCleanUserSubscriptionResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+// 用户订阅详情
+message UserSubscriptionInfo {
+  string product_id = 1; // 订阅商品ID
+  string status = 2; // 状态: ACTIVE, EXPIRED, CANCELLED
+  int64 start_time = 3; // 开始时间戳 (秒)
+  int64 end_time = 4; // 结束/过期时间戳 (秒)
+  bool auto_renew = 5; // 是否自动续费
+  string provider = 6; // 渠道: WAFFO, APPLE, GOOGLE
+}
+
+// giftInfo
+message GiftInfo {
+  string gift_id = 1;
+  GIFT_LEVEL gift_level = 2;
+  string gift_image_url = 3;
+  int64 gift_coin_value = 4;
+  string gift_cost_dollar = 5; // 对应的美金实际值
+}
+
+enum GIFT_LEVEL {
+  // Greeting - Radiant - Mystic - Celestial
+  GIFT_LEVEL_UNKNOWN = 0;
+  GIFT_LEVEL_GREETING = 1;
+  GIFT_LEVEL_RADIANT = 2;
+  GIFT_LEVEL_MYSTIC = 3;
+  GIFT_LEVEL_CELESTIAL = 4;
+  GIFT_LEVEL_FOR_YOU = 5;
+}
+
+// getGiftsInfo
+message GetGiftsInfoRequest {}
+message GetGiftsInfoResponse {
+  UserServiceCommonCode code = 1;
+  repeated GiftInfo gifts = 2;
+}
+
+// sendGift
+message SendGiftRequest {
+  string gift_id = 1;
+  int32 to_user_id = 2;
+}
+
+message SendGiftResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  int64 left_coin = 3;
+  UserLevelInfo levelInfo = 4;
+}
+
+// getSendGiftHistory
+message GiftHistory {
+  int32 to_user_id = 1;
+  GiftInfo gift_info = 2;
+  int64 send_time = 3;
+}
+message GetSendGiftHistoryRequest {
+  int32 to_user_id = 1;
+}
+message GetSendGiftHistoryResponse {
+  UserServiceCommonCode code = 1;
+  repeated GiftHistory gift_history = 2;
+}
+
+// getUserIntimacy
+message GetUserIntimacyRequest {
+  int32 to_user_id = 1; // 当前用户跟to_user_id对应的亲密度关系
+}
+
+message GetUserIntimacyResponse {
+  UserServiceCommonCode code = 1;
+  UserLevelInfo levelInfo = 2;
+}
+
+message GetUserIntimacyBatchRequest {
+  repeated int32 to_user_ids = 1; // 批量查询用户ID列表
+}
+
+message GetUserIntimacyBatchResponse {
+  UserServiceCommonCode code = 1;
+  repeated UserIntimacyInfo intimacy_infos = 2; // 用户亲密度信息列表
+}
+
+message UserIntimacyInfo {
+  int32 user_id = 1; // 目标用户ID
+  UserLevelInfo level_info = 2; // 与该用户的亲密度信息
+}
+
+message UserLevelInfo {
+  string name = 1;
+  int32 level = 2;
+  int32 ratio = 3; // 当前等级的百分比 0 - 100
+  int64 value = 4; // 当前亲密度的值
+}
+
+enum USER_COIN_CHANGE_TYPE {
+  USER_COIN_CHANGE_TYPE_UNKNOWN = 0;
+  USER_COIN_CHANGE_TYPE_BUY_COIN = 1;
+  USER_COIN_CHANGE_TYPE_SEND_GIFT = 2;
+  USER_COIN_CHANGE_TYPE_CHECK_IN = 3;
+  USER_COIN_CHANGE_TYPE_REFUND = 4;
+  USER_COIN_CHANGE_TYPE_NEW_USER = 5; // 新用户uploadUserInfo之后赠送金币
+  USER_COIN_CHANGE_TYPE_USER_SUB = 6; // 用户订阅给的金币
+  USER_COIN_CHANGE_TYPE_USER_MESSAGE_TEXT = 7; // 用户发送的文本消息 消耗
+  USER_COIN_CHANGE_TYPE_USER_MESSAGE_VIDEO = 8; // 用户发送的视频消息 消耗
+  USER_COIN_CHANGE_TYPE_USER_MESSAGE_AUDIO = 9; // 用户发送的音频消息 消耗
+  USER_COIN_CHANGE_TYPE_USER_NEW_REWARD_VIDEO = 10; // 新用户 首次视频奖励
+  USER_COIN_CHANGE_TYPE_USER_NEW_REWARD_AUDIO = 11; // 新用户 首次音频奖励
+  USER_COIN_CHANGE_TYPE_USER_NEW_REWARD_TEXT = 12; // 新用户 首次文本奖励
+  USER_COIN_CHANGE_TYPE_USER_SUPER_LIKE = 13; // gc2.2 super like
+  USER_COIN_CHANGE_TYPE_STREAK_CHECKIN = 14; // 连续签到奖励
+  USER_COIN_CHANGE_TYPE_USER_INS_EXCHANGE_ORDER_REFUND = 15; // ins交换订单退款
+  USER_COIN_CHANGE_TYPE_USER_INS_EXCHANGE_COST = 16; // ins交换订单金币消耗
+}
+
+// getUserCoinChangeHistory
+message UserCoinChangeHistory {
+  int64 change_time = 1;
+  int64 coin_value = 2;
+  USER_COIN_CHANGE_TYPE change_type = 3;
+  string ext = 4; // 这个如果类型是gift的话，代表gift_id
+  int32 from_userid = 5;
+  int32 to_userid = 6;
+  string to_username = 7;
+}
+
+message GetUserCoinChangeHistoryRequest {}
+
+message GetUserCoinChangeHistoryResponse {
+  UserServiceCommonCode code = 1;
+  repeated UserCoinChangeHistory histories = 2;
+}
+
+// getUserLevelConfig
+message UserLevelConfig {
+  string name = 1;
+  int32 level = 2;
+  int64 coin = 3;
+}
+
+// getUserLevelConfig
+message GetUserLevelConfigRequest {}
+message GetUserLevelConfigResponse {
+  UserServiceCommonCode code = 1;
+  repeated UserLevelConfig configs = 2;
+}
+
+message GetPWAFeedsRequest {
+  int32 limit = 1;
+  MatchFeedFilter filter = 2;
+}
+
+message GetPWAFeedsResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated UserInfo user_infos = 3;
+}
+
+message SendCustomizedFirebaseNotificationRequest {
+  int32 to_user_id = 1;
+  CustomizedFirebaseNotificationParams customized_notification = 2;
+}
+
+message SendCustomizedFirebaseNotificationResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+message CustomizedFirebaseNotificationParams {
+  string title = 1;
+  string body = 2;
+  string badge_url = 3;
+  string icon_url = 4;
+  repeated string customized_data_keys = 5;
+  repeated string customized_data_vals = 6;
+}
+
+message NormalMediumWithdrawCheckRequest {
+  bool is_lbs_america = 1; // 是否是美国LBS用户
+  USPaypalAccountType us_paypal_account_type = 2; // 是否是美国PayPal账户
+}
+
+message NormalMediumWithdrawCheckResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+message NormalMediumWithdrawRequest {
+  // empty
+  string amount = 1; // [2, 10, 100] only
+  bool allow_payment = 2; // 是否允许支付
+  bool is_lbs_america = 3; // 是否是美国LBS用户
+  USPaypalAccountType us_paypal_account_type = 4; // 是否是美国PayPal账户
+}
+
+message NormalMediumWithdrawResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  BffRewardNotification bff_reward_notification = 3;
+}
+
+message BffRewardNotification {
+  int64 event_id = 1;
+  string event_type = 2;
+  string invitee_nickname = 3;
+  int32 reward_amount_cents = 4;
+  string share_text = 5;
+}
+
+message QueryUserByPhoneRequest {
+  string phone = 1;
+}
+
+message QueryUserByPhoneResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated UserInfo user_basic_infos = 3;
+}
+
+message GetUsersPromptsRequest {
+  repeated int32 userIds = 1;
+}
+message GetUsersPromptsResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated UserPrompts results = 3;
+}
+message UserPrompts {
+  int32 userId = 1;
+  repeated Prompt prompts = 2;
+}
+
+message Prompt {
+  string title = 2;
+  string hint = 3;
+}
+
+// change user online status
+message ChangeUserOnlineStatusRequest {
+  bool online = 1;
+  PWA_STATUS pwa_status = 2;
+  int32 target_user_id = 3;
+}
+
+enum PWA_STATUS {
+  // 未知或未指定的状态
+  PWA_STATUS_UNKNOWN = 0;
+  // 前台在线活跃小利女：打开LIVE且IM在线的小利女。
+  PWA_STATUS_FRONTEND_ONLINE_ACTIVE = 1;
+  // 前台在线非活跃小利女：未开LIVE但IM在线
+  PWA_STATUS_FRONTEND_ONLINE_INACTIVE = 2;
+  // 忙线小利女：实时在线且在接听电话中的小利女。
+  PWA_STATUS_FRONTEND_ONLINE_BUSY = 3;
+  // 后台在线活跃小利女：PWA在后台，打开LIVE 且IM在线
+  PWA_STATUS_BACKEND_ONLINE_ACTIVE = 4;
+  // 后台在线非活跃小利女：未开着Live 但IM在线
+  PWA_STATUS_BACKEND_ONLINE_INACTIVE = 5;
+  // 离线小利女：离线状态的小利女。
+  PWA_STATUS_OFFLINE = 6;
+  // 前台在线，未开LIVE且IM不在线
+  PWA_STATUS_FRONTEND_OFFLINE = 7;
+}
+
+message ChangeUserOnlineStatusResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+// getUserOnlineStatus
+message GetUserOnlineStatusRequest {
+  repeated int32 userIds = 1;
+}
+
+message GetUserOnlineStatusResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated UserOnlineStatus results = 3;
+}
+
+message UserOnlineStatus {
+  int32 userId = 1;
+  bool isOnline = 2;
+  PWA_STATUS pwaStatus = 3;
+}
+
+// deductCoinMsgRequest
+message DeductCoinMsgRequest {
+  int32 toUserId = 1; // 对方的userId
+  MessageType msgType = 2; // 消息类型
+  string ext = 3; // 额外的信息: text, gif, image, emoji, audio 会透传到聊天历史
+}
+
+message DeductCoinMsgResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  int64 leftCoin = 3; // 统计剩余的金币值
+  int64 costCoin = 4; // 本地消耗的金币值 = 下次消耗的金币值
+  bool isFree = 5; // 免费
+  UserLevelInfo levelInfo = 6;
+}
+
+enum MessageType {
+  MESSAGE_TYPE_UNKNOWN = 0;
+  MESSAGE_TYPE_TEXT = 1; // 文字消息
+  MESSAGE_TYPE_VIDEO = 3; // 视频消息
+  MESSAGE_TYPE_AUDIO = 4; // 音频消息
+  MESSAGE_TYPE_SUPER_LIKE = 5; // gc2.2 super like
+}
+
+// getAllMessageTypeCostCoin
+message GetAllMessageTypeCostCoinRequest {}
+
+message GetAllMessageTypeCostCoinResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated MessageCostInfo costInfos = 3;
+}
+
+message MessageCostInfo {
+  MessageType msgType = 1;
+  int64 costCoin = 2;
+}
+
+// getEntitlementStatusRequest
+message GetEntitlementStatusRequest {}
+
+message GetEntitlementStatusResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated EntitlementStatusInfo entitlementStatusInfos = 3;
+}
+message EntitlementStatusInfo {
+  EntitlementType entitlementType = 1;
+  bool isDone = 2; // 是否领完了
+  int32 leftCount = 3; // 当前权益剩余的次数
+}
+
+// 权益类型
+enum EntitlementType {
+  ENTITLEMENT_TYPE_UNKNOWN = 0;
+  ENTITLEMENT_TYPE_FREE_VIDEO = 1; // 视频送金币
+  ENTITLEMENT_TYPE_FREE_AUDIO = 2; // 音频送金币
+  ENTITLEMENT_TYPE_FREE_TEXT = 3; // 文本送金币
+  ENTITLEMENT_TYPE_FREE_TEXT_V2 = 4; // 文本权益 v2版本，老版本是送金币
+  ENTITLEMENT_TYPE_FREE_AUDIO_VIDEO_SHARE = 5; // 视频，音频共享免费
+  ENTITLEMENT_TYPE_FREE_SUPER_LIKE = 6; // gc 2.2里的super like
+  ENTITLEMENT_TYPE_SUPER_HI = 7; // dora Super Hi
+  ENTITLEMENT_TYPE_BOOST = 8; // dora boost权益
+  ENTITLEMENT_TYPE_FEED_MESSAGE = 9; //  feed页面发送消息
+  ENTITLEMENT_TYPE_SUPER_HI_FREE = 10; //  Super Hi 赠送免费权益
+}
+
+// claimEntitlementRequest
+message ClaimEntitlementRequest {
+  EntitlementType entitlementType = 1;
+}
+
+message ClaimEntitlementResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  int64 leftCoin = 3; // 剩余的金币值
+}
+
+// getChangePhoneNumberHistory
+message GetChangePhoneNumberHistoryRequest {
+  repeated int32 userIds = 1;
+}
+message GetChangePhoneNumberHistoryResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated UserChangePhoneNumberHistory histories = 3;
+}
+
+message UserChangePhoneNumberHistory {
+  int32 userId = 1;
+  string phoneNumber = 2;
+}
+
+// clearEntitlement
+message ClearEntitlementRequest {
+  EntitlementType entitlementType = 1;
+}
+message ClearEntitlementResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+// 金币明细类型
+enum PwaUserBalanceChangeType {
+  PWA_USER_BALANCE_CHANGE_TYPE_UNSPECIFIED = 0;
+  PWA_USER_BALANCE_CHANGE_TYPE_VIDEO_CALL = 1;
+  PWA_USER_BALANCE_CHANGE_TYPE_VOICE_CALL = 2;
+  PWA_USER_BALANCE_CHANGE_TYPE_MESSAGE_TEXT = 3;
+  PWA_USER_BALANCE_CHANGE_TYPE_LIVE_STREAM = 4;
+  // chat order
+  PWA_USER_BALANCE_CHANGE_TYPE_CHAT_ORDER = 5;
+  // dailytask
+  PWA_USER_BALANCE_CHANGE_TYPE_DAILY_TASK = 6;
+  // onboarding task
+  PWA_USER_BALANCE_CHANGE_TYPE_ONBOARDING_TASK = 7;
+  // tutorial task
+  PWA_USER_BALANCE_CHANGE_TYPE_TUTORIAL_TASK = 8;
+  // send gift
+  PWA_USER_BALANCE_CHANGE_TYPE_SEND_GIFT = 9;
+  // waiting reward
+  PWA_USER_BALANCE_CHANGE_TYPE_WAITING_REWARD = 10;
+  // spin cost
+  PWA_USER_BALANCE_CHANGE_TYPE_SPIN_COST = 11;
+  // spin win
+  PWA_USER_BALANCE_CHANGE_TYPE_SPIN_WIN = 12;
+  // receive gift
+  PWA_USER_BALANCE_CHANGE_TYPE_RECEIVE_GIFT = 13;
+  // spin not enough reward
+  PWA_USER_BALANCE_CHANGE_TYPE_SPIN_NOT_ENOUGH_REWARD = 14;
+  // user video test reward
+  PWA_USER_BALANCE_CHANGE_TYPE_USER_VIDEO_TEST_REWARD = 15;
+  // user video test loss
+  PWA_USER_BALANCE_CHANGE_TYPE_USER_VIDEO_TEST_LOSS = 16;
+  // ins message reward
+  PWA_USER_BALANCE_CHANGE_TYPE_INS_MESSAGE_TEXT = 17;
+  // ins关注奖励
+  PWA_USER_BALANCE_CHANGE_TYPE_INS_FOLLOW_REWARD = 18;
+  //MOCK video 奖励
+  PWA_USER_BALANCE_CHANGE_TYPE_MOCK_VIDEO=19;
+  // BFF 裂变奖励
+  PWA_USER_BALANCE_CHANGE_TYPE_BFF_REWARD = 20;
+}
+
+// getPwaUserBalanceChangeHistory
+message GetPwaUserBalanceChangeHistoryRequest {
+  int64 startTime = 1; // unix时间戳 秒
+  int64 endTime = 2; // unix时间戳 秒
+}
+
+message GetPwaUserBalanceChangeHistoryResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated PwaUserBalanceChangeHistory histories = 3;
+  int64 onlineTime = 4; // 秒
+  repeated CallOrderInfo orders = 5;
+}
+
+message PwaUserBalanceChangeHistory {
+  PwaUserBalanceChangeType type = 1;
+  string changeBalance = 2;
+  int64 changeTime = 3; // unix时间戳 秒
+  string ext = 4; // 额外信息，如果是gift的信息，这里面就是coin值
+  int32 fromUserId = 5;
+}
+
+// getServerTime
+message GetServerTimeRequest {
+  // empty
+}
+message GetServerTimeResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  int64 serverTime = 3; // unix时间戳 秒
+}
+
+// listCallOrderByRange
+message ListCallOrderByRangeRequest {
+  int64 startTime = 1; // 秒 unix
+  int64 endTime = 2; // 秒 unix
+}
+
+message ListCallOrderByRangeResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated CallOrderInfo orders = 3;
+}
+
+// getGraceChatManFeeds
+message GetGraceChatManFeedsRequest {
+  int32 limit = 1;
+}
+message GetGraceChatManFeedsResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated UserInfo user_infos = 3;
+}
+
+// getUserCanCall
+message GetUserCanCallRequest {
+  int32 userId = 1;
+}
+
+message GetUserCanCallResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  bool canCall = 3;
+}
+
+// fakeUser
+message FkUserRequest {
+  int32 userId = 1;
+}
+message FkUserResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  string third_party_login_user_id = 3;
+}
+
+// getTodayLiveUser
+message GetTodayLiveUserRequest {
+  int32 interval = 1; // 时间间隔，单位为秒
+}
+
+message GetTodayLiveUserResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated int32 userIds = 3;
+}
+
+// verifyPWAInvitationCode -- 也会直接bind目标用户
+message VerifyPWAInvitationCodeRequest {
+  string invitationCode = 1;
+}
+
+message VerifyPWAInvitationCodeResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  int32 clubId = 3;
+}
+
+// listCallOrderByRangeAdmin
+message ListCallOrderByRangeAdminRequest {
+  int32 userId = 1;
+  int64 startTime = 2;
+  int64 endTime = 3;
+}
+
+message ListCallOrderByRangeAdminResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated CallOrderInfo orders = 3;
+}
+
+// pwaSendGift
+message PWASendGiftRequest {
+  string gift_id = 1;
+  int32 to_user_id = 2;
+}
+
+message PWASendGiftResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  string balance = 3;
+}
+
+// pwaTextEarn
+message PWAATextEarnRequest {
+  int32 toUserId = 1; // 跟谁聊的
+  string balance = 2; // 金额 0.01, 0.02 有效值
+}
+
+message PWAATextEarnResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  string balance = 3; // 当前金币值
+}
+
+// pwaWaitingEarn
+message PWAWaitingEarnRequest {
+  bool isPreIncr = 1; // 当次是否是预加钱
+}
+
+message PWAWaitingEarnResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  string balance = 3; // 当前金币值
+}
+
+// 触发Ins文字收益时调用
+message PWAINSTextEarnRequest {
+  int32 toUserId = 1;
+  bool isPreIncr = 2; // 当次是否是预加钱
+  int64 order_id = 3;
+}
+
+message PWAINSTextEarnResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  string balance = 3; // 当前金币值
+  string pwa_follow_reward = 4; // pwa的关注奖励
+  string pwa_per_message_reward = 5; // pwa 每条消息的奖励
+}
+
+// 查询用户预加钱数据
+message QueryPreIncrBalanceRequest {}
+
+message QueryPreIncrBalanceResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  string totalPreWaitingEarnings = 3;
+  string totalPreInsTextEarnings = 4;
+  string totalActualWaitingEarnings = 5;
+}
+
+// 确认将预先加的钱存入用户钱包中
+message ConfirmPreIncrBalanceRequest {}
+
+message ConfirmPreIncrBalanceResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  string balance = 3;
+}
+
+message FirstExchangeINSContactRequest {}
+
+message FirstExchangeINSContactResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+// === 访客逻辑 ===
+
+// 上报访客信息
+// reportVisitor
+message ReportVisitorRequest {
+  repeated ReportVisitorInfo visitorInfos = 1;
+}
+
+message ReportVisitorInfo {
+  int32 visitorId = 1;
+  int32 visitedId = 2;
+  VisitorActionType actionType = 3;
+  int64 delayTime = 4;
+}
+
+message ReportVisitorResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+enum VisitorActionType {
+  VISITOR_STATUS_UNKNOWN = 0;
+  VISITOR_PROFILE = 1;
+  VISITOR_CHAT = 2;
+}
+
+// 获取访客列表及统计数据
+// getVisitorList
+message GetVisitorListRequest {
+  // 暂时不做分页
+}
+message GetVisitorListResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  // 最近14日访客数
+  int32 visitorRecentCount = 3;
+  // 反复看你访客数
+  int32 repeatVisitorCount = 4;
+  // 好友访客数
+  int32 friendVisitorCount = 5;
+  repeated VisitorStatInfo visitorInfos = 6;
+}
+message VisitorStatInfo {
+  UserInfo user = 1; // 用户信息
+  repeated VisitorActionStat actionStats = 2; // 每种行为的访问次数，累计访问次数=每种类型叠加
+  bool isMatch = 3; // 是否 match过
+  int64 lastVisitTime = 4; // 最近一次访问时间
+}
+message VisitorActionStat {
+  VisitorActionType actionType = 1;
+  int32 count = 2;
+}
+
+// getNewVisitorCount - 该接口会返回 从startTime到当前时间 新增的visitor数据
+message GetNewVisitorCountRequest {
+  int64 startTime = 1; // 开始时间，unix时间戳 秒
+}
+
+message GetNewVisitorCountResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  int32 newVisitorCount = 3;
+}
+
+// getNewUserVideoMatchFeed
+message GetNewUserVideoMatchFeedRequest {
+  int32 limit = 1; // 取几个
+}
+
+message GetNewUserVideoMatchFeedResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated UserInfo users = 3; // 用户
+}
+
+message GetRecommendUsersForVideoCallRequest {
+  repeated int32 conversation_user_ids = 1; // 已建立会话的用户id
+}
+
+message GetRecommendUsersForVideoCallResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated int32 user_ids = 3; // 可以进行视频的推荐用户id（废弃）
+  repeated UserInfo user_list = 4; // 可以进行视频的推荐用户
+}
+
+// likeUserProfile
+message LikeUserProfileRequest {
+  int32 targetUserId = 1;
+  int32 fakeUserId = 2; // 如果不为零，则点赞的id是这个，否则是当前用户
+}
+message LikeUserProfileResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+// unlikeUserProfile
+message UnlikeUserProfileRequest {
+  int32 targetUserId = 1;
+  int32 fakeUserId = 2; // 如果不为零，则点赞的id是这个，否则是当前用户
+}
+message UnlikeUserProfileResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+// getUserProfileLikeData
+message GetUserProfileLikeDataRequest {
+  int32 targetUserId = 1;
+  int32 fakeUserId = 2; // 如果不为零，则点赞的id是这个，否则是当前用户
+}
+
+message GetUserProfileLikeDataResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  int32 likeCount = 3; // 总点赞数
+  bool isLiked = 4; // 当前用户是否点赞过
+}
+
+// gameSpin
+message GameSpinRequest {
+  string bet = 1; // 统一单位, 0.2$
+  MakePaymentType type = 2; //第几笔打款
+}
+message GameSpinResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  string balance = 3; // 用户当前的余额
+  string reward_balance = 4; // 用户当前的奖励 0的话就是没赢
+}
+
+// claimSpinNotEnoughReward
+message ClaimSpinNotEnoughRewardRequest {}
+message ClaimSpinNotEnoughRewardResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  string balance = 3; // 用户当前的余额
+}
+
+// getUserCallOrderTotalEarn
+message GetUserCallOrderTotalEarnRequest {}
+message GetUserCallOrderTotalEarnResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  string total_earn_balance = 3;
+}
+
+//scratchGameResult
+message ScratchGameResultRequest {
+  string bet = 1; // 0.2
+}
+message ScratchGameResultResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  string reward_balance = 3; // 用户本局要赢的
+}
+
+// scratchGameClaimReward
+message ScratchGameClaimRewardRequest {
+  string bet = 1; // 0.2
+  MakePaymentType type = 2;
+}
+message ScratchGameClaimRewardResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  string balance = 3; // 用户当前的余额
+  string reward_balance = 4; // 用户本局要赢的
+}
+
+// getUserVisitorSubscriptionPackage
+message GetUserVisitorSubscriptionPackageRequest {}
+message GetUserVisitorSubscriptionPackageResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  UserSubscriptionInfoV2 user_sub_info = 3;
+}
+
+// getSubscriptionsV3
+message GetSubscriptionsV3Request {}
+
+message GetSubscriptionsV3Response {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated SubscriptionInfoV3 normal_subscriptions = 3;
+  repeated SubscriptionInfoV3 visitor_subscriptions = 4;
+}
+
+message SubscriptionInfoV3 {
+  string ios_product_id = 1;
+  string name = 2;
+  string description = 3;
+  string price = 4;
+  int64 sub_coins = 5; // 订阅送的金币
+  string android_product_id = 6;
+  repeated SubscriptionVIPDetail vip_detail = 7;
+}
+
+message SubscriptionVIPDetail {
+  string text = 1;
+  string icon = 2;
+}
+
+// verifyVisitorSubscription
+// 二代简化版本 支付订阅接口
+message VerifyVisitorSubscriptionRequest {
+  string transaction_id = 1;
+  // Android 相关字段
+  string android_product_id = 2; // Android 产品ID
+  string token = 3; // Android 购买token
+}
+message VerifyVisitorSubscriptionResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  UserSubscriptionInfoV2 user_sub_info = 3;
+}
+
+// fakeVerifyVisitorSubscription 模拟访客订阅
+message FakeVerifyVisitorSubscriptionRequest {
+  string transaction_id = 1;
+  string productId = 2; // iOS 产品ID
+  // Android 相关字段
+  string android_product_id = 3; // Android 产品ID
+  string token = 4; // Android 购买token
+}
+
+message FakeVerifyVisitorSubscriptionResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  UserSubscriptionInfoV2 user_sub_info = 3;
+}
+
+message UserSubscriptionInfoV2 {
+  string ios_product_id = 1;
+  int64 expiry_time = 2;
+  string android_product_id = 3;
+}
+
+// uploadUserVideo
+message UploadUserVideoRequest {
+  bytes file = 1;
+  string fileType = 2; // mp4,wav,etc
+  bool verify_pass = 3; // 视频验证是否通过
+  string fail_reason = 4; // 失败原因
+  int32 order_id = 5;
+}
+
+message UploadUserVideoResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  string url = 3; // 上传的cdn地址
+}
+
+// adminPWATestVideo
+message AdminPWATestVideoRequest {
+  repeated int32 userIds = 1;
+  int64 limit = 2;
+  int64 offset = 3;
+}
+
+message AdminPWATestVideoResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated UserVideoInfo userVideo = 3;
+  int64 total = 4;
+}
+
+message UserVideoInfo {
+  int32 userId = 1;
+  string url = 2;
+  int64 createdAt = 3;
+  bool verifyPass = 4;
+  UserInfo user = 5; // 用户信息
+  string failReason = 6;
+}
+
+// getMaleUserBalance
+message GetMaleUserBalanceRequest {
+  int32 userId = 1;
+}
+message GetMaleUserBalanceResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  string coin = 3; // 用户当前金币值
+}
+
+// =================== Admin 主播相关接口===================
+// AdminGetClubUserListRequest 后台分页获取公会主播接口
+message ClubUserInfo {
+  UserInfo user = 1; // 用户信息
+  int32 user_id = 2; // user_id
+  int64 id = 3; // id
+  int64 created_at = 4; // 加入工会时间
+  string code = 5; // 邀请码
+  string regulation_status = 6; // 用户状态
+}
+
+message AdminGetClubUserListRequest {
+  int64 offset = 1;
+  int64 limit = 2;
+  int32 start_time = 3; // 秒级时间戳
+  int32 end_time = 4; // 秒级时间戳
+  string status = 5; // all、active、banned、unknown
+  string code = 6; // 邀请码
+}
+
+message AdminGetClubUserListResponse {
+  int64 total = 1;
+  repeated ClubUserInfo club_user_list = 2;
+  UserServiceCommonCode code = 3;
+  string message = 4; // if fail
+}
+
+// 获取Like&Visitor任务表信息
+message GetLikeVisitorTaskInfoRequest {
+  TaskScheduleScene scene = 1;
+}
+
+message TaskScheduleInfo {
+  int32 from_user_id = 1;
+  int32 to_user_id = 2;
+  TaskScheduleScene scene = 3;
+  int64 execute_time = 4;
+  string action = 5;
+  string like_content = 6;
+}
+
+message TaskGenerationInfo {
+  int64 generation_time = 1; // 任务生成时间（毫秒时间戳）
+  repeated TaskScheduleInfo tasks = 2; // 任务列表
+  int32 task_count = 3; // 任务数量
+}
+
+message GetLikeVisitorTaskInfoResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  TaskGenerationInfo current_tasks = 3; // 当前任务表
+  TaskGenerationInfo previous_tasks = 4; // 前一次任务表
+}
+
+enum TaskScheduleAction {
+  LIKE = 0;
+  VISIT = 1;
+}
+
+enum TaskScheduleScene {
+  OFFLINE = 0;
+  ONLINE = 1;
+}
+
+// verifyPWAUserTestVideo
+message VerifyPWAUserTestVideoRequest {
+  bool video_verify_pass = 1;
+  int32 video_id = 2;
+  int32 order_id = 3;
+}
+message VerifyPWAUserTestVideoResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2; // if fail
+}
+
+// getMatchFeedsV3
+message GetMatchFeedsV3Request {
+  int32 limit = 1;
+  MatchFeedFilter filter = 2;
+  string zip_code = 3; // 返回用户当前定位对应的zipcode
+}
+
+message GetMatchFeedsV3Response {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated UserInfo user_infos = 3;
+  repeated MatchFeedExtInfo ext_infos = 4; // 存放用户需要展示的额外信息
+}
+
+message MatchFeedExtInfo {
+  int32 user_id = 1;
+  double distance = 2; // 与用户的距离
+}
+
+//查询 2 个用户之间的距离
+message UserDistanceRequest {
+  int32 other_user_id = 1;
+}
+
+message UserDistanceResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  double distance = 3; //与用户的距离
+}
+
+// 左滑，右滑
+// swipeCard
+enum SwipeType {
+  SwipeTypeUnknown = 0;
+  SwipeTypeLeft = 1;
+  SwipeTypeRight = 2;
+}
+message SwipeCardRequest {
+  int32 userId = 1; // 滑动的id
+  SwipeType swipeType = 2;
+  int64 viewDuration = 3;
+}
+
+message SwipeCardResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  bool triggerMatch = 3;
+}
+
+// uploadAnchorVideo - 上传主播审核视频
+message UploadAnchorVideoRequest {
+  bytes file = 1;
+  string fileType = 2; // mp4,wav,etc
+}
+
+message UploadAnchorVideoResponse {
+  UserServiceCommonCode code = 1;
+  string url = 2; // 上传的cdn地址
+  string message = 3; // if fail
+}
+
+enum AuditStatus {
+  Auditing = 0;
+  Approved = 1;
+  Rejected = 2;
+  PendingUpload = -1;
+}
+
+// getAnchorVideoStatus - 获取主播上传视频状态
+message GetAnchorVideoStatusRequest {}
+
+message GetAnchorVideoStatusResponse {
+  UserServiceCommonCode code = 1;
+  AuditStatus auditStatus = 2; // auditing,approved,rejected
+  string message = 3; // if fail
+}
+
+// getAdminAnchorVideo 雅典娜获取主播视频接口
+message GetAdminAnchorVideoRequest {
+  AuditStatus auditStatus = 1; // Auditing,Approved,Rejected
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message GetAdminAnchorVideoResponse {
+  UserServiceCommonCode code = 1;
+  int32 total = 2;
+  repeated AnchorVideoInfo anchor_video_list = 3;
+  string message = 4;
+}
+
+message AnchorVideoInfo {
+  int32 userId = 1; // 主播id
+  string clubName = 2; // 公会名称
+  string invitationCode = 3; // 公会邀请码
+  AuditStatus auditStatus = 4; // 审核状态 Auditing,Approved,Rejected
+  UserInfo user = 5; // 用户信息
+  string url = 6;
+}
+
+// auditAdminAnchorVideo 主播视频审核
+message AuditAdminAnchorVideoRequest {
+  int32 userId = 1; // 主播id
+  AuditStatus auditStatus = 2; // approved,rejected
+}
+
+message AuditAdminAnchorVideoResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+// getAdminClub 工会列表
+message GetAdminClubRequest {
+  int32 limit = 1;
+  int32 offset = 2;
+}
+
+message GetAdminClubResponse {
+  UserServiceCommonCode code = 1;
+  int32 total = 2;
+  repeated ClubInfo club_list = 3;
+  string message = 4;
+}
+
+message ClubInfo {
+  int32 id = 1; // 工会id
+  string clubName = 2; // 工会名称
+  string invitationCode = 3; // 工会邀请码
+  string clubEmail = 4; // 工会邮箱
+  string clubMasterName = 5; // 工会长名
+  string clubMasterPhone = 6; // 公会长电话或WhatsApp
+  string country = 7; // 国家
+  int32 created_at = 8; // 工会创建时间 unix 时间戳，秒|毫秒
+  string created_by = 9; // 工会创建人
+}
+
+// addAdminClub 新增工会
+message AddAdminClubRequest {
+  string clubName = 1; // 工会名称
+  string country = 2; // 国家
+  string clubEmail = 3; // 工会邮箱
+  string clubMasterName = 4; // 工会长名
+  string clubMasterPhone = 5; // 公会长电话或WhatsApp
+}
+
+message AddAdminClubResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+// 上报曝光接口
+message ReportExposureRequest {
+  repeated int32 user_ids = 1;
+}
+
+message ReportExposureResponse {
+  bool success = 1;
+  string errorMessage = 2;
+}
+
+// fakeVerifyIOS
+message FakeVerifyIOSRequest {
+  int32 subscription_id = 1; // 100 月，101 年，102 周
+  string productId = 2; // 产品id
+}
+
+// fakeVerifyIOS
+message FakeVerifyIOSResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  UserSubscription subscriptions = 3;
+}
+
+// fakeBuyCoin
+message FakeBuyCoinRequest {
+  string coin_bundle_id = 1; // 礼品价值的id (iOS使用)
+  string android_product_id = 2; // Android商品ID (Android使用)
+}
+
+message FakeBuyCoinResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  int64 coin = 3;
+}
+
+message GetMatchLikedListRequest {
+  int64 reqRecordTime = 1;
+  int32 limit = 2;
+}
+
+message GetMatchLikedListResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  int64 lastRecordTime = 3; // 下一次请求的偏移值
+  int32 totalLikedUserCount = 4; // 只有offset=0的时候返回
+  repeated LikedUserEntity likedUserInfos = 5; // 已按时间倒序，客户端取前20个作为顶部列表
+  int32 totalUnreadLikedUserCount = 6; // 只有offset=0的时候返回
+}
+
+message LikedUserEntity {
+  UserInfo userInfo = 1;
+  bool isUnread = 2;
+  string userActionDesc = 3;
+}
+
+message MarkMatchLikedReadRequest {}
+
+message MarkMatchLikedReadResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+message GetUnreadLikedListRequest {}
+
+message GetUnreadLikedListResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated LikedUserEntity unreadUserList = 5;
+}
+
+// 上报Match接口
+message ReportMatchRequest {
+  repeated int32 user_ids = 1;
+}
+
+message ReportMatchResponse {
+  bool success = 1;
+  string errorMessage = 2;
+}
+
+// 会话删除上报
+message DeleteMatchRequest {
+  repeated int32 user_ids = 1;
+}
+message DeleteMatchResponse {
+  bool success = 1;
+  string errorMessage = 2;
+}
+
+// 会话状态
+enum MatchStatus {
+  MATCH_STATUS_NORMAL = 0; // 缺省(正常)
+  MATCH_STATUS_INVALID = 1; // 会话失效
+  MATCH_STATUS_INACTIVE_NORMAL = 2; // 会话不活跃-正常
+  MATCH_STATUS_INACTIVE_INVALID = 3; // 会话不活跃-失效
+  MATCH_STATUS_UNLOCKED = 4; // 会话已解锁
+  MATCH_STATUS_INACTIVE_UNLOCKED = 5; // 会话不活跃-已解锁
+}
+
+// 会话来源
+enum MatchConversationSource {
+  CONVERSATION_SOURCE_VIDEO = 0; // video
+  CONVERSATION_SOURCE_NON_VIDEO = 1; // non video
+  CONVERSATION_SOURCE_DISCOVER_MATCH = 3; // discover
+  CONVERSATION_SOURCE_DISCOVER_VIDEO = 4; // discover
+}
+
+// 会话状态获取
+message MatchItem {
+  MatchStatus matchStatus = 1; // 会话状态
+  int32 user_id = 2; // 会话对方ID
+  int64 create_time = 3; // 会话创建时间戳
+  MatchConversationSource matchConversationSource = 4; // 会话来源
+  int32 chat_round = 5; // 会话轮数
+}
+
+message MatchListRequest {
+  repeated int32 user_ids = 1;
+}
+
+message MatchListResponse {
+  UserServiceCommonCode code = 1;
+  repeated MatchItem matchList = 2;
+}
+
+// 会话配置下发
+message InactiveMatchGiftRequest {}
+message InactiveMatchGiftResponse {
+  UserServiceCommonCode code = 1;
+  GiftInfo gift = 2;
+}
+
+// ABtestConfig下发
+message ABtestConfigRequest {
+  repeated string key = 1; // ABtestConfig key
+}
+message ABtestConfigResponse {
+  UserServiceCommonCode code = 1;
+  string config_json_string = 2; // config json字符串
+}
+
+// 会话解锁
+message MatchUnlockRequest {
+  int32 target_user_id = 1; // 对方的id
+}
+message MatchUnlockResponse {
+  UserServiceCommonCode code = 1;
+}
+
+// pwa第phase笔提现所有任务完成后上报
+message ReportPwaWithdrawPhaseRequest {
+  int32 phase = 1; // 第phase笔
+}
+message ReportPwaWithdrawPhaseResponse {
+  UserServiceCommonCode code = 1;
+}
+// ========== 连续签到奖励相关 ==========
+
+// 获取连续签到状态
+message GetStreakStatusRequest {}
+
+message GetStreakStatusResponse {
+  UserServiceCommonCode code = 1;
+  bool has_checked_in_today = 2; // 今日是否已签到
+  int32 current_streak_days = 3; // 当前连续签到天数
+  int32 next_reward_day = 4; // 下次奖励天数
+  string hint_text = 5; // 提示文案
+  repeated StreakDayStatus day_statuses = 6; // 7天签到状态
+}
+
+// 连续签到操作
+message StreakCheckinRequest {}
+
+message StreakCheckinResponse {
+  UserServiceCommonCode code = 1;
+  int32 streak_days = 2; // 连续签到天数
+  int32 reward_coins = 3; // 获得金币数
+  bool is_chest = 4; // 是否为宝箱奖励
+  int64 left_coin_value = 5; // 剩余金币数
+  string reward_title = 6; // 奖励标题
+}
+
+// 单日签到状态
+message StreakDayStatus {
+  int32 day = 1; // 第几天(1-7)
+  bool is_completed = 2; // 是否已完成
+  bool is_today = 3; // 是否为今天
+  StreakReward reward = 4; // 奖励信息
+}
+
+// 连续签到奖励信息
+message StreakReward {
+  bool is_chest = 1; // 是否为宝箱奖励
+  int32 fixed_coins = 2; // 固定金币数(非宝箱)
+  int32 min_coins = 3; // 最小金币数(宝箱)
+  int32 max_coins = 4; // 最大金币数(宝箱)
+}
+
+// pwa获取测试视频
+message GetTestVideoRequest {
+  MockVideoSource source = 1;
+}
+
+message GetTestVideoResponse {
+  int32 id = 1; // 视频ID
+  string url = 2; // 视频URL
+  int32 count = 3; // 剩余测试视频数量
+  UserInfo user_info = 4; // 关联用户信息
+  UserServiceCommonCode code = 5;
+}
+
+// 视频通话意愿开关相关协议
+message GetVideoCallSwitchRequest {
+  int32 toUserId = 1; // 跟谁聊天
+}
+
+message GetVideoCallSwitchResponse {
+  UserServiceCommonCode code = 1;
+  bool fromUserSwitch = 2; // 我的视频开关状态
+  bool toUserSwitch = 3; // 对方的的视频开关状态
+}
+
+message SetVideoCallSwitchRequest {
+  bool switch = 1;
+  int32 toUserId = 2; // 跟谁聊天
+}
+
+message SetVideoCallSwitchResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  bool switch = 3;
+}
+
+enum LIKE_TYPE {
+  SWIPE_CARD_LIKE = 0;
+  VISIT_LIKE = 1;
+}
+
+//
+message ManualLikeRequest {
+  int32 target_user_id = 1;
+}
+
+message ManualLikeResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  bool triggerMatch = 3;
+}
+
+// Dora 主页是否喜欢过
+message GetUserLikeDataRequest {
+  int32 target_user_id = 1;
+}
+
+message GetUserLikeDataResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  bool is_like_me = 3; // 当前用户是否喜欢我
+  bool is_liked = 4; // 当前用户是否点赞过
+}
+
+// getGooglePlayProducts - 获取Google Play内购产品列表
+message GetGooglePlayProductsRequest {}
+
+message GooglePlayProduct {
+  string sku = 1;
+  string status = 2;
+  string price_info = 3;
+  string mapped_coin_bundle_id = 4;
+}
+
+message GetGooglePlayProductsResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  string app_name = 3;
+  string package_name = 4;
+  int32 product_count = 5;
+  repeated GooglePlayProduct products = 6;
+  repeated string sku_mappings = 7; // SKU映射信息，格式: "sku->bundle_id"
+}
+
+// PWA生成三选一消息
+message GenerateThreePWAMsgRequest {
+  int32 to_user_id = 1;
+  string message = 2;
+}
+
+message GenerateThreePWAMsgResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated PwaMessage messages = 3;
+}
+
+message PwaMessage {
+  string type = 1; // flirty | friendly | neutral 40秒超时后女用户未选择，PWA默认选“flirty”消息回复
+  string message = 2;
+}
+
+// PWA生成三选一消息后调用TC IM发送
+message SendUserPwaMsgRequest {
+  int32 to_user_id = 1;
+  string message = 2;
+}
+
+message SendUserPwaMsgResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+// PWA违规扣减收益
+message PwaEarnDeductionRequest {
+  int32 call_order_id = 1;
+}
+
+message PwaEarnDeductionResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+// =================== Video Call Transcript ===================
+
+// 视频通话记录中的单条文本部分
+message VideoCallTranscriptPart {
+  string text = 1; // 文本内容
+}
+
+// 视频通话记录中的单条消息
+message VideoCallTranscriptContent {
+  int32 user_id = 1; // 用户ID
+  repeated VideoCallTranscriptPart parts = 2; // 消息内容部分
+}
+
+// 提交视频通话记录请求
+message SubmitVideoCallTranscriptRequest {
+  int32 from_user_id = 1; // 通话发起者
+  int32 to_user_id = 2; // 通话接收者
+  int64 start_time = 3; // 通话开始时间戳（毫秒）
+  int64 end_time = 4; // 通话结束时间戳（毫秒）
+  repeated VideoCallTranscriptContent content = 5; // 通话内容转录
+  string message_id = 6; // 消息ID，用于存储到数据库
+  string source = 7; // 来源，例如“loveRing"
+}
+
+// 提交视频通话记录响应
+message SubmitVideoCallTranscriptResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  string message_id = 3; // 返回存储的消息ID
+}
+
+// 根据messageID查询视频通话文本内容请求
+message AdminGetVideoCallTranscriptByMessageIdRequest {
+  string message_id = 1; // 消息ID
+}
+
+// 根据messageID查询视频通话文本内容响应
+message AdminGetVideoCallTranscriptByMessageIdResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  int32 from_user_id = 3; // 通话发起者
+  int32 to_user_id = 4; // 通话接收者
+  int64 start_time = 5; // 通话开始时间戳（毫秒）
+  int64 end_time = 6; // 通话结束时间戳（毫秒）
+  repeated VideoCallTranscriptContent content = 7; // 通话内容转录
+  string message_id = 8; // 消息ID
+}
+
+// 客户端拉取通用配置
+message GetStaticConfigRequest {}
+
+message GetStaticConfigResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  RetainUserConfig retainUserConfig = 3;
+}
+
+message RetainUserConfig {
+  int32 version = 1;
+  int32 daily_paywall_min_count = 2; // 每日金币弹框次数的最小值
+  int32 daily_paywall_max_count = 3; // 每日金币弹框次数的最大值
+  int32 daily_swap_card_count = 4; // 每日划卡次数阈值
+  int64 daily_stay_duration = 5; // 每日用户停留时间阈值，单位：s
+  int32 daily_reply_msg_count = 6; // 每日回复消息阈值
+  int32 daily_rest_coins = 7; // 每日金币余额阈值
+}
+
+// 请求发放召回礼包
+message GetRetainUserGiftRequest {}
+
+message GetRetainUserGiftResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  EntitlementGiftInfo gift_info = 3;
+  RetainUserGiftModal cliam_modal = 4; // 领取弹框的文案信息
+  RetainUserGiftModal confirm_modal = 5; // 确认弹框的文案信息
+}
+
+// 查询礼包的使用量
+message QueryGiftUsageRequest {
+  int32 entitlement_id = 1;
+}
+
+message QueryGiftUsageResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  EntitlementGiftInfo gift_info = 3;
+  RetainUserGiftModal confirm_modal = 4;
+}
+
+message EntitlementGiftInfo {
+  int32 entitlement_id = 1;
+  int64 distribute_timestamp = 2; // 发放礼包的后台时间戳(s)
+  int64 expiration_time = 3; // 礼包有效期(s)
+  repeated GrantEntitlementItem grant_entitlement_items = 4; // 礼包中授予的权益
+}
+
+message GrantEntitlementItem {
+  EntitlementType type = 1;
+  int32 total_count = 2;
+  int32 left_count = 3;
+}
+
+message RetainUserGiftModal {
+  string title = 1;
+  string button_text = 2;
+  repeated ModalItemCell item_cells = 3;
+}
+
+message ModalItemCell {
+  EntitlementType type = 1; // 1:chat 2:call
+  string line_1_text_1 = 2; // 第一行第一部份的文字
+  string line_1_text_2 = 3; // 第一行第二部份的文字
+  string line_2_text_1 = 4;
+  string right_text = 5;
+}
+
+// getUserOnlineStatus
+message AdminGetUserOnlineStatusRequest {
+  repeated int32 userIds = 1;
+}
+
+message AdminGetUserOnlineStatusResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated UserOnlineStatus results = 3;
+}
+
+// 获取用户周期性权益信息
+message GetCycleEntitlementInfoRequest {
+  repeated EntitlementType entitlement_types = 1;
+}
+
+message GetCycleEntitlementInfoResponse {
+  UserServiceCommonCode code = 1;
+  map<string, EntitlementInfo> entitlement_info = 2;
+}
+
+message EntitlementInfo {
+  int32 left_count = 1;
+  int64 expires_at = 2;
+}
+
+// 扣减周期性权益
+message DeductCycleEntitlementCountRequest {
+  EntitlementType entitlement_type = 1;
+  int32 count = 2;
+}
+
+message DeductCycleEntitlementCountResponse {
+  UserServiceCommonCode code = 1;
+  EntitlementInfo entitlement_info = 2;
+}
+
+// 增加周期性权益数量
+message AddCycleEntitlementCountRequest {
+  EntitlementType entitlement_type = 1;
+  int32 count = 2;
+}
+
+message AddCycleEntitlementCountResponse {
+  UserServiceCommonCode code = 1;
+  EntitlementInfo entitlement_info = 2;
+}
+
+// 获取用户Boost生效时间信息
+message GetBoostTimeInfoRequest {}
+
+// Boost 计时信息
+message GetBoostTimeInfoResponse {
+  UserServiceCommonCode code = 1;
+  bool effective = 2; // 是否在有效期
+  int32 total_time = 3; // 总时长，单位秒
+  int32 left_time = 4; // 剩余时长，单位秒
+}
+
+// 视频通话计数相关接口
+message TipsVideoCallRequest {
+  int32 to_user_id = 1; // 对方的userid
+}
+
+message TipsVideoCallResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+// 订单相关信息
+message InsExchangeOrderInfo {
+  int64 id = 1; // 订单id
+  int64 create_at = 2; // 订单创建时间
+  int64 update_at = 3; // 订单最后更新时间
+  int64 expire_at = 4; // 订单过期时间
+  int32 create_user_id = 5; // 创建者用户id，因为订单可以双向创建，所以这里双向保存一下
+  int32 male_user_id = 6; // ios用户id
+  int32 female_user_id = 7; // pwa用户id
+  string status = 8; // 支付状态 INIT：初始化IN交换订 PAID:IOS用户已经支付该订 FINISH: 订单已经完结,已经交换过联系方式 REJECT:订单被拒 REFUNDED:该订单已经退回-退还后给用户加金币
+  bool followed = 9; // 是否follow过
+  string relate_gift_id = 10; // 关联的礼物id
+  int32 relate_gift_coin = 11; // 关联的礼物金币值
+  string time_message_id = 12; // 关联的TIM平台的消息ID
+}
+
+// IOS判断是否满足交换条件-用于判断是否展示交换入口
+message CheckInsExchangeConditionRequest {
+  int32 target_user_id = 1;
+}
+
+message CheckInsExchangeConditionResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  InsConditionStatus status = 3;
+  int64 order_id = 4;
+  int32 create_user_id = 5;
+  bool is_meet = 6;
+}
+
+enum InsConditionStatus {
+  INS_CONDITION_STATUS_LOCK = 0;
+  INS_CONDITION_STATUS_UNLOCK = 1;
+  INS_CONDITION_STATUS_PROCESSING = 2;
+  INS_CONDITION_STATUS_COMPLETED = 3;
+}
+
+// 获取交换INS绑定的礼物信息
+message GetInsExchangeGiftInfoRequest {
+  int64 order_id = 1; // 可以为0
+}
+
+message GetInsExchangeGiftInfoResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  GiftInfo gift_info = 3;
+}
+
+// 创建并支付交换INS订单，发送INS消息之前需要先创建该订单
+message CreateAndPayInsExchangeOrderRequest {
+  int32 target_user_id = 1; // 目标对象信息
+  GiftInfo gift_info = 2; // 关联的礼物信息
+}
+
+message CreateAndPayInsExchangeOrderResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  int64 order_id = 3; // 订单ID
+  int64 expire_timestamp = 4; // 过期时间的unix时间戳
+  string pwa_follow_reward = 5; // pwa的关注奖励
+  int64 left_coin = 6; // 用户剩余金币
+}
+
+// 支付订单-IOS支付PWA发来的订单
+message PayInsExchangeOrderRequest {
+  int64 order_id = 1; // 订单ID
+  GiftInfo gift_info = 2; // 关联的礼物信息
+}
+
+message PayInsExchangeOrderResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  string pwa_follow_reward = 3; // pwa的关注奖励
+  int64 left_coin = 4; // 用户剩余金币
+}
+
+// 保存用户INS ID
+message SaveUserInsIdRequest {
+  string ins_id = 1;
+  string ins_avatar = 2;
+}
+
+message SaveUserInsIdResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+// 完成并关注INS订单
+message FinishAndFollowInsExchangeOrderRequest {
+  int64 order_id = 1;
+  int32 male_user_id = 2;
+}
+
+message FinishAndFollowInsExchangeOrderResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  string earned_amount = 3;
+  string max_earned_amount = 4;
+}
+
+// 查询该用户所有待处理（follow）的订单
+message ListUserInsExchangeOrderRequest {}
+
+message ListUserInsExchangeOrderResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated InsExchangeOrderFullInfo orders = 3;
+}
+
+message InsExchangeOrderFullInfo {
+  UserInfo male_user_info = 1;
+  InsExchangeOrderInfo order = 2;
+}
+
+// 生成INS消息
+message GenerateInsMessageRequest {
+  int32 target_user_id = 1; // 对方的user_id
+}
+
+message GenerateInsMessageResponse {
+  UserServiceCommonCode code = 1; // 错误码
+  string message = 2; // 错误信息，正常为空
+  bool first_reply = 3; // 是否为首次回复（打招呼）
+  string generated_message = 4; // 生成的消息
+}
+
+// 同步INS聊天记录
+message SaveInsChatHistoryRequest {
+  int32 target_user_id = 1;
+  repeated InsChatMessage messages = 2;
+}
+
+message SaveInsChatHistoryResponse {
+  UserServiceCommonCode code = 1; // 错误码
+  string message = 2; // 错误信息，正常为空
+}
+
+message InsChatMessage {
+  int32 send_user_id = 1;
+  int32 receive_user_id = 2;
+  string content = 3;
+  int64 timestamp = 4;
+  string message_id = 5;
+}
+
+// 获取INS聊天记录
+message GetInsChatHistoryRequest {
+  int32 target_user_id = 1;
+}
+
+message GetInsChatHistoryResponse {
+  UserServiceCommonCode code = 1; // 错误码
+  string message = 2; // 错误信息，正常为空
+  repeated InsChatMessage messages = 3; // 聊天记录
+}
+
+// 拒绝INS订单
+message RejectInsExchangeOrderRequest {
+  int64 order_id = 1;
+}
+
+message RejectInsExchangeOrderResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  int64 gift_coin_value = 3; // 拒绝订单所退回的礼物金币值
+}
+
+// pwa获取主动交换INS的条件信息 -- 调用刷新时机端上判断
+message GetInsExchangeConditionInfoRequest {
+  int32 target_user_id = 1;
+}
+
+message GetInsExchangeConditionInfoResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  bool allow = 3; // true,说明所有条件都满足，false
+  PwaInsExchangeConditionInfo condition = 4;
+  bool is_meet = 5;
+}
+
+message PwaInsExchangeConditionInfo {
+  int32 left_trigger_count = 1; // 剩余触发次数
+  bool is_video_test = 2; // 是否为视频小利女（包括主播）
+  bool is_ins_pwa = 3; // 是否为INS pwa (是否绑定INS号)
+  int32 left_chat_round = 4; // 剩余聊天轮次
+}
+
+// pwa端主动创建订单
+message InitInsExchangeOrderRequest {
+  int32 target_user_id = 1;
+}
+
+message InitInsExchangeOrderResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  int64 order_id = 3; // 订单ID
+  string pwa_follow_reward = 4; // pwa的关注奖励
+}
+
+// pwa用户通过交换INS产生的总收益
+message GetUserInsTotalEarnRequest {}
+
+message GetUserInsTotalEarnResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  string total_earn_balance = 3;
+}
+
+// INS关注收益
+message PWAINSFollowEarnRequest {
+  int64 order_id = 1;
+}
+
+message PWAINSFollowEarnResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  string balance = 3; // 当前金币值
+}
+
+// 获取所有关注的INS用户
+message GetPwaFollowedUserRequest {}
+
+message GetPwaFollowedUserResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated PwaFollowedUserinfo followed_userinfo = 3;
+}
+
+message PwaFollowedUserinfo {
+  UserInfo user_info = 1;
+  string earned_amount = 2;
+  string max_earned_amount = 3;
+}
+
+// PWA获取INS交换订单的奖励信息
+message GetPwaInsExchangeOrderRewardRequest {
+  int64 order_id = 1;
+  int32 male_user_id = 2;
+}
+
+message GetPwaInsExchangeOrderRewardResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  string earned_amount = 3;
+  string max_earned_amount = 4;
+  repeated UserInsExchangeEarnHistory earn_history = 5;
+}
+
+// UserInsExchangeEarnHistory
+message UserInsExchangeEarnHistory {
+  int64 change_time = 1; // 时间
+  string amount = 2; // 奖励值
+  PwaUserBalanceChangeType change_type = 3; // 奖励类型
+}
+
+message ReportColdStartRequest {}
+
+message ReportColdStartResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+// ========== PWA电话数据查询相关消息 ==========
+
+// 主播状态枚举
+enum AnchorStatus {
+  ANCHOR_STATUS_UNKNOWN = 0;
+  ANCHOR_STATUS_ACTIVE = 1; // 活跃主播
+  ANCHOR_STATUS_INACTIVE = 2; // 非活跃主播
+  ANCHOR_STATUS_ALL = 3; // 所有主播
+}
+
+// post /userApi/adminQueryCallData
+message CallDataQueryRequest {
+  string guild_invite_code = 1; // 公会邀请码（可选）
+  AnchorStatus anchor_status = 2; // 主播状态筛选
+  int64 start_time = 3; // 开始时间（Unix时间戳，毫秒）
+  int64 end_time = 4; // 结束时间（Unix时间戳，毫秒）
+  int32 page = 5; // 页码（从1开始）
+  int32 page_size = 6; // 每页大小（最大100）
+  int32 user_id = 7;
+  string order_status = 8;
+  CallOrderFinishReasonType reason_type = 9;
+  string order_type = 10; //订单类型
+}
+
+message CallDataQueryResponse {
+  repeated CallDataInfo call_data_list = 1; // 通话数据列表
+  int32 total_count = 2; // 总记录数
+  int64 total_duration = 3; // 总通话时长（秒）
+  int32 current_page = 4; // 当前页码
+  int32 page_size = 5; // 每页大小
+  bool has_next_page = 6; // 是否有下一页
+  UserServiceCommonCode code = 7; // 状态码
+  string message = 8;
+  string amount = 9;
+  int32 ins_order_num = 10;
+}
+
+// 电话数据信息
+message CallDataInfo {
+  int32 order_id = 1; // 订单ID
+  int32 male_user_id = 2; // 男性用户ID
+  int32 female_user_id = 3; // 女性用户ID（主播）
+  string female_username = 4; // 女性用户名（主播用户名）
+  string guild_name = 5; // 公会名称
+  string guild_invite_code = 6; // 公会邀请码
+  AnchorStatus anchor_status = 7; // 主播状态
+  int64 create_time = 8; // 订单创建时间（Unix时间戳，毫秒）
+  int32 call_duration = 9; // 通话时长（秒）
+  string amount = 10; // 订单金额
+  string order_type = 11; // 订单类型
+  string status = 12; // 订单状态
+  int64 join_guild_time = 13; // 主播加入公会时间（Unix时间戳，毫秒）
+  int64 update_time = 14; // 订单创建时间（Unix时间戳，毫秒）
+  int32 call_order_rank = 15; // 通话订单排名
+  int32 free_call_duration = 16; // 免费通话时长（秒）
+  string free_amount = 17; // pwa获得的总钱数中的免费通话金额
+  CallOrderFinishReasonType reason_type = 18; //挂断原因
+}
+
+// ========== iOS 演示脚本推送相关消息 ==========
+
+// 演示脚本状态枚举
+enum DemoScriptStatus {
+  DEMO_SCRIPT_STATUS_UNKNOWN = 0;
+  DEMO_SCRIPT_STATUS_RUNNING = 1; // 运行中
+  DEMO_SCRIPT_STATUS_COMPLETED = 2; // 已完成
+  DEMO_SCRIPT_STATUS_CANCELLED = 3; // 已取消
+}
+
+// post /userApi/demoScript/start
+message StartDemoScriptRequest {
+  string script_id = 1; // 脚本ID（start_demo_script, start_demo_script_consulting）
+  string apns_token = 2; // 推送token
+}
+
+message StartDemoScriptResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  string session_id = 3; // 会话ID
+}
+
+// post /userApi/demoScript/status
+message GetDemoScriptStatusRequest {
+  string session_id = 1; // 会话ID
+}
+
+message GetDemoScriptStatusResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  string session_id = 3;
+  DemoScriptStatus status = 4;
+  int32 current_step = 5;
+}
+
+// post /userApi/demoScript/update
+message UpdateDemoScriptRequest {
+  string session_id = 1; // 会话ID
+  string current_step = 2;
+}
+
+message UpdateDemoScriptResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+// 检查用户剩余免费通话时长
+message CheckUserFreeCallDurationRequest {
+  int32 user_id = 1;
+}
+
+message CheckUserFreeCallDurationResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  bool has_free_call_duration = 3; // 是否有免费通话时长
+}
+
+// 上传截图检测结果请求体
+message UploadScreenshotDetectRequest {
+  string time_point = 1; // 通话时间点
+  string detect_result = 2; // 检测结果(色情、不露脸...)
+  bool is_violation = 3; // 是否违规
+  bool need_deduction = 4; // 是否需要扣款
+  string room_id = 5; // tim通话的room id
+  int32 male_user_id = 6; // 用户id
+  bytes file = 7;
+  string fileType = 8; // png,jpg
+}
+
+// 上传截图检测结果响应体
+message UploadScreenshotDetectResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  string screenshot_url = 3;
+}
+
+// 后台查询截图检测结果请求体
+message AdminSearchScreenshotDetectRequest {
+  int32 female_user_id = 1; // 女方id
+  int32 male_user_id = 2; // 男用户id
+  string invitation_code = 3; // 工会邀请码
+  int64 start_time = 4; // 开始时间戳（ms）
+  int64 end_time = 5; // 结束时间戳（ms）
+  string detect_result = 6; // 检测结果(色情、不露脸...)
+}
+
+// 后台查询截图检测结果响应体
+message AdminSearchScreenshotDetectResponse {
+  repeated ScreenshotDetect screenshot_detect = 1;
+}
+
+message ScreenshotDetect {
+  int32 female_user_id = 1;
+  UserInfo female_user = 2;
+  int32 male_user_id = 3;
+  UserInfo male_user = 4;
+  string invitation_code = 5;
+  int64 created_at = 6;
+  string room_id = 7;
+  string detect_result = 8;
+  string time_point = 9;
+  bool is_violation = 10;
+  bool need_deduction = 11;
+  string screenshot_url = 12;
+}
+
+// 截图检测
+message ScreenshotDetectRequest {
+  bytes file = 1;
+}
+
+message ScreenshotDetectResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  bool is_violation = 3; // 是否违规
+  string detect_result = 4; // 检测结果(色情、不露脸...)
+}
+message UserSearchListRequest {
+  int32 male_user_id = 1; //男用户id
+  int32 offset = 2; // 偏移量
+  int32 limit = 3; // 每页数量
+}
+message UserSearchListResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated UserInfo male_user = 3;
+  int32 offset = 4; // 当前页
+  int32 limit = 5; //每页大小
+  int32 searchTotalTimes = 6; //search总次数限制
+  int32 searchRemainingTimes = 7; //search剩余次数
+}
+
+message UserSearchRequest {
+  int32 male_user_id = 1; //男用户id
+}
+message UserSearchResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+message PwaConfirmMatchRequest {
+  int32 female_user_id = 1; //pwa id
+  int32 male_user_id = 2; //男用户id
+}
+message PwaConfirmMatchResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+message SearchCancelRequest {
+  int32 male_user_id = 1; //男用户id
+}
+message SearchCancelResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+message UpdateAvatarListRequest {
+  int32 user_id = 1;
+  repeated UpdateAvatarRequest avatar_list = 2;
+}
+message UpdateAvatarListResponse {
+  bool is_successful = 1;
+  string message = 2;
+}
+
+message QueryPwaPaidCallListRequest {
+  int32 female_user_id = 1;
+  int32 page_token = 2;
+  int32 limit = 3; //每页限制条数
+}
+message QueryPwaPaidCallListResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated CallOrderInfo orders = 3;
+  int32 page_token = 4;
+  bool hasMore = 5;
+  int32 total = 6;
+  string sum_video_call_amount = 7;
+  string sum_mock_video_call_amount = 8;
+  string sum_ins_exchange_amount = 9;
+}
+enum MakePaymentType {
+  NORMAL_PAYMENT = 0; //正常付款
+  SECOND_PAYMENT = 2; //第二笔打款
+}
+message PwaChangeDispatchStatusRequest {
+  bool dispatch = 1; //是否分发标识 true:分发 false:不分发
+}
+message PwaChangeDispatchStatusResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+message GetThirdPartyLoginOldUserRequest {
+  string third_party_login_user_id = 3; // required
+  ThirdPartyLoginUser platform = 4; // optional
+}
+
+message GetThirdPartyLoginOldUserResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  int32 old_user_id = 3;
+  string old_user_balance = 4;
+}
+message QueryPwaDailyDataRequest {
+  int32 user_id = 1;
+  int64 start_time = 2;
+  int64 end_time = 3;
+  int32 page_no = 4; //第几页
+  int32 limit = 5; //每页限制条数
+  string sort_column = 6; //排序字段
+  bool is_asc = 7; //是否升序
+  int32 user_type = 8;
+  WeightType weight_type = 9;
+}
+enum WeightType {
+  ALL = 0; //全部
+  ADD_WEIGHT = 1; //加权
+  REDUCE_WIGHT = 2; //减权
+}
+message QueryPwaDailyDataResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated PwaDailyDataInfo info = 3;
+  int32 total = 4;
+  PwaDailyDataInfo total_data = 5;
+}
+message PwaDailyDataInfo {
+  UserInfo user = 1;
+  int32 user_id = 2;
+  int32 received_video_count = 3;
+  int32 connected_video_count = 4;
+  string connected_radio = 5;
+  int32 total_video_duration = 6;
+  int32 mock_video_count = 7;
+  int32 mock_video_duration = 8;
+  int32 mock_video_income_count = 9;
+  string mock_video_income = 10;
+  int32 video_call_count = 11;
+  int32 video_call_duration = 12;
+  string video_call_income = 13;
+  int32 video_ring_exposure_count = 14;
+  int32 video_ring_click_count = 15;
+  string video_ring_ctr = 16;
+  int32 online_duration = 17;
+  int32 live_online_duration = 18;
+  int32 remaining_user_count = 19;
+  string video_duration_radio1 = 20;
+  string video_duration_radio2 = 21;
+  string live_online_radio = 22;
+  double hourly_wage = 23;
+  string remaining_radio = 24;
+  int32 avg_video_duration = 25;
+  int32 call_order_user_count = 26;
+  int32 weight_score = 27; //权重分
+  double weight_coefficient = 28; //权重系数
+}
+message UserRetention {
+  int32 user_id = 1;
+  string secondary_day = 2;
+  string secondary_day_diff = 3;
+  string three_day = 4;
+  string three_day_diff = 5;
+  string seven_day = 6;
+  string seven_day_diff = 7;
+  int32 withdraw_id = 8;
+}
+message SumAdminUserRevenueRequest {
+  string start_time = 1; // 开始时间，格式：2024-07-16T00:00:00Z (ISO 8601)
+  string end_time = 2; // 结束时间，格式：2024-07-16T23:59:59Z (ISO 8601)
+  ActionType type = 3; // 行为类型：PAID 或 REFUND
+  int32 app_name = 4; // 分页令牌
+}
+message SumAdminUserRevenueResponse {
+  OverallRevenue overall_revenue = 1;
+  SubscriptionsRevenue subscriptions_revenue = 2;
+  CoinsRevenue coins_revenue = 3;
+  NewUsersRevenue new_users_revenue = 4;
+  UserServiceCommonCode code = 5;
+}
+message OverallRevenue {
+  string total = 1;
+  int32 payments = 2;
+  int32 unique_user_count = 3;
+}
+message SubscriptionsRevenue {
+  string total = 1;
+  int32 count = 2;
+}
+message CoinsRevenue {
+  string total = 1;
+  int32 count = 2;
+}
+message NewUsersRevenue {
+  string total = 1;
+  int32 payments = 2;
+  int32 unique_user_count = 3;
+}
+
+message QueryPwaRscoreRequest {
+  repeated PwaRScoreReq requests = 1;
+}
+message PwaRScoreReq {
+  int32 user_id = 1;
+  string create_time = 2;
+  int32 withdraw_id = 8;
+}
+message QueryPwaRscoreResponse {
+  repeated UserRetention user_retention = 1;
+  UserServiceCommonCode code = 2;
+}
+message ReportPwaVideoRequest {
+  int32 user_id = 1;
+  ReportType type = 2;
+}
+enum ReportType {
+  RECEIVE_VIDEO = 0; //接收视频
+  CONNECT_VIDEO = 1; //连接视频
+}
+message ReportPwaVideoResponse {
+  UserServiceCommonCode code = 1;
+}
+
+// 上报 A/B 测金币配置请求
+message ReportCoinOfferRequest {
+  // iOS 产品ID (原: dtc_message_coins_ios_product_id)
+  string dtc_message_coins_ios_product_id = 2;
+
+  // Android 产品ID (原: dtc_message_coins_android_product_id)
+  string dtc_message_coins_android_product_id = 3;
+
+  // 配置金币数量 (原: dtc_message_coins_number)
+  int32 dtc_message_coins_number = 4;
+
+  // 原价 (原: dtc_message_coins_original_price)
+  double dtc_message_coins_original_price = 5;
+
+  // 现价 (原: dtc_message_coins_current_price)
+  double dtc_message_coins_current_price = 6;
+
+  // 优惠比例 (原: dtc_message_coins_extra_percentage)
+  double dtc_message_coins_extra_percentage = 7;
+
+  // 限时倒计时(秒) (原: dtc_message_coins_count_down_time)
+  int32 dtc_message_coins_count_down_time = 8;
+
+  // 三方 Channel (原: dtc_message_coins_pay_channel)
+  string dtc_message_coins_pay_channel = 9;
+
+  // 三方 Router (原: dtc_message_coins_pay_router)
+  repeated string dtc_message_coins_pay_router = 10;
+
+  // 触发时间点 (原: dtc_message_coins_trigger_time，例如 20:00)
+  string dtc_message_coins_trigger_time = 11;
+
+  // 是否触发 Push (原: is_dtc_message_coins_push, 0或1)
+  bool is_dtc_message_coins_push = 12;
+
+  // 消息内容文案列表 (原: is_dtc_message_coins_push_contents)
+  // 支持多条，使用 repeated 数组
+  repeated string is_dtc_message_coins_push_contents = 13;
+
+  // 消息内容文案列表 (原: is_dtc_message_coins_push_titles)
+  // 支持多条，使用 repeated 数组
+  repeated string is_dtc_message_coins_push_titles = 14;
+}
+
+// 上报响应
+message ReportCoinOfferResponse {
+  // 引用你通用的状态码枚举 (假设叫 UserServiceCommonCode)
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+// 前端新架构 - 颜值打分
+message FaceScoreRequest {
+  string image_url = 1;
+  int32 user_id = 2;
+}
+message FaceScoreResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  BeautyScore beautyScore = 3;
+}
+message BeautyScore {
+  int32 appearance = 1;
+  int32 status = 2;
+  int32 sexual_attractiveness_score = 3;
+}
+
+// 前端新架构 - 获取用户信息
+message UserInfoRequest {}
+message UserInfoResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  UserInfo uer_info = 3;
+}
+
+// 前端新架构 - 男用户信息更改通知
+message UserInfoChange {
+  int32 user_id = 1;
+  UserInfo user = 2;
+  int64 update_time = 3;
+}
+
+// 获取 PayPal 用户信息接口
+message GetPaypalUserInfoRequest {
+  string authorization_code = 1; // PayPal OAuth 授权码
+  string redirect_uri = 2; // OAuth 回调地址
+}
+
+message PaypalUserAddress {
+  string country = 1;
+  string locality = 2;
+  string region = 3;
+  string postal_code = 4;
+}
+
+message PaypalUserInfo {
+  string email = 1;
+  string user_id = 2;
+  string name = 3;
+  bool verified_account = 4;
+  string raw_json_data = 5;
+  PaypalUserAddress address = 6;
+}
+
+message GetPaypalUserInfoResponse {
+  PaypalUserInfo paypal_user_info = 1;
+  int32 code = 2; // 0-成功, 1001-授权码无效, 1002-PayPal API失败
+  string message = 3;
+}
+
+message QueryUserExpendInfoRequest {
+  int32 user_id = 1;
+}
+message QueryUserExpendInfoResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  UserExpendInfo expend_info = 3;
+}
+message UserExpendInfo {
+  double hourly_rate = 1;
+  UserStageEnum user_stage = 2;
+  double total_video_income = 3;
+  int32 total_video_duration = 4;
+  int32 basic_score = 5;
+  double weight = 6;
+  int32 current_score = 7;
+}
+enum UserStageEnum {
+  boarding = 0;
+  join_hatching_pool = 1; //加入孵化池
+  join_racing_pool = 2; //加入赛马池
+  restart_racing_pool = 3; //重新赛马池
+  join_main_pool = 4; //加入主池
+  eliminated = 5; //淘汰
+  from_main_pool_to_racing_pool = 6; //主持进入赛马池
+}
+message ReportMockVideoRequest {
+  int32 video_id = 1;
+  int32 order_id = 2;
+  MockVideoSource source = 3;
+  bool pass = 4;
+}
+message ReportMockVideoResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+enum MockVideoSource {
+  other = 0; //其他
+  check_dispatch_status = 1; //检查分发状态
+  word_to_video = 2; //文字转视频
+}
+message QueryPwaVideoRequest {
+  int32 user_id = 1;
+  int32 page_num = 2;
+  int32 page_size = 3;
+}
+message QueryPwaVideoResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated PwaVideoInfo video_info = 3;
+  int32 total = 4;
+}
+message PwaVideoInfo{
+  int32 target_user_id=1;
+  string video_url=2;
+  int32 order_id=3;
+  bool mock=4;  //是否是mock视频  0:不是 1:是
+  int32 call_duration=5;
+  string target_user_name=6;
+  string start_time=7;
+}
+message PunishmentPwaRequest {
+  int32 user_id = 1;
+  PunishmentTypeEnum type = 2; // 0:解封 1:封禁  2:警告
+  string message = 3; //处罚/警告原因
+}
+enum PunishmentTypeEnum {
+  UNBAN = 0; //解封
+  BAN = 1; //封禁
+  WARN = 2; //警告
+}
+message PunishmentPwaResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+message QueryTopUserRequest {
+  int32 user_id = 1; //pwa id
+  int32 limit_day = 2; //查询时间范围 单位天(全部则不限制)
+  int32 top_n = 3; //查询top n个用户
+}
+message QueryTopUserResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated TopUserInfo top_user_info = 3;
+}
+message TopUserInfo {
+  int32 user_id = 1; //用户id
+  double total_charge_amount = 2; //总充值金额
+  int32 total_video_duration = 3; //总视频时长
+  int32 pwa_video_duration = 4; //与pwa视频时长
+  string user_name = 5; //用户名称
+}
+message QueryPwaDataOperationLogRequest {
+  int32 user_id = 1;
+}
+message QueryPwaDataOperationLogResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated PwaDataOperationLog log = 3;
+}
+message PwaDataOperationLog {
+  string operator = 1; //操作人
+  int64 create_time = 2; //操作时间
+  string content = 3; //操作内容
+}
+
+//流量调整请求
+message AdjustTrafficRequest {
+  int32 user_id = 1; //用户id
+  double adjust_coefficient = 2; //调整系数
+}
+message AdjustTrafficResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+}
+
+enum USPaypalAccountType {
+  US_PAYPAL_UNKNOWN = 0; // 未知
+  US_PAYPAL_ACCOUNT = 1; // 是美国PayPal账户
+  NON_US_PAYPAL_ACCOUNT = 2; // 不是美国PayPal账户
+}
+
+message GetPostPicturesRequest {
+  int32 user_id = 1;
+}
+
+message GetPostPicturesResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  int32 user_id = 3;
+  repeated PostServiceProto.PostPictureInQuery post_pictures = 4;
+}
+message QueryPunishmentRequest{
+  int32 user_id = 1;
+}
+message QueryPunishmentResponse{
+  string banned_message=1;
+  string warn_message=2;
+  UserServiceCommonCode code = 3;
+  string message = 4;
+  bool  banned=5;
+}
+
+
+
+
+// 8.1 获取旷视 FaceID Token
+message GetFaceIdTokenRequest {
+  string imageFile = 1;
+  string returnUrl = 2;
+}
+
+message GetFaceIdTokenResponse {
+  string token = 1;
+  string faceIdUrl = 2;
+  string bizId = 3;
+  UserServiceCommonCode code = 4;
+  string message = 5;
+}
+
+// 8.2 校验旷视 FaceID 结果
+message CheckFaceIdResultRequest {
+  string bizId = 1;
+}
+
+message CheckFaceIdResultResponse {
+  bool verified = 1;
+  string reason = 2;
+  UserServiceCommonCode code = 3;
+  string message = 4;
+}
+
+message GetCallOrderPriceRequest {
+
+}
+
+
+message GetCallOrderPriceResponse {
+  int32 user_id = 1;
+  string common_video_order_price = 2;
+  UserServiceCommonCode code = 3;
+  string message = 4;
+}
+
+// ===================== BFF 裂变 =====================
+
+// 接口1: 落地页信息 (公开)
+message BffGetLandingInfoRequest {
+  string invite_code = 1;
+}
+
+message BffGetLandingInfoResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  string inviter_nickname = 3;
+  string inviter_avatar = 4;
+  string title = 5;
+  string subtitle = 6;
+}
+
+// 接口3: 入口概览
+message BffGetOverviewRequest {}
+
+message BffGetOverviewResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  int32 locked_amount_cents = 3;
+  int32 available_amount_cents = 4;
+  int32 delivered_amount_cents = 5;
+  string entry_status = 6;        // NO_INVITE | REWARD_READY | FRIEND_EARNING | IN_PROGRESS
+  int32 active_invite_count = 7;
+  int32 total_invite_count = 8;
+  bool has_unconsumed_event = 9;
+  string invite_code = 10; // format: username_last3digits
+}
+
+// 接口4: Dashboard
+message BffGetDashboardRequest {}
+
+message BffSquadMember {
+  int64 relationship_id = 1;
+  int32 invitee_user_id = 2;
+  string nickname = 3;
+  string avatar = 4;
+  int32 current_stage = 5;
+  int32 max_stage_reached = 6;
+  int32 withdraw_success_count = 7;
+  string risk_status = 8;
+  string reward_status = 9;
+  string created_at = 10;
+}
+
+message BffGetDashboardResponse {
+  UserServiceCommonCode code = 1;
+  string message = 2;
+  repeated BffSquadMember squad_list = 3;
+  int32 total_count = 4;
+  bool has_pending_coin_animation = 5;
+  string invite_code = 6; // format: username_last3digits
+}

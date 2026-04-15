@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+option java_package = "com.pserver.proto.auth";// 类中的package
+option java_multiple_files = true; // 每个message 单独生成类
+option java_outer_classname = "AuthProto"; // 如果没设置multi 则所有的message都为他的内部类
+
+// Unity/C# 命名空间
+option csharp_namespace = "Lobby";
+
+package Auth;
+
+/*
+协议对应的 状态码
+*/
+enum AuthErrorCode {
+  AUTH_SUCCESS = 0;
+  AUTH_FAILED = 1;
+  AUTH_FAILED_NO_USER = 2;
+}
+/*
+ 上行认证消息
+*/
+message C2S_Auth {
+  // 用户id
+  int32 playerId = 1;
+  // 用户token 认证
+  string token = 2;
+}
+
+/*
+返回认证消息
+*/
+message S2C_Auth {
+  //认证状态
+  int32 result = 1;
+  int32 playerId = 2;
+  string token = 3;
+}
+

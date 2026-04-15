@@ -1,0 +1,1208 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.pserver.proto.tcp";
+option java_outer_classname = "RoomProto";
+
+// Unity/C# 命名空间
+option csharp_namespace = "Room";
+
+package Room;
+
+
+enum RoomErrorCode {
+  /**
+   正常成功进房
+   */
+  SUCCESS = 0;
+  /**
+    进房成功，但encounter不存在
+   */
+  SUCCESS_ENCOUNTER_MISS = 1;
+  /**
+  进房成功，但friend 离开
+   */
+  SUCCESS_FRIEND_LEAVE = 2;
+  /**
+  进房失败
+   */
+  FAIL = 10;
+  // 踢人 黑名单
+  FAIL_IN_BLACKLIST = 11;
+  // 最大的玩家
+  FAIL_MAX_PLAYER_LIMIT = 12;
+  // 房间不存在
+  FAIL_ROOM_NOT_EXIST = 13;
+  // 进房失败，好友不在线了
+  FAIL_FRIEND_OFFLINE = 14;
+  // 私有房鉴权失败
+  FAIL_NO_PERMISSION = 15;
+}
+
+message UserInfo {
+  int32 userId = 1;
+  string userName = 2;
+  int32 userGender = 3;
+  string avatarUrl = 4;
+  string avatar_id = 5;
+  /**
+  新增的mmoStatus
+   */
+  MMOStatus mmoStatus = 6;
+  /**
+    首次设置的默认avatarId
+   */
+  string firstAvatarId = 7;
+}
+
+message UserStatus {
+  int32 userId = 1;
+  int32 userPosX = 2;
+  int32 userPosY = 3;
+  int32 userPosZ = 4;
+  int32 userRotX = 5;
+  int32 userRotY = 6;
+  int32 userRotZ = 7;
+  //	int32 userFaceX = 8;
+  //	int32 userFaceY = 9;
+  //	int32 userFaceZ = 10;
+}
+
+enum Platform {
+  UNKNOWN = 0;
+  IOS = 1;
+  ANDROID = 2;
+  // other eg: WEB..
+}
+/**
+  客户端传来的手机信息
+ */
+message PhoneInfo {
+  Platform platform = 1;
+}
+/*
+进入房间
+*/
+message C2S_EnterRoom {
+  // 用户id
+  int32 playerId = 1;
+  int32 roomId = 2;
+  UserStatus user = 3;
+  UserInfo userInfo = 4;
+  PhoneInfo phoneInfo = 5;
+  /**
+    encounter的Id
+   */
+  string encounterId = 6;
+  /**
+    好友Id
+   */
+  int32 friendId = 7;
+  /**
+    会话邀请进房
+    如果房间的权限是 public，则不用 inviteToken
+    如果房间权限是 private，则inviteToken 填写为 房主的id
+   */
+  int32 inviteToken = 8;
+}
+/*
+进入房间 返回的消息
+*/
+message S2C_EnterRoom {
+  // 结果状态码
+  int32 result = 1;
+  // 当前房间的Id号
+  int32 roomId = 2;
+  // 当前房间的用户 id列表
+  repeated UserInfo userInfoList = 3;
+  repeated UserStatus userStatusList = 4;
+  // 当前房间的椅子列表
+  repeated Seat seatList = 5;
+  // 当前房间的 沙发列表
+  repeated Sofa sofaList = 6;
+  // 玩家的肩膀信息
+  repeated UserStatus userShoulderList = 7;
+  // 当前房间的房主id
+  RoomData roomInfo = 8;
+}
+/**
+ 进入房间错误码 对应S2C_EnterRoom
+ */
+enum EnterRoomErrorCode {
+  ENTER_ROOM_SUCCESS = 0;
+  ENTER_ROOM_FAILED = 1;
+  ENTER_ROOM_FAILED_MAX_COUNT = 2;
+}
+/*
+其他用户进入房间的 单一广播消息
+*/
+message S2C_BroadCastEnterRoom {
+  // 结果状态码
+  int32 result = 1;
+  // 当前房间的Id号
+  int32 roomId = 2;
+  // 当前房间的用户 id列表
+  UserInfo userInfo = 3;
+  // 新进入房间的用户状态
+  UserStatus userStatus = 4;
+}
+/*
+离开房间
+*/
+message C2S_LeaveRoom {
+  // 用户Id
+  int32 playerId = 1;
+}
+
+message S2C_LeaveRoom {
+  // 返回确认码
+  int32 result = 1;
+  int32 playerId = 2;
+}
+
+message S2C_BroadCastLeaveRoom {
+  // 返回确认码
+  int32 playerId = 1;
+  // 可能换房主了 0
+  int32 owner_id = 2;
+}
+
+/*
+房间同步当前的用户状态
+*/
+message C2S_SyncMessage {
+  // 房间号
+  int32 roomId = 1;
+  // 同步用户消息
+  UserStatus user = 2;
+}
+/*
+房间 同步 当前用户状态的回包 确认
+当前用户会收到 S2C_SyncMessage
+其他用户会收到 S2C_BroadCastSyncMessage
+*/
+message S2C_SyncMessage {
+  int32 roomId = 1;
+  int32 playerId = 2;
+  UserStatus user = 3;
+}
+/*
+房间内 同步广播所有人的消息
+*/
+message S2C_BroadCastSyncMessage {
+  repeated UserStatus users = 1;
+}
+
+/**
+  游戏状态
+ */
+message GameStatus {
+  GameStatusId gameStatusId = 1; // 对应 GameStatusIds
+  int32 leftTime = 2; // 距离当前状态结束剩余的秒数(s) -1 默认无限
+  int32 sendTime = 3; // 服务器发送该时间的时间戳
+}
+// 游戏状态id列表 及说明
+enum GameStatusId {
+  NOT_READY = 0; // 还未足够三个人
+  READY_WAITING_START = 1; // 已经够3个人，等待30s 或者 有人点击开始，此时可以发送，开始游戏按钮
+  START_AND_INIT = 2; // 游戏已经开始，发牌后三十秒进入下一个状态
+  PLAYER_SELECT_CARD = 3; // 玩家选牌阶段 30s倒计时
+  CZAR_SELECT_CARD = 4; // 裁判 选牌阶段 30s倒计时
+  WAITING_FOR_NEXT_ROUND = 5; // 裁判选择完牌，通知给 玩家后，等待下一轮 30倒计时
+}
+
+/*
+  超时，或者全部选择完成后，需要单独广播游戏状态的协议
+*/
+message S2C_BroadCastGameStatus {
+  GameStatus gameStatus = 1;
+}
+
+/*
+  椅子坐下
+*/
+message C2S_SitSeat {
+  int32 seatId = 1;
+}
+
+/*
+椅子坐下的回包
+*/
+message S2C_SitSeat {
+  SeatResultCode result = 1;
+  GameStatus gameStatus = 2;
+}
+/**
+  离开椅子
+ */
+message C2S_LeaveSeat {
+  int32 seatId = 1;
+}
+
+/**
+离开椅子
+ */
+message S2C_LeaveSeat {
+  SeatResultCode result = 1;
+}
+
+enum SeatResultCode {
+  SEAT_SUCCESS = 0;
+  SEAT_FAIL = 1;
+}
+/**
+ 椅子状态有变化，广播椅子状态
+ */
+message S2C_BroadCastSeatStatus {
+  // 每个椅子的状态
+  repeated Seat seatList = 1;
+}
+
+/**
+ 椅子
+ */
+message Seat {
+  int32 id = 1;
+  SeatStatus status = 2;
+  int32 playerId = 3;
+}
+
+/**
+  椅子状态
+ */
+enum SeatStatus {
+  FREE = 0;
+  NOT_FREE = 1;
+}
+
+/*
+开始游戏 按钮 满三个人， 任何人可以点击开始按钮 可以开始
+*/
+message C2S_StartGame {
+  int32 playerId = 1;
+}
+/*
+  给当前玩家的回复确认信息
+*/
+message S2C_StartGame {
+  RoomErrorCode result = 1;
+}
+
+/*
+ 点击开始游戏后，初始化广播的协议，后面每经过一轮
+*/
+message S2C_BroadCastGameReady {
+  // 当前用户的角色身份 是裁判 还是 玩家
+  Role role = 1;
+  // 当前游戏数据
+  int32 score = 2;
+  // 本轮黑牌
+  Card blackCard = 3;
+  // 当前用户的白牌卡牌列表
+  repeated Card cardList = 4;
+  // 裁判的 playerId
+  int32 czarPlayerId = 5;
+  repeated PlayerGameStat playerStatList = 6;
+}
+/**
+玩家的游戏数据
+ */
+message PlayerGameStat {
+  int32 playerId = 1;
+  int32 score = 2;
+}
+// 角色枚举
+enum Role {
+  // 裁判
+  CZAR = 0;
+  // 其他玩家
+  PLAYER = 1;
+}
+/*
+当前玩家 从手里卡组选择一张卡牌
+*/
+message C2S_SelectCard {
+  int32 cardId = 1;
+}
+/*
+回复 选择结果，与剩余卡牌，如果超时未收到选择卡牌的，则直接发下面的协议
+*/
+message S2C_SelectCard {
+  // 结果状态码
+  RoomErrorCode result = 1;
+  // 当前玩家-剩余的卡牌列表，此时不会补齐卡牌
+  int32 cardId = 2;
+}
+
+/*
+  该消息广播给所有玩家玩家选择牌的状态
+*/
+message S2C_BroadCastPlayerSelectCard {
+  repeated Card card = 2;
+}
+
+/**
+ 裁判揭牌
+ */
+message C2S_CzarOpenCard {
+  int32 cardId = 1;
+}
+message S2C_CzarOpenCard {
+  int32 result = 1;
+  int32 cardId = 2;
+}
+/**
+广播给其他玩家 当前揭牌
+如果当前裁判始终未选择牌，则广播所有牌
+裁判点选的时候 广播一张牌
+ */
+message S2C_BroadCastOpenCard {
+  repeated int32 cardId = 1;
+}
+/*
+裁判 选择本轮获胜的玩家
+*/
+message C2S_CzarSelectWinCard {
+  int32 cardId = 1;
+}
+/*
+回复 选择结果，与剩余卡牌，如果超时未收到选择卡牌的，则直接发下面的协议
+*/
+message S2C_CzarSelectWinCard {
+  RoomErrorCode result = 1;
+  int32 cardId = 2;
+}
+/*
+  广播给所有玩家 谁赢了
+*/
+message S2C_BroadcastCzarWinCard {
+  int32 winCardId = 1;
+  int32 winPlayerId = 2;
+  // 当前的赢的玩家的分数
+  int32 score = 3;
+}
+
+/**
+ 卡牌的数据
+ */
+message Card {
+  int32 cardId = 1;
+  // 卡牌的类型 黑牌 还是 白牌
+  CardType type = 2;
+  // 卡牌的内容
+  string content = 3;
+  // 从哪个玩家选出的 - 广播给裁判的时候用的
+  int32 fromPlayerId = 4;
+  // 选牌之后 是否被裁判打开
+  bool isOpen = 5;
+}
+
+/**
+ 卡牌的类型
+ */
+enum CardType {
+  BLACK = 0;
+  WHITE = 1;
+}
+// 同步 bs 消息
+message C2S_SyncBlendShape {
+  // 用户id
+  int32 playerId = 1;
+  // bs数组
+  repeated uint32 bs = 2;
+
+}
+/*
+待优化，需要同时同步多个人的bs信息
+*/
+message S2C_SyncBlendShape {
+  // 结果状态码
+  RoomErrorCode result = 1;
+  // bs数组
+  repeated uint32 bs = 2;
+}
+/*
+广播bs
+*/
+message S2C_BroadcastSyncBlendShape {
+  repeated UserBlendShape users = 1;
+}
+
+message UserBlendShape {
+  // 用户Id
+  int32 playerId = 1;
+  // bs数组
+  repeated uint32 bs = 2;
+}
+/**
+  头部状态
+ */
+
+message HeadStatus {
+  int32 playerId = 1;
+  int32 headRotX = 2;
+  int32 headRotY = 3;
+  int32 headRotZ = 4;
+}
+message C2S_SyncHeadStatus {
+  HeadStatus headStatus = 1;
+}
+
+message S2C_SyncHeadStatus {
+  RoomErrorCode result = 1;
+  HeadStatus headStatus = 2;
+}
+
+message S2C_BroadcastSyncHeadStatus {
+  repeated HeadStatus headStatus = 1;
+}
+
+/**
+这两个是心跳包
+ */
+message C2S_HeartBeat {
+  int32 index = 1;
+}
+
+message S2C_HeartBeat {
+  int32 index = 1;
+}
+
+
+/*
+  沙发坐下
+*/
+message C2S_SitSofa {
+  int32 sofaId = 1;
+}
+
+/*
+ 沙发坐下的回包
+*/
+message S2C_SitSofa {
+  SofaResultCode result = 1;
+}
+/**
+  离开沙发
+ */
+message C2S_LeaveSofa {
+  int32 sofaId = 1;
+}
+
+/**
+ 离开沙发
+ */
+message S2C_LeaveSofa {
+  SofaResultCode result = 1;
+}
+
+enum SofaResultCode {
+  SOFA_SUCCESS = 0;
+  SOFA_FAIL = 1;
+}
+/**
+ 沙发状态有变化，广播沙发状态
+ */
+message S2C_BroadCastSofaStatus {
+  // 每个沙发的状态
+  repeated Sofa sofaList = 1;
+}
+
+/**
+ 椅子
+ */
+message Sofa {
+  int32 id = 1;
+  SofaStatus status = 2;
+  int32 playerId = 3;
+}
+
+/**
+  椅子状态
+ */
+enum SofaStatus {
+  SOFA_FREE = 0;
+  SOFA_NOT_FREE = 1;
+}
+
+message C2S_VoiceInfo {
+  VoiceMsg data = 1;
+}
+
+message S2C_VoiceInfo {
+  VoiceErrorCode result = 1;
+}
+
+message S2C_BroadcastVoiceInfo {
+  repeated VoiceMsg data = 1;
+}
+
+enum VoiceErrorCode {
+  VOICE_SUCCESS = 0;
+  VOICE_FAILED = 1;
+}
+
+// 声音实体
+message VoiceMsg {
+  int32 uid = 1;         //user id
+  int32 volume = 2;    //[0-255]
+  int32 vad = 3;          //The activity status of remote users
+}
+
+// 强制下一轮
+message C2S_ForceNextRound {
+}
+
+message S2C_ForceNextRound {
+  ForceNextRoundResultCode result = 1;
+  // 已经同意下一轮的 玩家人数
+  int32 agreePlayerCount = 2;
+}
+
+message S2C_BroadcastForceNextRound {
+  int32 agreePlayerCount = 1;
+}
+
+enum ForceNextRoundResultCode {
+  NEXT_ROUND_SUCCESS = 0;
+  NEXT_ROUND_FAILED = 1;
+}
+
+/**
+  同步肩膀消息
+ */
+message C2S_SyncShoulder {
+  UserStatus shoulderInfo = 1;
+}
+
+message S2C_SyncShoulder {
+  RoomErrorCode result = 1;
+}
+
+message  S2C_BroadcastShoulder {
+  repeated UserStatus shoulderInfoLst = 1;
+}
+/**
+  同步手部消息
+ */
+message C2S_SyncHand {
+  UserHandTrackingInfo handInfo = 1;
+}
+
+message S2C_SyncHand {
+  RoomErrorCode result = 1;
+}
+
+message  S2C_BroadcastHand {
+  repeated UserHandTrackingInfo handInfoLst = 1;
+}
+
+message UserHandTrackingInfo {
+  // 玩家id
+  int32 uid = 1;
+  int32 thumbFlexionAngle = 2;
+  int32 indexFlexionAngle = 3;
+  int32 middleFlexionAngle = 4;
+  int32 ringFlexionAngle = 5;
+  int32 littleFlexionAngle = 6;
+  int32 handWristPosX = 7;
+  int32 handWristPosY = 8;
+  int32 handWristPosZ = 9;
+  int32 handWristRotX = 10;
+  int32 handWristRotY = 11;
+  int32 handWristRotZ = 12;
+  bool isRightHand = 13;
+  bool isHandInCamera = 14;
+}
+
+message C2S_ChangeAvatar {
+  int32 playerId = 1;
+  string avatarId = 2;
+  /**
+  未来可能不用？
+   */
+  string avatarUrl = 3;
+}
+
+
+message S2C_ChangeAvatar {
+  RoomErrorCode result = 1;
+}
+/**
+ TODO:
+  这里 临时广播给自己一下 不走鉴权
+ */
+message S2C_BroadCastChangeAvatar {
+  int32 playerId = 1;
+  string avatarId = 2;
+  string avatarUrl = 3;
+}
+
+message C2S_AgoraToken {
+  // token role
+  int32 role = 1;
+  int32 uid = 2;
+  string channelName = 3;
+}
+
+message S2C_AgoraToken {
+  string token = 1;
+  string message = 2;
+}
+
+/**
+ 创建房间的协议
+ */
+message C2S_CreateRoom {
+  RoomData roomInfo = 1;
+}
+
+message S2C_CreateRoom {
+  // 创建房间结果码
+  CreateRoomErrorCode result = 1;
+  // 房间id
+  int32 room_id = 2;
+}
+
+enum CreateRoomErrorCode {
+  CREATE_SUCCESS = 0;
+  CREATE_FAILED = 1;
+}
+/**
+房间权限
+ */
+enum RoomPermissiion {
+  PRIVATE = 0;
+  PUBLIC = 1;
+}
+
+message RoomData {
+  // 创建的时候不用传
+  int32 roomId = 1;
+  // 创建的时候必要
+  string premadeId = 2;
+  // 创建的时候 不传 默认 20
+  int32 maxUser = 3;
+  // 创建的时候 必要
+  string roomTitle = 4;
+  // 房主id
+  int32 ownerId = 5;
+  // 创建的时候 必要
+  RoomPermissiion permission = 6;
+}
+
+// 房间内踢人的逻辑
+message C2S_KickOut {
+  // 要踢的玩家
+  int32 kickPlayerId = 1;
+  // 踢人踢多久，不传的话，默认1h, 默认是传 秒(second)
+  int32 expireTime = 2;
+}
+message S2C_KickOut {
+  // 踢的结果
+  KickErrorCode result = 1;
+}
+// 发给被踢人的消息
+message S2C_ForceKickOut {
+  // 被 房主剔除房间了
+  int32 owner_id = 1;
+}
+
+enum KickErrorCode {
+  KICK_SUCCESS = 0;
+  KICK_FAILED = 1;
+  KICK_FAILED_PLAYER_NOT_EXISTS = 2;
+}
+
+/**
+ 这个会强制 服务器针对这个玩家发起一个推流
+ for dev
+ */
+message C2S_FakeStartEncounter {
+  /**
+    fakeEncounter中的玩家Id列表
+    *包含当前玩家的Id*
+    *多个玩家，才可以模拟reAnchor*
+   */
+  repeated int32 playerIds = 1;
+  /**
+  指定的 anchor的 玩家id
+   */
+  int32 anchorId = 2;
+}
+
+/**
+正常情况下，服务器主动推下这个消息
+重新更换anchor的情况下 也发这个消息
+ */
+message S2C_StartEncounter {
+  // 当前的encounter 信息
+  EncounterEntity encounterInfo = 1;
+  // 是否是二次发起的 将Anchor 从last client -> current client
+  bool isReAnchor = 2;
+  /*
+  当前客户端是anchor的情况下(已经推流中)，
+  如果当前 encounter 信息有更新的话 则为true
+  */
+  bool isUpdate = 3;
+  /**
+   premadeId
+   */
+  string premadeId = 4;
+  /**
+    encounter 开始时间
+   */
+  int64 startTime = 5;
+}
+/**
+  客户端 需要给服务器回复ack一下，如果ack时间超过阈值，则会自动更换下一个
+  待定?
+ */
+message C2S_StartEncounter {
+  bool isSuccess = 1;
+}
+
+/**
+ 相同encounter，更换camera的逻辑
+ */
+message C2S_ReAnchor {
+  // 之前的encounterId
+  string encounterId = 1;
+}
+
+message S2C_ReAnchor {
+  ReAnchorErrorCode result = 1;
+}
+
+enum ReAnchorErrorCode {
+  REANCHOR_SUCCESS = 0;
+  REANCHOR_FAILED = 1;
+  /**
+   当前的Encounter被刷新or失败了
+   */
+  REANCHOR_FAILED_ENCOUNTER_MISS = 2;
+  /**
+   当前encounter 没有其他符合条件的玩家了
+   */
+  REANCHOR_FAILED_NO_OTHER_PLAYER = 3;
+  /**
+    当前玩家不是 anchor，发起错误
+   */
+  REANCHOR_FAILED_NOT_ANCHOR = 4;
+}
+
+message EncounterEntity {
+  /**
+  当前发起的encounterId
+  */
+  string encounterId = 1;
+  /**
+   当前 房间内所有玩家的列表
+   */
+  repeated EncounterUserInfo players = 2;
+  /**
+    当前encounter的 坐标值
+   */
+  int32 encounterX = 3;
+  int32 encounterY = 4;
+  int32 encounterZ = 5;
+}
+
+message EncounterUserInfo {
+  int32 playerId = 1;
+  int64 enterRoomTime = 2;
+}
+
+/**
+ TODO:
+  后面做成通用消息
+ */
+message C2S_FollowNotify {
+  /**
+  发给哪个玩家
+   */
+  int32 toPlayerId = 1;
+  /**
+  自定义消息 内容
+   */
+  string followMsg = 2;
+}
+/**
+给发起者的回包
+ */
+message S2C_FollowNotify {
+  FollowNotifyResult result = 1;
+}
+/**
+ 发送给 被follow的玩家消息
+ */
+message S2C_BroadcastFollowNotify {
+  /**
+  发给哪个玩家
+   */
+  UserInfo fromPlayer = 1;
+  /**
+   自定义消息 内容
+    */
+  string followMsg = 2;
+}
+
+enum FollowNotifyResult {
+  FOLLOW_SUCCESS = 0;
+  FOLLOW_FAILED = 1;
+  FOLLOW_FAILED_USER_NOT_IN_ROOM = 2;
+}
+
+/**
+ 发起MMO 状态
+ */
+message C2S_ChangeMMOStatus {
+    MMOStatus mmoStatus = 1;
+}
+
+message S2C_BroadCastMMOStatus {
+  int32 playerId = 1;
+  MMOStatus mmoStatus  = 2;
+}
+enum MMOStatus {
+  MMO_NORMAL = 0;
+  MMO_UI = 1;
+  MMO_BACKGROUND = 2;
+}
+
+/**
+ 数据统计 encounter观看人数
+ */
+message C2S_StatEncounter {
+  /**
+   encounterId
+   */
+  string encounterId = 1;
+  /**
+   当前统计的动作类型
+   */
+  StatType actionType = 2;
+  /**
+    当前统计的值 +1的这种 可以不填该值，按请求记次
+    浮点数 取整上报
+   */
+  int64 statValue = 3;
+}
+message S2C_StatEncounter {
+    StatEncounterErrorCode result = 1;
+}
+enum StatEncounterErrorCode {
+  STAT_ENCOUNTER_SUCCESS = 0;
+  STAT_ENCOUNTER_FAILED = 1;
+}
+
+/**
+ 定时 推送
+ */
+message S2C_RoomWatching {
+  int32 watchCount = 1;
+  /**
+   观看者Id列表(超过100 只会按照100发送)
+  */
+  repeated int32 watcherLst = 2;
+}
+
+/**
+ 统计元数据
+ */
+message C2S_StatEncounterMeta {
+  /**
+    encounterId - 不是全场景都需要
+  */
+  string encounterId = 1;
+  /**
+   当前统计的动作类型
+   */
+  StatType actionType = 2;
+  /**
+    当前统计的值 +1的这种 可以不填该值，按请求记次
+    浮点数 取整上报
+   */
+  int64 statValue = 3;
+}
+
+/**
+  统计元数据
+ */
+message S2C_StatEncounterMeta {
+  StatEncounterErrorCode result = 1;
+}
+
+enum StatType {
+  STAT_DEFAULT = 0;
+  STAT_ENCOUNTER_WATCH = 1;
+  STAT_ENCOUNTER_UNWATCH = 2;
+  /**
+    用户说话时长
+    当前encounter的总时长，每次覆盖掉上一次的
+   */
+  STAT_ENCOUNTER_SPEAK_TIME = 3;
+  /**
+   当前encounter的 unmute 次数
+   */
+  STAT_ENCOUNTER_UNMUTE = 4;
+  /**
+    在当前encounter里 有follow行为的
+   */
+  STAT_ENCOUNTER_FOLLOW = 5;
+}
+
+/*
+  统计发过文字聊天的消息，需要上报
+ */
+message C2S_SyncChat {
+  /**
+   当前聊天的 对方id
+   */
+  int32 playerId = 1;
+}
+
+message S2C_SyncChat {
+    SyncChatResultCode result = 1;
+}
+/**
+ 结果码
+ */
+enum SyncChatResultCode {
+  SYNC_CHAT_SUCCESS = 0;
+  SYNC_CHAT_FAILED = 10;
+}
+
+/**
+  开始匹配
+ */
+message C2S_StartMatch {
+  /**
+   当前用户block的数据
+   */
+  repeated int32 blockPlayerIds = 1;
+
+  /**
+    当前用户被block的用户Id
+   */
+  repeated int32 blockByIds = 2;
+  /**
+   client pass seqNum
+   */
+  int32 seqNum = 3;
+  /**
+   匹配类型，旧版本
+   */
+  MatchFilterType filterType = 4;
+}
+/**
+  匹配的filter类型
+ */
+enum MatchFilterType {
+  MATCH_FILTER_TYPE_DEFAULT = 0;
+  MATCH_FILTER_TYPE_FEMALE = 1;
+  MATCH_FILTER_TYPE_MALE = 2;
+  MATCH_FILTER_TYPE_EVERYONE = 3;
+}
+message S2C_StartMatch {
+    StartMatchResultCode result = 1;
+    int32 matchPlayerId = 2; //如果匹配失败 则该id 传0
+  /**
+   client pass seqNum
+   */
+    int32 seqNum = 3;
+    bool isOnline = 4;
+}
+
+
+enum StartMatchResultCode {
+  MATCH_SUCCESS = 0;
+  MATCH_FAILED = 10;
+}
+
+message C2S_CancelMatch {}
+
+message S2C_CancelMatch {
+    CancelMatchResultCode result = 1;
+}
+enum CancelMatchResultCode {
+  CANCEL_MATCH_SUCCESS = 0;
+  CANCEL_MATCH_FAILED = 10;
+}
+
+/**
+  邀请卡进房的逻辑
+  双方都可以发
+ */
+message C2S_InviteJoinRoom {
+  /**
+    进房的房间数据
+   */
+  RoomData roomData = 1;
+  /**
+   邀请卡的唯一id
+   */
+  string inviteCardId = 2;
+}
+
+message S2C_InviteJoinRoom {
+  /**
+    结果
+   */
+  InviteJoinRoomErrorCode result = 1;
+  /**
+    邀请卡唯一Id
+   */
+  string inviteCardId = 2;
+  /**
+    房间Id
+   */
+  int32 roomId = 3;
+}
+
+/**
+  结果码
+ */
+enum InviteJoinRoomErrorCode {
+  INVITE_JOIN_ROOM_SUCCESS = 0;
+  INVITE_JOIN_ROOM_FAILED = 10;
+  /**
+    重试一下，竞争锁的情况下，可以
+   */
+  INVITE_JOIN_ROOM_FAILED_RETRY = 11;
+}
+
+/**
+  批量获取 邀请房间的信息
+ */
+message C2S_InviteRoomInfo {
+  repeated string inviteCardIds = 1;
+}
+
+message S2C_InviteRoomInfo {
+  repeated InviteRoomInfo roomInfos = 1;
+}
+
+message InviteRoomInfo {
+  string inviteCardId = 1;
+  InviteRoomStatus roomStatus = 2;
+}
+
+enum InviteRoomStatus {
+  /**
+    未开始
+   */
+  INVITE_ROOM_IN_ACTIVE = 0;
+  /**
+   活跃中
+   */
+  INVITE_ROOM_ACTIVE = 1;
+  /**
+    结束了
+   */
+  INVITE_ROOM_END = 2;
+}
+
+message C2S_NormalRoomInfo {
+  repeated int32 roomIds = 1;
+}
+
+message S2C_NormalRoomInfo {
+  repeated NormalRoomStatus roomData = 1;
+}
+
+message NormalRoomStatus {
+  int32 roomId = 1;
+  bool isAlive = 2;
+}
+
+message C2S_UpdateRoomInfo {
+  /**
+    当前版本只用permission即可
+   */
+  RoomData roomData = 1;
+}
+
+message S2C_UpdateRoomInfo {
+  UpdateRoomInfoErrorCode result = 1;
+}
+
+message S2C_BroadcastUpdateRoomInfo {
+  /**
+   当前版本只用permission即可
+  */
+  RoomData roomData = 1;
+}
+enum UpdateRoomInfoErrorCode {
+  UPDATE_ROOM_INFO_SUCCESS = 0;
+  UPDATE_ROOM_INFO_FAILED = 10;
+  UPDATE_ROOM_INFO_NOT_OWNER = 11;
+}
+
+/**
+  设置匹配过滤的配置，每次变更的时候调用
+ */
+message C2S_SetMatchFilterType {
+  MatchFilterType filterType = 1;
+}
+
+message S2C_SetMatchFilterType {
+  FilterTypeErrorCode result = 1;
+}
+
+enum FilterTypeErrorCode {
+  UPDATE_FILTER_TYPE_SUCCESS = 0;
+  UPDATE_FILTER_TYPE_FAILED = 10;
+}
+/**
+  获取上次设置的匹配类型
+  检测本地没有 cache的时候，获取一次
+  其他情况以本地为准
+ */
+message C2S_GetMatchFilterType {}
+
+message S2C_GetMatchFilterType {
+  MatchFilterType filterType = 1;
+}
+
+/**
+ 3D视频协议
+ */
+message VideoConfig {
+  string videoUrl = 1;
+  int32 currentTime = 2;
+  bool isPlay = 3;
+}
+/**
+客户端设置 3d视频配置，只有房主发起
+ */
+message C2S_Set3DVideoConfig {
+  VideoConfig videoConfig = 1;
+}
+/**
+  设置结果
+ */
+message S2C_Set3DVideoConfig {
+  bool isSuccess = 1;
+}
+
+/**
+ 房主每变更一次，则进行广播一次
+ */
+message S2C_Broadcast3DVideoConfig {
+  VideoConfig videoConfig = 1;
+}
+
+/**
+  进入房间，动态加载当前房间的播放配置
+ */
+message C2S_Get3DVideoConfig {
+}
+/**
+ 返回当前的播放配置
+ */
+message S2C_Get3DVideoConfig {
+  VideoConfig videoConfig = 1;
+}
+
+

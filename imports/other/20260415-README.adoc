@@ -1,0 +1,28 @@
+= Proto Repo(proto文件)
+
+
+== 使用
+
+单独使用：
+```
+ git clone git@gitee.com:presence-dev/proto.git
+```
+
+内嵌项目：
+```
+ git submodule add git@gitee.com:presence-dev/proto.git /path/to
+```
+
+== 目录介绍
+    config - 全局消息约定
+        message.proto - 常用消息类的枚举
+        ProtoConfig.json - 消息proto 的id 到 class的映射 
+    messages - 一个项目一个文件夹 比如CAH,
+        CAH - CAH项目 Proto
+        Common - 常用/通用协议
+
+== 参考文档
+* https://git-scm.com/book/en/v2/Git-Tools-Submodules[Git Submodule]
+
+
+

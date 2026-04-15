@@ -1,0 +1,94 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.pserver.proto.archat";
+option java_outer_classname = "MessagingServiceProto";
+
+// Unity/C# 命名空间
+option csharp_namespace = "MessagingServiceApi";
+
+package MessagingServiceProto;
+
+enum NotificationMessageDesc {
+  NOTIFICATION_UNSPECIFIED = 0;
+  NOTIFICATION_ADMIN_MOVE_TO_K_SERVER = 1;
+  NOTIFICATION_ADMIN_MOVE_TO_NORMAL_SERVER = 2;
+  NOTIFICATION_ADMIN_MOVE_TO_BANNED = 3;
+  NOTIFICATION_USER_INVITE_TO_ROOM = 4;
+  NOTIFICATION_USER_FOLLOW_YOU = 5;
+  NOTIFICATION_USER_UNFOLLOW_YOU = 6;
+  NOTIFICATION_USER_BLOCK_YOU = 7;
+  NOTIFICATION_USER_UNBLOCK_YOU = 8;
+  NOTIFICATION_USER_LIKE_YOUR_POST = 9;
+  NOTIFICATION_USER_COMMENT_YOUR_POST = 10;
+  NOTIFICATION_USER_COMMENT_YOUR_COMMENT = 11;
+  NOTIFICATION_USER_REPLY_OTHER_COMMENT = 12;
+  NOTIFICATION_USER_SUCCESSFUL_INVITATION = 13;
+  NOTIFICATION_AI_AVATAR_GENERATED = 14;
+  NOTIFICATION_AI_AVATAR_AUTO_REPLACED = 15;
+}
+
+enum MessageServiceCommonCode {
+  MESSAEG_UNKNOWN = 0;
+  MESSAGE_SUCCESS = 1;
+  MESSAGE_FAILED = 99;
+}
+
+message SendNotificationMessageRequest {
+  string to_user_id = 1;
+  NotificationMessageDesc message_desc = 2;
+  string message_data = 3;
+  int32 msg_life_time = 4;
+}
+
+message SendNotificationMessageResponse {bool is_successful = 1;}
+
+enum FcmPushType {
+  FCM_TYPE_UNKNOWN = 0;
+  FCM_TYPE_USER_MATCH = 1;
+  FCM_TYPE_LIKE_ME = 2;
+  FCM_TYPE_OFFLINE_HOUR_MESSAGE = 3;
+  FCM_TYPE_WITHDRAWAL_COMPLETE = 4;
+  FCM_TYPE_DEMO_SCRIPT = 5;
+  FCM_TYPE_USER_NEW_MATCH = 6;
+  FCM_TYPE_POST_COMMON = 7;
+  FCM_TYPE_POST_LIKE = 8;
+  FCM_TYPE_PAYMENT = 9;
+  FCM_TYPE_PAYMENT_FAIL = 10;
+}
+
+// uploadNormalImage
+message UploadNormalImageRequest {
+  bytes file = 1;
+  string fileType = 2; // wav,mp3 and ...
+}
+message UploadNormalImageResponse {
+  MessageServiceCommonCode code = 1;
+  string imageUrl = 2;
+}
+
+// verifyUserFlag - 短信校验成功后 上报主要是userId
+message VerifyUserFlagRequest {
+  int32 userId = 1;
+  UserFlag flag = 2; // 校验用户的某个行为标准
+  string extraInfo = 3; // 其他补充信息，eg：如果手机号校验位置，则此处放手机号码
+}
+
+enum UserFlag {
+  USER_FLAG_UNKNOWN = 0;
+  USER_FLAG_PHONE_VERIFIED = 1; // 手机号已经校验
+}
+message VerifyUserFlagResponse {
+  MessageServiceCommonCode code = 1;
+  string message = 2;
+}
+
+// getUserFlag 应用内查询自己的，所以不需要带参数
+message GetUserFlagRequest {
+  UserFlag flag = 1;
+}
+
+message GetUserFlagResponse {
+  MessageServiceCommonCode code = 1;
+  bool isVerified = 2;
+}

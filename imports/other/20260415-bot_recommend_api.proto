@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.pserver.proto.archat";
+option java_outer_classname = "BotRecommendServiceProto";
+import "archat_api/user_api.proto";
+// Unity/C# 命名空间
+option csharp_namespace = "BotRecommendServiceAPI";
+
+package BotRecommendServiceProto;
+
+
+enum BotRecommendServiceCommonCode {
+  None    = 0;
+  Success = 1;
+  Failed  = 99;
+}
+
+message BotRecommendServiceResult {
+  BotRecommendServiceCommonCode code    = 1;
+  string                        message = 2;
+}
+
+message GetDiscoverRecBotsRequest {
+  string category = 1;
+}
+
+message GetDiscoverRecBotsResponse {
+  repeated UserServiceProto.BotDetail bots       = 1;
+  BotRecommendServiceResult           result     = 2;
+  string                              request_id = 3;
+}
+
+message GetDiscoverRecBotsAdminRequest {
+  string                      category = 1;
+  int32                       user_id  = 2;
+  UserServiceProto.UserLocale lang     = 3;
+}
+
+message GetDiscoverRecBotsAdminResponse {
+  repeated UserServiceProto.BotDetail bots       = 1;
+  BotRecommendServiceResult           result     = 2;
+  string                              request_id = 3;
+}
+
+message GetRelatedRecBotsRequest {
+  string bot_id   = 1;
+  string category = 2;
+  string bot_name = 3;
+  string bot_ip   = 4;
+}
+
+message GetRelatedRecBotsResponse {
+  repeated UserServiceProto.BotDetail bots       = 1;
+  BotRecommendServiceResult           result     = 2;
+  string                              request_id = 3;
+}
+

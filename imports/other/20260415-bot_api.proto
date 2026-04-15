@@ -1,0 +1,334 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.pserver.proto.archat";
+option java_outer_classname = "BotServiceProto";
+
+import "archat_api/user_api.proto";
+option csharp_namespace = "BotServiceApi";
+
+enum BotServiceCommonCode {
+  BotServiceCommonCodeNone = 0;
+  Success                  = 1;
+  Reject                   = 2;
+  Failed                   = 99;
+  // bot operations
+  ERROR_MISSING_ID         = 100;
+  ERROR_DUPLICATE          = 101;
+  ERROR_UNKNOWN            = 102;
+  ERROR_BAN_WORDS          = 103;
+  ERROR_BAN_WORDS_NLP      = 104;
+  ERROR_NOT_OWNER          = 105;
+  ERROR_BOT_NOT_FOUND      = 106;
+  // comment operations
+  ERROR_BAD_COMMENT        = 107;
+}
+
+// /botApi/editBot
+message EditBotRequest {
+  UserServiceProto.BotAvatar  avatar            = 1;
+  string                      participant_name  = 2;
+  string                      greeting          = 3;
+  string                      short_description = 4;
+  string                      long_description  = 5;
+  string                      advanced          = 6;
+  UserServiceProto.Visibility visibility        = 7;
+  string                      title             = 8;
+  string                      bot_id            = 9;
+}
+message EditBotResponse {
+  UserServiceProto.BotDetail bot     = 1;
+  BotServiceCommonCode       code    = 2;
+  string                     message = 3; // if fail
+}
+
+// /botApi/createBot
+message CreateBotRequest {
+  UserServiceProto.BotAvatar  avatar            = 1;
+  string                      participant_name  = 2;
+  string                      greeting          = 3;
+  string                      short_description = 4;
+  string                      long_description  = 5;
+  string                      advanced          = 6;
+  UserServiceProto.Visibility visibility        = 7;
+  string                      title             = 8;
+  string                      bot_id            = 9;
+}
+message CreateBotResponse {
+  UserServiceProto.BotDetail bot     = 1;
+  BotServiceCommonCode       code    = 2;
+  string                     message = 3; // if fail
+}
+
+// /botApi/getBotIntro
+message GetBotIntroRequest {
+  string bot_id = 1;
+}
+
+message GetBotIntroResponse {
+  int64                comment_count = 1;
+  float                rating        = 2;
+  string               introduction  = 3;
+  BotServiceCommonCode code          = 4;
+  string               message       = 5;
+}
+
+message GetBotRatingByUserRequest {
+  string bot_id = 1;
+}
+
+message GetBotRatingByUserResponse {
+  UserRating           rating  = 1;
+  BotServiceCommonCode code    = 2;
+  string               message = 3;
+}
+
+// /botApi/getBotRating
+message GetBotRatingRequest {
+  string bot_id = 1;
+}
+
+message RatingDistribution {
+  string            bot_id              = 1;
+  float             rating              = 2;
+  // Key: rating, Value: count
+  map<int32, int64> rating_distribution = 3;
+}
+
+message GetBotRatingResponse {
+  RatingDistribution   rating_distribution = 1;
+  BotServiceCommonCode code                = 2;
+  string               message             = 3;
+}
+
+message UserRating {
+  int32  user_id = 1;
+  string bot_id  = 2;
+  float  rating  = 3;
+}
+
+// /botApi/createBotRating
+message CreateBotRatingRequest {
+  string bot_id = 1;
+  float  rating = 2;
+}
+
+message CreateBotRatingResponse {
+  UserRating           rating  = 1;
+  BotServiceCommonCode code    = 2;
+  string               message = 3;
+}
+
+
+message Comment {
+  int64                       id              = 1;
+  string                      bot_id          = 2;
+  int64                       parent_id       = 3;
+  int32                       user_id         = 4;
+  CommentType                 type            = 5;
+  int64                       reply_count     = 6;
+  string                      content         = 7;
+  CommentStatus               status          = 8;
+  int64                       created_at      = 9;
+  int64                       updated_at      = 10;
+  int64                       deleted_at      = 11;
+  string                      avatar_url      = 12;
+  string                      username        = 13;
+  int32                       size            = 14;
+  int64                       replied_id      = 15;
+  Comment                     parent_comment  = 16;
+  Comment                     replied_comment = 17;
+  UserServiceProto.UserLocale lang            = 18;
+
+  // post comment
+  // deprecated
+  int64                       post_id         = 19;
+
+  string                      nickname        = 20;
+}
+
+enum CommentType {
+  comment = 0;
+  reply   = 1;
+}
+
+enum CommentStatus {
+  valid   = 0;
+  banned  = 1;
+  deleted = 2;
+}
+
+// /botApi/createUserComment
+message CreateUserCommentRequest {
+  string      bot_id    = 1;
+  CommentType type      = 2;
+  int64       parent_id = 3;
+  int64       reply_id  = 4;
+  string      content   = 5;
+}
+
+message CreateUserCommentResponse {
+  BotServiceCommonCode code    = 1;
+  Comment              comment = 2;
+  string               message = 3;
+}
+
+// /botApi/getUserComments
+message GetUserCommentsRequest {
+  string bot_id            = 1;
+  int64  comment_id_offset = 2; // offset
+  int32  limit             = 3;
+}
+
+message GetUserCommentsResponse {
+  BotServiceCommonCode code          = 1;
+  repeated Comment     comments      = 2;
+  bool                 has_more      = 3;
+  int32                comment_count = 4;
+  string               message       = 5;
+}
+
+// /botApi/getReplyComments
+message GetReplyCommentsRequest {
+  int64 comment_id        = 1;
+  int64 comment_id_offset = 2;
+  int32 limit             = 3;
+}
+
+message GetReplyCommentsResponse {
+  BotServiceCommonCode code          = 1;
+  repeated Comment     comments      = 2;
+  bool                 has_more      = 3;
+  int32                comment_count = 4;
+  string               message       = 5;
+}
+
+// /botApi/getTopComment
+message GetTopCommentRequest {
+  string bot_id = 1;
+}
+
+message GetTopCommentResponse {
+  BotServiceCommonCode code    = 1;
+  Comment              comment = 2;
+  string               message = 3;
+}
+
+// /botApi/updateUserComment
+message UpdateUserCommentRequest {
+  int64  comment_id = 1;
+  string content    = 2;
+}
+
+message UpdateUserCommentResponse {
+  BotServiceCommonCode code    = 1;
+  Comment              comment = 2;
+  string               message = 3;
+}
+
+// /botApi/reportComment
+message ReportCommentRequest {
+  int64           comment_id = 1;
+  repeated string reason     = 2;
+}
+
+message ReportCommentResponse {
+  BotServiceCommonCode code    = 1;
+  string               message = 2;
+}
+
+// /botApi/getXHToken
+message GetXHTokenRequest {
+}
+
+message GetXHTokenResponse {
+  BotServiceCommonCode code    = 1;
+  string               token   = 2;
+  string               message = 3;
+}
+
+message SetInReviewVersionRequest {
+  UserServiceProto.ClientType client_type = 1;
+  string                      version     = 2;
+}
+
+message SetInReviewVersionResponse {
+  BotServiceCommonCode code    = 1;
+  string               message = 2;
+}
+
+message UpdateCaiAccountRequest {
+  int32                            id         = 1;
+  UserServiceProto.CaiAccountState state      = 2;
+  string                           cookie     = 3;
+  string                           user_agent = 4;
+}
+
+message UpdateCaiAccountResponse {
+  BotServiceCommonCode code    = 1;
+  string               message = 2;
+}
+
+message GetBotsByTagAdminRequest {
+  int32                               user_id     = 1;
+  UserServiceProto.GetBotsByTagOffset offset      = 2;
+  string                              bot_tag     = 3;
+  UserServiceProto.ClientType         client_type = 4;
+  string                              app_version = 5;
+}
+
+message GetBotsByTagResponse {
+  repeated UserServiceProto.BotDetail    bots        = 1;
+  UserServiceProto.GetBotsByTagOffset    next_offset = 2;
+  int32                                  total       = 3;
+  UserServiceProto.UserServiceCommonCode code        = 4;
+  string                                 message     = 5; // if fail
+  string                                 request_id  = 6;
+}
+
+// /botApi/createFakeBot
+message CreateFakeBotRequest {
+  string participant_name = 1;
+  string bot_id           = 2;
+  bool isFromRec = 3;
+}
+message CreateFakeBotResponse {
+  UserServiceProto.BotDetail bot     = 1;
+  BotServiceCommonCode       code    = 2;
+  string                     message = 3; // if fail
+}
+
+
+// ----------- digital human ------------ //
+// 创建完成后，author_id设置为1
+message AdminCreateBotForDigitalHumanRequest {
+  string                      avatar_url        = 1; //
+  string                      participant_name  = 2;
+  string                      greeting          = 3;
+  string                      short_description = 4;
+  string                      long_description  = 5;
+  string                      advanced          = 6;
+  UserServiceProto.Visibility visibility        = 7;
+  string                      title             = 8;
+  string                      bot_id            = 9;
+  int32                       user_id           = 10;
+}
+
+message AdminCreateBotForDigitalHumanResponse {
+  BotServiceCommonCode       code    = 1;
+  string                     message = 2; // if fail
+  UserServiceProto.BotDetail bot     = 3;
+}
+
+// UPLOAD_CHAT_SOUND
+message UploadChatSoundRequest {
+  int32 to_user_id = 1;
+  bytes file   = 2;
+  string fileType = 3; // wav,mp3 and ...
+}
+
+message UploadChatSoundResponse {
+  BotServiceCommonCode code    = 1;
+  string               message = 2; // if fail
+  string               url     = 3;
+}

@@ -1,0 +1,588 @@
+syntax = "proto3";
+
+package PostServiceProto;
+
+option java_multiple_files = true;
+option java_package = "com.pserver.proto.archat";
+option java_outer_classname = "PostServiceProto";
+// Unity/C# 命名空间
+option csharp_namespace = "PostServiceApi";
+
+enum PostServiceCommonCode {
+  PostServiceCommonCodeNone = 0;
+  Success = 1;
+  Reject = 2;
+  Failed = 99;
+  ERROR_BAN_WORDS = 100;
+  ERROR_CONFLICT = 101;
+  ERROR_NOT_FOUND = 102;
+  ERROR_ALREADY_LIKED = 103;
+  ERROR_NOT_LIKED = 104;
+}
+
+// =================== Comment ===================
+
+enum PostCommentType {
+  comment = 0;
+  reply = 1;
+}
+
+enum PostCommentStatus {
+  valid = 0;
+  banned = 1;
+  deleted = 2;
+}
+
+enum PostUserLocale {
+  en = 0;
+  es = 1;
+  de = 2;
+  id = 3;
+  fil = 4;
+  it = 5;
+  fr = 6;
+  pt = 7;
+  in = 8;
+}
+
+message PostComment {
+  int64                id = 1;
+  int64                parent_id = 3;
+  int32                user_id = 4;
+  PostCommentType      type = 5;
+  int64                reply_count = 6;
+  string               content = 7;
+  PostCommentStatus    status = 8;
+  int64                created_at = 9;
+  int64                updated_at = 10;
+  int64                deleted_at = 11;
+  string               avatar_url = 12;
+  string               username = 13;
+  int32                size = 14;
+  int64                replied_id = 15;
+  optional PostComment parent_comment = 16;
+  optional PostComment replied_comment = 17;
+  PostUserLocale       Lang = 18;
+  // post comment
+  int64                Post_id = 19;
+  string               Nickname = 20;
+
+  string               custom_avatar_url = 21;
+  string               beautified_avatar_url = 22;
+}
+
+message CreatePostCommentRequest {
+  int64           post_id = 1;
+  int64           parent_id = 2;
+  int64           reply_id = 3;
+  string          content = 4;
+  PostCommentType type = 5;
+  // 可以用来模拟评论，当这个id > 0的时候，会优先使用这个id进行评论
+  int32 fake_user_id = 6;
+  // 模拟延迟时间，注意此处配置是sec，当前时间+延迟的分钟数据
+  // eg： 60s， 等于 now() +60s 后执行
+  int32 fake_delay_time_sec = 7;
+}
+
+message CreatePostCommentResponse {
+  PostServiceCommonCode code = 1;
+  PostComment           comment = 2;
+  string                message = 3;
+}
+
+message GetPostCommentsRequest {
+  int64 post_id = 1;
+  int64 comment_id_offset = 2;
+  int32 limit = 3;
+}
+
+message GetPostCommentsResponse {
+  PostServiceCommonCode code = 1;
+  repeated PostComment  comments = 2;
+  bool                  has_more = 3;
+  int32                 comment_count = 4;
+  string                message = 5;
+}
+
+message GetReplyPostCommentsRequest {
+  int64 post_id = 1;
+  int64 comment_id = 2;
+  int64 comment_id_offset = 3;
+  int32 limit = 4;
+}
+
+message GetReplyPostCommentsResponse {
+  PostServiceCommonCode code = 1;
+  repeated PostComment  comments = 2;
+  bool                  has_more = 3;
+  int32                 comment_count = 4;
+  string                message = 5;
+}
+
+message UpdatePostCommentRequest {
+  int64  post_id = 1;
+  int64  comment_id = 2;
+  string content = 3;
+}
+
+message UpdatePostCommentResponse {
+  PostServiceCommonCode code = 1;
+  PostComment           comment = 2;
+  string                message = 3;
+}
+
+message DeletePostCommentRequest {
+  int64 post_id = 1;
+  int64 comment_id = 2;
+  int32 fake_user_id = 3;
+}
+
+message DeletePostCommentResponse {
+  PostServiceCommonCode code = 1;
+  string                message = 2;
+}
+
+// =================== Post ===================
+
+// LikePost
+message LikePostRequest {
+  int64 post_id = 1;
+  int32 fake_user_id = 2;
+  int32 fake_delay_time_sec = 3;
+}
+
+message LikePostResponse {
+  PostServiceCommonCode code = 1;
+  string                message = 2;
+  int32                 like_count = 3;
+}
+
+// UnlikePost
+message UnlikePostRequest {
+  int64 post_id = 1;
+  int32 fake_user_id = 2;
+  int32 fake_delay_time_sec = 3;
+}
+
+message UnlikePostResponse {
+  PostServiceCommonCode code = 1;
+  string                message = 2;
+  int32                 like_count = 3;
+}
+
+enum PostOperation {
+  PostOperationNone = 0;
+  PostLike = 1;
+  CommentLike = 2;
+}
+
+// 帖子排序方式
+enum SortType {
+  DEFAULT_SORT = 0;
+}
+
+enum LikeCountType {
+  MALE = 0;
+  FEMALE = 1;
+  NONBINARY = 2;
+}
+
+enum State {
+  NORMAL = 0;
+  BANNED = 1;
+  SUSPICIOUS = 2;
+}
+
+// Post 包含了帖子的全部信息，以及与帖子相关的用户信息和 PostUrlInfo（如果存在）
+message Post {
+  int64                       id = 1;
+  int32                       author_id = 2;
+  int32                       like_count = 3;
+  repeated PostPictureInQuery pictures = 4;
+  string                      content = 5;
+  bool                        is_liked = 6;
+  string                      author_avatar = 7;
+  string                      author_name = 8;
+  double                      score = 9;
+  bool                        is_pinned = 10;
+  int32                       comment_count = 11;
+  int64                       banned_at = 12;
+  int64                       deleted_at = 13;
+  int64                       created_at = 14;
+  int64                       partial_banned_at = 15;
+
+  // FIXME
+  // because in database schema, the column name is `user_id`,
+  // there is a compatibility issue while mapping to `author_id` in CacheProvider.get()
+  int32                       user_id = 16;
+  ///////
+
+  bool                        is_digital_human = 17;
+  string                      bot_id = 18;
+}
+
+// CreatePost
+message CreatePostRequest {
+  string               client_token = 1;
+  string               content = 2;
+  repeated PostPicture pictures = 3;
+  bool isPrivate = 4; // 仅自己可见，true -> 只有自己能见到
+}
+
+message PostPicture {
+  string name = 1;
+  bytes  file = 2;
+}
+
+message CreatePostResponse {
+  CreatePostResult code = 1;
+  int64            post_id = 2;
+  string           message = 3; // if fail
+  Post             Post = 4;
+}
+
+enum CreatePostResult {
+  CreatePostResultCodeNone = 0;
+  SuccessResult = 1;
+  RepeatedInProgress = 2;
+  RepeatedSuccess = 3;
+  FileTypeNotSupported = 11;
+  FileSizeNotSupported = 12;
+  FileUploadFail = 13;
+  ParameterError = 14;
+  PostContentNotSafe = 20;
+  PostUnknownError = 99;
+}
+
+message PostPictureInQuery {
+  string url = 1;
+  int32  width = 2;
+  int32  height = 3;
+  string minUrl = 4;
+  int32  min_width = 5;
+  int32  min_height = 6;
+  string mid_url = 7;
+  int32  mid_width = 8;
+  int32  mid_height = 9;
+  State  state = 20;
+}
+
+// DeletePost
+message DeletePostRequest {
+  int64 post_id = 1;
+}
+
+message DeletePostResponse {
+  PostServiceCommonCode code = 1;
+  string                message = 2;
+}
+
+// GetPostsByIds
+message GetPostsByIdsRequest {
+  repeated int64 post_ids = 1;
+}
+
+message GetPostsByIdsResponse {
+  PostServiceCommonCode code = 1;
+  string                message = 2;
+  repeated Post         post = 3;
+}
+
+message GetPostsByUserIdRequest {
+  int32 user_id = 1;
+  int64 cursor = 2; // post_id
+  int32 limit = 3;
+}
+
+message GetPostsByUserIdResponse {
+  PostServiceCommonCode code = 1;
+  string                message = 2;
+  repeated Post         posts = 3;
+  int64                 next_cursor = 4;
+}
+
+// DevBanPost - app内开dev mode可以直接ban post
+message DevBanPostRequest {
+  int64 post_id = 1;
+}
+
+message DevBanPostResponse {
+  PostServiceCommonCode code = 1;
+  string                message = 2;
+}
+
+// AdminBanPosts
+message AdminBanPostsRequest {
+  // js 无法处理 long
+  repeated string post_ids = 1;
+}
+
+message AdminBanPostsResponse {
+  PostServiceCommonCode code = 1;
+  string                message = 2;
+}
+
+// AdminUnbanPosts
+message AdminUnBanPostsRequest {
+  // js 无法处理 long
+  repeated string post_ids = 1;
+}
+
+message AdminUnBanPostsResponse {
+  PostServiceCommonCode code = 1;
+  string                message = 2;
+}
+
+message AdminGetPostsRequest {
+  int64 cursor = 1;
+  int32 limit = 2;
+  int32 user_id = 3; // 这个可以不用了
+  int32 gender = 4; // 对应性别
+  int32 app_name = 5;
+}
+
+message AdminGetPostsResponse {
+  PostServiceCommonCode code = 1;
+  string                message = 2;
+  repeated Post         posts = 3;
+  int64                 next_cursor = 4;
+}
+
+enum PostReportReason {
+  harassment = 0;
+  sexual = 1;
+  violence = 2;
+  illegal = 3;
+  underage = 4;
+  spam = 5;
+  other = 6;
+}
+
+message ReportPostRequest {
+  int64                     post_id = 1;
+  repeated PostReportReason reasons = 2;
+  string                    description = 3;
+  int32                     author_id = 4;
+}
+
+message ReportPostResponse {
+  PostServiceCommonCode code = 1;
+  string                message = 2;
+}
+
+message AdminAdjustPostScoreRequest {
+  int64 post_id = 1;
+  int32 score = 2;
+}
+
+message AdminAdjustPostScoreResponse {
+  PostServiceCommonCode code = 1;
+  string                message = 2;
+}
+
+// Discard overwritten score and use original.
+message AdminResetPostScoreRequest {
+  int64 post_id = 1;
+}
+
+message AdminResetPostScoreResponse {
+  PostServiceCommonCode code = 1;
+  string                message = 2;
+}
+
+message PostIdAndScore {
+  int64 post_id = 1;
+  float score = 2;
+}
+
+message AdminGetAllOverwritePostScoreRequest {
+}
+
+message AdminGetAllOverwritePostScoreResponse {
+  PostServiceCommonCode   code = 1;
+  string                  message = 2;
+  repeated PostIdAndScore scores = 3;
+}
+
+//message BanInfo {
+//  string key        = 1;
+//  string name       = 2;
+//  string parentName = 3;
+//  string confidence = 4;
+//}
+//
+//message AdminPostWithBanInfo {
+//  AdminPost        adminPost = 1;
+//  repeated BanInfo banInfos  = 2;
+//}
+//
+//message ReportPostRequest {
+//  int32  post_id = 1;
+//  string reason  = 2;
+//  string comment = 3;
+//}
+//
+//message ReportPostResponse {
+//  PostServiceCommonCode code    = 1;
+//  string                message = 2;
+//}
+//
+//// GetPagedPostReportsAdmin
+//message GetPagedPostReportsAdminRequest {
+//  int32 page_size   = 1;
+//  int32 page_number = 2;
+//}
+//
+//message PostReport {
+//  int64           post_id          = 1;
+//  int32           reporter_user_id = 2;
+//  string          comment          = 3;
+//  repeated string reasons          = 4;
+//}
+//
+//message PostReportWithPost {
+//  PostReport report = 1;
+//  AdminPost  post   = 2;
+//}
+//
+//message AdminGetPagedPostReportsResponse {
+//  int32                       total_page   = 1;
+//  int32                       current_page = 2;
+//  repeated PostReportWithPost reports      = 3;
+//}
+//
+//// GetPostReportsAdmin
+//message AdminGetPostReportsRequest {
+//  repeated int32 post_ids = 1;
+//}
+//
+//message AdminGetPostReportsResponse {
+//  PostServiceCommonCode code         = 1;
+//  repeated PostReport   post_reports = 2;
+//}
+//
+//// GetMostReportedPosts
+//message GetMostReportedPostsRequest {
+//  int32 limit = 1;
+//}
+//
+//message GetMostReportedPostsResponse {
+//  PostServiceCommonCode code               = 1;
+//  repeated int32        post_ids           = 2;
+//  repeated int32        post_report_counts = 3;
+//}
+//
+//// ParsePostRequest 用于请求解析视频链接的信息
+//message ParsePostRequest {
+//  string url = 1; // 要解析的视频链接
+//}
+//
+//message AdminGetAutoBannedPostsResponse {
+//  PostServiceCommonCode         code    = 1;
+//  string                        message = 2;
+//  repeated AdminPostWithBanInfo posts   = 3;
+//  int32                         total   = 4;
+//}
+
+
+// ------------- digital human -------------
+// CreatePost
+message AdminCreatePostRequest {
+  string               client_token = 1;
+  string               content = 2;
+  repeated PostPicture pictures = 3;
+  int32                user_id = 4;
+  int64                created_at = 5;
+  repeated PostPictureInQuery picturesInQuery = 6;
+}
+
+message AdminCreatePostResponse {
+  CreatePostResult code = 1;
+  string           message = 2; // if fail
+  Post             post = 3;
+}
+
+message AdminEditPostRequest {
+  int64                post_id = 1;
+  string               content = 2;
+  repeated PostPicture pictures = 3;
+  int32                user_id = 4;
+  int64                created_at = 5;
+}
+
+message AdminEditPostResponse {
+  CreatePostResult code = 1;
+  string           message = 2; // if fail
+  Post             post = 3;
+}
+
+// LikePost
+message AdminDigitalHumanLikePostRequest {
+  int64 post_id = 1;
+  int32 user_id = 2;
+}
+
+message AdminDigitalHumanLikePostResponse {
+  PostServiceCommonCode code = 1;
+  string                message = 2;
+  int32                 like_count = 3;
+}
+
+message AdminCreatePostCommentRequest {
+  int64           post_id = 1;
+  int64           parent_id = 2;
+  int64           reply_id = 3;
+  string          content = 4;
+  PostCommentType type = 5;
+  int32           user_id = 6;
+}
+
+message AdminCreatePostCommentResponse {
+  PostServiceCommonCode code = 1;
+  PostComment           comment = 2;
+}
+
+// =================== Feed ===================
+
+message GetPostFeedRequest {
+  int32 limit = 1;
+  int64 offset = 2;
+}
+
+message GetPostFeedResponse {
+  PostServiceCommonCode code = 1;
+  string                message = 2;
+  repeated Post         posts = 3;
+  int64                 next_offset = 4;
+}
+
+message GetPostDetailRequest {
+  int64 post_id = 1;
+}
+
+message GetPostDetailResponse {
+  PostServiceCommonCode code = 1;
+  string                message = 2;
+  Post                  post = 3;
+}
+
+message AdminDeletePostRequest {
+  int64 post_id = 1;
+}
+
+message AdminDeletePostResponse {
+  PostServiceCommonCode code = 1;
+  string                message = 2;
+}
+
+// 前端新架构 - 发帖图片自动生成文案
+message PostSuggestedContentRequest {
+  repeated PostPicture pictures = 1; // 用户图片
+  int64 timezone_offset_minutes = 2; // 用户本地时区偏移（分钟），用于“早晨/夜晚”等文案语境
+}
+
+message PostSuggestedContentResponse {
+  PostServiceCommonCode code = 1;
+  string message = 2;
+  string suggested_content = 3;
+}

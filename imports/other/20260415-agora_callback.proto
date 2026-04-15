@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.pserver.proto.archat";
+option java_outer_classname = "AgoraCallbackServiceProto";
+
+// Unity/C# 命名空间
+option csharp_namespace = "AgoraCallbackServiceApi";
+
+package AgoraCallbackServiceProto;
+
+// 融合 CDN 消息类型
+enum FCDNSEventType {
+  FCDNSEventTypeNone = 0;
+  PublishStart = 1;
+  PublishEnd = 2;
+  NewStandardSnapshotFile = 102;
+  NewStandardRecordFile = 101;
+}
+
+// 互动直播消息类型
+enum ILSEventType {
+  ILSEventTypeNone = 0;
+  BroadcasterLeaveChannel = 104;
+}
+
+enum ProductType {
+  ProductTypeNone = 0;
+  // 互动直播
+  InteractiveLiveStreaming = 1;
+  // 融合 CDN
+  FusionCDNStreaming = 7;
+}
+
+message StreamInfo {
+  string env = 1;
+  string encounter_id = 2;
+}

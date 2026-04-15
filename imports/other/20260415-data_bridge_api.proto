@@ -1,0 +1,273 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.pserver.proto.archat";
+option java_outer_classname = "DataBridgeServiceProto";
+
+// Unity/C# 命名空间
+option csharp_namespace = "DataBridgeServiceAPI";
+
+package DataBridgeServiceProto;
+
+message UploadUserBehaviorRequest {
+  repeated UserBehavior user_behaviors = 1;
+}
+
+message UploadUserBehaviorResponse {
+  DataBridgeServiceCommonCode code = 1;
+  string message = 2;
+}
+
+enum DataBridgeServiceCommonCode {
+  DataBridgeServiceCommonCodeNone = 0;
+  Success = 1;
+  Failed = 99;
+  Failed_Invalid_Params = 2;
+}
+
+message UserBehavior {
+  int64 bhv_time = 1;                   // 行为发生时间戳，以秒为单位的unix timestamp
+  BehaviorType bhv_type = 2;                  // 行为名
+  string doc_id = 3;                    // 文档ID
+  SCM scm = 4;                       // 来自哪家推荐 如Bytedance, Presence
+  string spm = 5;                       // A$##$B$##$C$##$D A:业务， B:页面， C:页面区块， D:区块内点位
+  string user_id = 6;                   // 用户id
+  string author_id = 7;                 // bot作者id
+  string parent_doc_id = 8;             // 详情页母bot id
+  string query = 9;                     // 搜索query
+  string request_id = 10;               // 每次请求唯一ID
+  int32 stay_time = 11;                 // 时长 stay行为下，回传停留时长（单位为秒）
+  repeated string source_type = 12;              // 来源类型
+  int32 video_duration = 13;            // 视频时长
+  int32 video_play_time = 14;           // 视频播放时长
+  string area = 15;                     // 用户发生行为的商圈
+  string city = 16;                     // 用户发生行为的城市
+  string client_version = 17;           // App版本
+  string device_model = 18;             // 设备型号 如（Samsung SM-S918U1）
+  string network = 19;                  // 网络类型, wifi/4G/5G
+  OS os = 20;                           // iOS/Android
+  string os_version = 21;               // 操作系统版本
+  Platform platform = 22;               // 平台，我们只有App
+  string trace_id = 23;                 // 跟踪ID
+  string trans_data = 24;               // 传输数据
+  string ipv4 = 25;                     // ipv4
+  string ipv6 = 26;                     // ipv6
+  string dislike_type = 27;
+  string dislike_value = 28;
+  int32 round = 29;                     // 轮次
+  int32 refresh_cnt = 30;               // 刷新次数
+  int32 regenerate_cnt = 31;            // 重新生成消息次数
+  string device_id = 32;                // 设备ID
+}
+enum BehaviorType {
+  UNKNOWN = 0;              // 用于未知或未指定的行为
+  EXPOSURE = 1;             // 曝光
+  CLICK = 2;                // 点击
+  START_CHAT = 3;           // 开始聊天
+  SEND_MESSAGE_TO_BOT = 4;  // 向机器人发送消息
+  STAY = 5;                 // 停留
+  REFRESH = 6;              // 刷新
+  RESTART_CHAT = 7;         // 重新开始聊天
+  REGENERATE_MESSAGE = 8;   // 重新生成消息
+  CREATE_BOT = 9;           // 创建机器人
+  SEARCH = 10;              // 搜索
+}
+
+enum Platform {
+  PLATFORM_APP = 0;
+}
+
+enum OS {
+  OS_UNKNOWN = 0;
+  OS_IOS = 1;
+  OS_ANDROID = 2;
+}
+
+enum SCM {
+  SCM_UNKNOWN = 0;
+  SCM_BYTEDANCE = 1;
+  SCM_PRESENCE = 2;
+}
+
+//statCardShow
+message StatCardShowRequest {
+  repeated int32 card_user_ids = 1;
+}
+
+message StatCardShowResponse {
+  DataBridgeServiceCommonCode code = 1;
+  string message = 2;
+}
+
+// reportUserAction
+message ReportUserActionRequest {
+  repeated int32 userIds = 1;
+  ReportUserAction action = 2;
+}
+
+message ReportUserActionResponse {
+  DataBridgeServiceCommonCode code = 1;
+  string message = 2;
+}
+
+enum ReportUserAction {
+  REPORT_USER_ACTION_UNKNOWN = 0;
+  REPORT_USER_ACTION_SHOW = 1;
+  REPORT_USER_ACTION_CALL = 2;
+}
+
+// firebasePush
+message FireBasePushRequest {
+  int32 user_id = 1;
+  Notification notification = 2; // firebase的通用字段
+  repeated FireBaseData data = 3; // firebase的通用字段
+  string badge = 4; // web端
+  string icon = 5; // web端
+  // 其他字段需要啥后面再加
+}
+
+message FireBaseData {
+  string key = 1;
+  string value = 2;
+}
+message Notification {
+  string title = 1;
+  string body = 2;
+}
+
+message FireBasePushResponse {
+  DataBridgeServiceCommonCode code = 1;
+  string message = 2;
+}
+
+// createCloudRecording
+message CreateCloudRecordingRequest {
+  // json string
+  /**
+       StorageParams: {
+        CloudVod: {
+          TencentVod: {
+            ExpireTime: 0,
+            UserDefineRecordId: customPrefix,  // 客户端传递
+          },
+        },
+      },
+      UserSig: "", // 这个服务端会覆盖
+      UserId: "", // 这个服务端会覆盖
+      RecordParams: {
+        MaxIdleTime: 60,
+        StreamType: 0,
+        RecordMode: 2,
+      },
+      RoomIdType: 1,
+      MixTranscodeParams: {
+        VideoParams: {
+          Width: 360,
+          BitRate: 500000,
+          Fps: 15,
+          Height: 640,
+          Gop: 10,
+        },
+      },
+      MixLayoutParams: {
+        MixLayoutMode: 3,
+      },
+      SdkAppId: SDK_APP_ID, // 这个服务端会覆盖
+      RoomId: roomId,  // 客户端传递
+    };
+   */
+  string request = 1;
+}
+
+message CreateCloudRecordingResponse {
+  DataBridgeServiceCommonCode code = 1;
+  string message = 2;
+  string taskId = 3;
+  string requestId = 4;
+}
+
+// deleteCloudRecording
+message DeleteCloudRecordingRequest {
+  string taskId = 1;
+  string requestId = 2;
+}
+
+message DeleteCloudRecordingResponse {
+  DataBridgeServiceCommonCode code = 1;
+  string message = 2;
+  string taskId = 3;
+  string requestId = 4;
+}
+
+enum CallType {
+  AUDIO = 0;
+  VIDEO = 1;
+}
+
+enum CallEvent {
+  CALL_BEGIN = 0;
+  CALL_END = 1;
+}
+
+message ReportCallEventRequest {
+  string room_id = 1;
+  int32 caller_id = 2;
+  int32 callee_id = 3;
+  int32 pay_user_id = 4; // 当前通话的由谁来支付，传0表示免费
+  CallType call_type = 5;
+  CallEvent call_event = 6;
+  int32 free_call_duration = 7; // 当前剩余的免费通话时间（单位：s）
+}
+
+message ReportCallEventResponse {
+  DataBridgeServiceCommonCode code = 1;
+  string message = 2;
+}
+
+
+message StartAITranscriptionRequest {
+  string room_id = 1; // 房间id
+  int32 room_id_type = 2; // TRTC房间号的类型，0代表数字房间号，1代表字符串房间号。不填默认是数字房间号。
+}
+
+message StartAITranscriptionResponse {
+  DataBridgeServiceCommonCode code = 1;
+  string message = 2;
+  string task_id = 3; // 用于唯一标识转录任务。
+}
+
+message StopAITranscriptionRequest {
+  string task_id = 1; // 转录任务的id
+}
+
+message StopAITranscriptionResponse {
+  DataBridgeServiceCommonCode code = 1;
+}
+
+// 上报会话来源
+message ReportConversationSourceRequest {
+  int32 peer_user_id = 1;
+  string source_type = 2;
+}
+
+message ReportConversationSourceResponse {
+  DataBridgeServiceCommonCode code = 1;
+  string message = 2;
+}
+
+// 批量查询会话来源
+message QueryConversationSourceRequest {
+  repeated int32 user_ids = 1;
+  int32 from_user_id = 2;
+}
+
+message QueryConversationSourceResponse {
+  DataBridgeServiceCommonCode code = 1;
+  string message = 2;
+  repeated ConversationSource sources = 3;
+}
+
+message ConversationSource {
+  int32 user_id = 1;
+  string source_type = 2;
+}
