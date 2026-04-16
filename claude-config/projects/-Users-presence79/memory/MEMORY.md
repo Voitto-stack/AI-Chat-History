@@ -15,6 +15,7 @@
 - [feedback_demonstrate_not_describe.md](feedback_demonstrate_not_describe.md) - "展示"/"演示"类请求必须实际执行，不能只口头描述
 - [feedback_feishu_doc_collaborator.md](feedback_feishu_doc_collaborator.md) - **[铁规]** 创建飞书文档后必须设为任何人可编辑
 - [feedback_feishu_doc_direct_blocks.md](feedback_feishu_doc_direct_blocks.md) - **[铁规]** 禁止markdown转飞书，必须直接构建原生块
+- [feedback_database_confirmation.md](feedback_database_confirmation.md) - 涉及数据库的任何操作都必须先停下确认
 
 ## 学到的工作模式（Self-Improving）
 - [pattern_collaboration_pat-2026-03-24-001.md](../../../.claude/memory/self-improving/semantic/pattern_collaboration_pat-2026-03-24-001.md) - 提出自动化方案时，主动分析权衡并邀请用户质疑

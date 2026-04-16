@@ -35,3 +35,5 @@
 
 - [直接执行优先](feedback_direct_execution_for_urgent_bugfixes.md) — 紧急 bug 修复少走流程，先动代码
 - [老后端服务位置](reference_old_backend.md) — dora-service 和 presence-server-gateway 的本地路径
+- [Minerva 迁移到 sitin-next 采用完全融合重构](minerva_to_sitin_next_full_rebuild_target.md) — 只迁业务逻辑和契约，不保留旧的 Minerva 结构
+- [Minerva 数据层直接融入 sitin-next plugin 体系](minerva_to_sitin_next_direct_plugin_data_layer.md) — 不走 Prisma 过渡层，第一阶段直接按 plugin / business package 形态落地

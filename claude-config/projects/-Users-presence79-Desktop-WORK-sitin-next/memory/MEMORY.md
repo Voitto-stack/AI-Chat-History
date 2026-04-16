@@ -1,0 +1,1 @@
+- [Simple UI fixes: no brainstorming](feedback_simple_ui_fix_no_brainstorming.md) — For narrow style bugs, diagnose and patch directly.
