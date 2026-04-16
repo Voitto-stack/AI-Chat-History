@@ -1,0 +1,13 @@
+---
+title: Users-Bzu_QlKX
+date: 2026-04-16T11:07:55+08:00
+source: import
+language: js
+original: Users-Bzu_QlKX.js
+---
+
+# Users-Bzu_QlKX
+
+```js
+import{r as e}from"./rolldown-runtime-Dw2cE7zH.js";import{E as t,N as n,P as r,R as i,T as a,V as o,b as s,g as c,h as l,k as u,v as d,y as f}from"./vendor-antd-D2OY8gyT.js";import{r as p}from"./vendor-codemirror-CDEiZDLp.js";import{t as m}from"./client-DP1wUUNV.js";var h=e(o()),g=()=>m.post(`/users/list`),_=e=>m.post(`/users/create`,e),v=e=>m.post(`/users/update`,e),y=e=>m.post(`/users/delete`,{id:e}),b=p(),x=[{label:`管理员`,value:`admin`},{label:`维护者`,value:`maintainer`},{label:`开发者`,value:`developer`},{label:`只读`,value:`viewer`}],S=()=>{let[e,i]=(0,h.useState)([]),[a,o]=(0,h.useState)(!1),[l,d]=(0,h.useState)(!1),[f,p]=(0,h.useState)(!1),[m,x]=(0,h.useState)(null),[S]=t.useForm(),T=async()=>{o(!0);try{i(await g())}catch{}finally{o(!1)}};return(0,h.useEffect)(()=>{T()},[]),(0,b.jsxs)(u,{direction:`vertical`,style:{width:`100%`},children:[(0,b.jsx)(r,{type:`primary`,icon:(0,b.jsx)(n,{}),onClick:()=>{x(null),S.resetFields(),d(!0)},children:`添加用户`}),(0,b.jsx)(c,{columns:C(e=>{x(e),S.setFieldsValue({username:e.username,email:e.email,role:e.role}),d(!0)},async e=>{try{await y(e),s.success(`已删除`),T()}catch{}}),dataSource:e,rowKey:`id`,loading:a}),(0,b.jsx)(w,{open:l,editing:!!m,submitting:f,form:S,onCancel:()=>d(!1),onFinish:async e=>{p(!0);try{if(m){let t={id:m.id};e.email!==m.email&&(t.email=e.email),e.role!==m.role&&(t.role=e.role),await v(t),s.success(`用户已更新`)}else await _(e),s.success(`用户已创建`);d(!1),S.resetFields(),T()}catch{}finally{p(!1)}}})]})},C=(e,t)=>[{title:`用户名`,dataIndex:`username`,key:`username`},{title:`邮箱`,dataIndex:`email`,key:`email`},{title:`角色`,dataIndex:`role`,key:`role`,render:e=>(0,b.jsx)(l,{children:e})},{title:`操作`,key:`action`,render:(n,i)=>(0,b.jsxs)(u,{children:[(0,b.jsx)(r,{size:`small`,onClick:()=>e(i),children:`编辑`}),(0,b.jsx)(d,{title:`确认删除该用户？`,onConfirm:()=>t(i.id),children:(0,b.jsx)(r,{size:`small`,danger:!0,children:`删除`})})]})}],w=({open:e,editing:n,submitting:r,form:o,onCancel:s,onFinish:c})=>(0,b.jsx)(f,{title:n?`编辑用户`:`添加用户`,open:e,onCancel:s,onOk:()=>o.submit(),confirmLoading:r,children:(0,b.jsxs)(t,{form:o,layout:`vertical`,onFinish:c,children:[(0,b.jsx)(t.Item,{name:`username`,label:`用户名`,rules:[{required:!0}],children:(0,b.jsx)(a,{disabled:n})}),(0,b.jsx)(t.Item,{name:`email`,label:`邮箱`,rules:[{required:!0,type:`email`}],children:(0,b.jsx)(a,{})}),!n&&(0,b.jsx)(t.Item,{name:`password`,label:`密码`,rules:[{required:!0,min:6}],children:(0,b.jsx)(a.Password,{})}),(0,b.jsx)(t.Item,{name:`role`,label:`角色`,rules:[{required:!0}],children:(0,b.jsx)(i,{options:x})})]})});export{S as UsersPage};
+```

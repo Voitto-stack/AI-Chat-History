@@ -1,0 +1,28 @@
+---
+title: PrecacheInstallReportPlugin.d
+date: 2026-04-16T11:07:54+08:00
+source: import
+language: ts
+original: PrecacheInstallReportPlugin.d.ts
+---
+
+# PrecacheInstallReportPlugin.d
+
+```ts
+import { WorkboxPlugin } from 'workbox-core/types.js';
+import '../_version.js';
+/**
+ * A plugin, designed to be used with PrecacheController, to determine the
+ * of assets that were updated (or not updated) during the install event.
+ *
+ * @private
+ */
+declare class PrecacheInstallReportPlugin implements WorkboxPlugin {
+    updatedURLs: string[];
+    notUpdatedURLs: string[];
+    handlerWillStart: WorkboxPlugin['handlerWillStart'];
+    cachedResponseWillBeUsed: WorkboxPlugin['cachedResponseWillBeUsed'];
+}
+export { PrecacheInstallReportPlugin };
+
+```

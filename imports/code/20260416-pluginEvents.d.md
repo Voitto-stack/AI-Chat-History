@@ -1,0 +1,23 @@
+---
+title: pluginEvents.d
+date: 2026-04-16T11:07:54+08:00
+source: import
+language: ts
+original: pluginEvents.d.ts
+---
+
+# pluginEvents.d
+
+```ts
+import '../_version.js';
+export declare const enum pluginEvents {
+    CACHE_DID_UPDATE = "cacheDidUpdate",
+    CACHE_KEY_WILL_BE_USED = "cacheKeyWillBeUsed",
+    CACHE_WILL_UPDATE = "cacheWillUpdate",
+    CACHED_RESPONSE_WILL_BE_USED = "cachedResponseWillBeUsed",
+    FETCH_DID_FAIL = "fetchDidFail",
+    FETCH_DID_SUCCEED = "fetchDidSucceed",
+    REQUEST_WILL_FETCH = "requestWillFetch"
+}
+
+```

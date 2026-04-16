@@ -1,0 +1,43 @@
+---
+title: getOrCreateDefaultRouter
+date: 2026-04-16T11:07:54+08:00
+source: import
+language: ts
+original: getOrCreateDefaultRouter.ts
+---
+
+# getOrCreateDefaultRouter
+
+```ts
+/*
+  Copyright 2019 Google LLC
+
+  Use of this source code is governed by an MIT-style
+  license that can be found in the LICENSE file or at
+  https://opensource.org/licenses/MIT.
+*/
+
+import {Router} from '../Router.js';
+import '../_version.js';
+
+let defaultRouter: Router;
+
+/**
+ * Creates a new, singleton Router instance if one does not exist. If one
+ * does already exist, that instance is returned.
+ *
+ * @private
+ * @return {Router}
+ */
+export const getOrCreateDefaultRouter = (): Router => {
+  if (!defaultRouter) {
+    defaultRouter = new Router();
+
+    // The helpers that use the default Router assume these listeners exist.
+    defaultRouter.addFetchListener();
+    defaultRouter.addCacheListener();
+  }
+  return defaultRouter;
+};
+
+```

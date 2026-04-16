@@ -1,0 +1,14 @@
+---
+title: index-7qpdRWnW
+date: 2026-04-16T11:07:54+08:00
+source: import
+language: js
+original: index-7qpdRWnW.js
+---
+
+# index-7qpdRWnW
+
+```js
+import{c3 as e,cq as a,b$ as t,cP as o,dw as r,bY as s,c7 as c,dx as i,dy as n,dz as l,dA as u,ct as m,cG as d,cK as P}from"./main-BcomqkE8.js";import{r as f}from"./vendor-zustand-CLAZo2La.js";import{bo as S,a4 as A}from"./vendor-proto-C-lnwXQR.js";import{u as g}from"./vendor-react-54E4_waN.js";import"./BytePlusManager-C3IUa--3.js";import"./vendor-image-DqRj4WXi.js";import"./vendor-im-7n5L8jf0.js";import"./vendor-tuicall-CoI_IVso.js";import"./vendor-utils-Di1-0pO8.js";function _(){const _=g(),{paypalAccount:w,logout:N}=e(),{willCashoutStage:h}=a(),y=f.useRef(!1),U=f.useRef(h),p=f.useRef(N);return f.useEffect(()=>{U.current=h,p.current=N}),f.useEffect(()=>{const e=()=>{const e=localStorage.getItem(s.PAYPAL_OAUTH_HISTORY_LENGTH);if(e){const a=Number(e);window.history.go(-(window.history.length-a))}else _("/")};w&&!y.current&&(y.current=!0,(async()=>{try{const t=await r();if(!t||!t.email)return console.error("PayPal OAuth: failed to fetch user info",{hasCode:!!new URLSearchParams(window.location.search).get("code")}),localStorage.removeItem(s.CASHOUT_FLOW_PENDING),c.error("Failed to connect PayPal. Please try again."),await i(n.Error),void e();const o=t.address?.country||"";"US"===o?localStorage.setItem(s.PAYPAL_COUNTRY_IS_US,"true"):localStorage.setItem(s.PAYPAL_COUNTRY_IS_US,"false");try{const e="us"===await l();let a=S.US_PAYPAL_UNKNOWN;if("US"===o?a=S.US_PAYPAL_ACCOUNT:o&&"US"!==o&&(a=S.NON_US_PAYPAL_ACCOUNT),(await u({isLbsAmerica:e,usPaypalAccountType:a})).code===A.USER_BANNED)return console.log("User has been banned, logging out..."),p.current(),void(window.location.href="/onboarding")}catch(a){console.error("Failed to check withdraw status:",a)}if(!w||t.email.trim().toLowerCase()!==w.trim().toLowerCase()||o&&"US"!==o){await i(n.Failed);const e=t.email.trim().toLowerCase()===w?.trim().toLowerCase(),a=!o||"US"===o;console.error("PayPal verification failed:",{oauthEmail:t.email,boundEmail:w,country:o,emailMatch:e,countryOk:a,hasPaypalAccount:!!w})}else await i(n.Success);const f=localStorage.getItem(s.CASHOUT_FLOW_PENDING);if(e(),f){localStorage.removeItem(s.CASHOUT_FLOW_PENDING);const e=m[U.current];setTimeout(()=>{d({initialStatus:P.PAYPAL_BIND_RESULT,amount:e.toFixed(2)})},500)}}catch(a){console.error("Failed to handle PayPal callback:",a),localStorage.removeItem(s.CASHOUT_FLOW_PENDING),c.error("Failed to connect PayPal. Please try again."),await i(n.Error),_("/")}})())},[w,_]),t.jsx("div",{className:"flex items-center justify-center h-full w-full fixed inset-0 bg-surface",children:t.jsxs("div",{className:"flex flex-col items-center gap-4",children:[t.jsx(o,{size:48}),t.jsx("p",{className:"text-[15px] text-gray-500 text-center px-6",children:"Processing PayPal authentication..."})]})})}export{_ as default};
+
+```

@@ -1,41 +1,51 @@
 ---
 title: README
-date: 2026-04-15T17:04:52+08:00
+date: 2026-04-16T11:07:55+08:00
 source: import
 original: README.md
 ---
 
-# Minerva
+# @heyhru/common-util-logger
 
-Minerva 后台管理系统前端，基于 Umi Max + Ant Design 构建。
+Shared logger based on [pino](https://github.com/pinojs/pino), usable on both server and browser.
 
-## 快速开始
+## Usage
 
-```bash
-# 安装依赖
-pnpm install
+```ts
+import { createLogger } from "@heyhru/common-util-logger";
 
-# 启动开发服务器
-pnpm dev
+const logger = createLogger({ name: "my-service" });
 
-# 构建
-pnpm build
+logger.info("server started");
+logger.error({ err }, "request failed");
+logger.debug({ userId }, "user login");
+
+// Child logger with bound context
+const reqLogger = logger.child({ requestId: "abc-123" });
+reqLogger.info("handling request");
 ```
 
-访问 http://localhost:8000
+## Options
 
-## 技术栈
+| Option | Type   | Default                             | Description       |
+| ------ | ------ | ----------------------------------- | ----------------- |
+| name   | string | —                                   | Logger name       |
+| level  | string | `debug` (dev) / `info` (production) | Minimum log level |
 
-- Umi Max 4.x
-- Ant Design 5.x
-- TypeScript
-- React 19
+## Log Levels
 
-## 文档
+| Level | Value | Usage                  |
+| ----- | ----- | ---------------------- |
+| fatal | 60    | Process about to crash |
+| error | 50    | Runtime errors         |
+| warn  | 40    | Warnings               |
+| info  | 30    | General information    |
+| debug | 20    | Debug details          |
+| trace | 10    | Fine-grained tracing   |
 
-详细的架构说明、设计模式、开发流程请参阅：
+## Environment Behavior
 
-- [Minerva 文档库](../../docs/minerva/README.md)
-- [本地开发指南](../../docs/minerva/05_dev_process/local_dev.md)
-- [构建部署流程](../../docs/BUILD_FLOW.md)
+- **Development** (`NODE_ENV !== 'production'`): defaults to `debug` level, uses `pino-pretty` for colorized output (server only)
+- **Production**: defaults to `info` level, outputs JSON to stdout
+- **Browser**: uses `console` methods, no `pino-pretty`
 
