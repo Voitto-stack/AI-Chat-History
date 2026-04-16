@@ -1,6 +1,6 @@
 ---
 title: migrations
-date: 2026-04-16T11:07:55+08:00
+date: 2026-04-16T21:03:22+08:00
 source: import
 language: ts
 original: migrations.ts
@@ -114,6 +114,10 @@ CREATE TABLE IF NOT EXISTS saved_sqls (
 );
 
 CREATE INDEX IF NOT EXISTS idx_saved_sqls_user_id ON saved_sqls(user_id);`,
+  },
+  {
+    name: "007_approvals_add_db_name.sql",
+    sql: () => `ALTER TABLE approvals ADD COLUMN IF NOT EXISTS db_name TEXT;`,
   },
 ];
 
