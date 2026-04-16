@@ -2,7 +2,7 @@
 title: Minerva 迁移方案评估
 date: 2026-04-16 11:08:00
 model: Claude Opus 4.6
-messages: 6
+messages: 8
 ---
 
 # Minerva 迁移方案评估
@@ -100,3 +100,96 @@ B. 不要，直接一步改成 plugin 体系
 
 **A** = 第一阶段保留 Prisma  
 **B** = 直接一步改成 plugin 体系
+
+### User (11:12:00)
+B
+
+### Assistant (11:12:00)
+现在路线已经很明确了：
+
+- 总体目标：**C，完全融合重构**
+- 数据层原则：**B，第一阶段就直接融入 sitin-next 的 plugin / business package 体系**
+
+这意味着迁移方案不能再按“旧系统搬家”来设计了，而要按“目标仓重建 Minerva 领域能力”来设计。
+
+如果按你现在的选择，我会把迁移拆成 5 个层次，而且顺序不能乱：
+
+**第一层：契约层先落**  
+先把 `packages/minerva-schemas` 的内容重新安置为 `sitin-next` 里的共享 contract package。  
+这层最先做，因为它定义了：
+- API request/response
+- 枚举
+- RBAC 权限 key
+- 前后端共享类型
+
+不先定契约，后端 business package 和前端页面都会边迁边漂。
+
+**第二层：后端领域拆包**  
+不要在 `sitin-next` 里再造一个 `minerva-server` 大包。  
+应该按业务域拆成多个 package，比如：
+- `business-minerva-auth`
+- `business-minerva-rbac`
+- `business-minerva-user`
+- `business-minerva-dashboard`
+- `business-minerva-content`  
+名字不一定这样，但思路要是“领域包”，不是“一个新后端 app”。
+
+然后这些 business package 通过 `app-dms-server` 类似的服务壳，或者一个新的 minerva server app/package 暴露 HTTP。
+
+**第三层：数据访问直接按 plugin 体系落**  
+既然你选了 B，就不要再把 Prisma 当正式过渡层。  
+要直接设计：
+- db plugin 怎么注入
+- repository/query service 怎么组织
+- 哪些查询属于通用 mysql/pg plugin，哪些属于 Minerva 专属 domain repository
+- 原来 Prisma 的查询逻辑怎么映射成 SQL / repository 方法
+
+这里最危险，必须做“查询语义对照表”，逐个确认：
+- where 条件
+- NULL 语义
+- 排序
+- 分页
+- count
+- 聚合
+- JSON 字段解析
+- 分区表查询策略
+
+**第四层：前端重建承载**  
+`apps/minerva` 的 Umi 壳不保留，但“页面行为”要保留。  
+所以前端不是“重写一个新后台”，而是：
+- 先做路由信息架构映射
+- 再迁页面状态和筛选模型
+- 再迁 API 调用
+- 最后迁权限显示逻辑
+
+尤其你之前已经多次强调的这些点，迁移时必须锁死：
+- useState 默认值要跟老系统一致
+- SQL NULL 对应的前端筛选语义不能变
+- 不要顺手加老系统没有的功能
+
+**第五层：回归验证层**  
+这次你选的是高风险路线，所以验证不能只靠 lint/test。  
+必须有三类对照：
+- **接口对照**：老接口 vs 新接口，输入输出是否一致
+- **查询对照**：同一筛选条件下，结果集和计数是否一致
+- **页面对照**：同一用户、同一筛选、同一权限下，页面表现是否一致
+
+你这次选 B，其实本质上是在选一种更激进的迁移哲学：  
+**不接受“为了平稳过渡而保留旧技术边界”，要从第一天开始就让新仓长成目标形状。**
+
+这个方向不是不行，但代价是：  
+你后面一定要接受“迁移前先做模型抽象和语义清点”，否则代码一开搬就会失控。  
+也就是说，接下来最该做的不是直接列文件复制清单，而是先定 **Minerva 在 sitin-next 里的领域拆分蓝图**。
+
+所以我只问下一个最关键的问题：
+
+你希望我下一步先给你哪一种？
+
+A. **先给最终目录蓝图**  
+我直接给出 Minerva 在 `sitin-next` 里的推荐 package / app 结构
+
+B. **先给迁移分期方案**  
+我先按 Phase 1 / 2 / 3 拆出完整迁移路径和每阶段目标
+
+C. **先给领域拆分图**  
+我先把 Minerva 现有能力拆成 auth / rbac / user / dashboard / content 这类领域边界，再决定目录怎么放
