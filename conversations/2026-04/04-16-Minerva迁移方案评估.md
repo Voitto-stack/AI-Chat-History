@@ -2,7 +2,7 @@
 title: Minerva 迁移方案评估
 date: 2026-04-16 11:08:00
 model: Claude Opus 4.6
-messages: 8
+messages: 9
 ---
 
 # Minerva 迁移方案评估
@@ -193,3 +193,6 @@ B. **先给迁移分期方案**
 
 C. **先给领域拆分图**  
 我先把 Minerva 现有能力拆成 auth / rbac / user / dashboard / content 这类领域边界，再决定目录怎么放
+
+### Assistant (11:13:00)
+我把问题收回到最关键的一步。
