@@ -2,7 +2,7 @@
 title: Minerva 迁移方案评估
 date: 2026-04-16 11:08:00
 model: Claude Opus 4.6
-messages: 4
+messages: 5
 ---
 
 # Minerva 迁移方案评估
@@ -47,3 +47,35 @@ C
 A. **继续 Prisma 主导**：在 `sitin-next` 里也保留 Prisma 作为 Minerva 业务的数据访问核心  
 B. **融入 sitin-next server plugins**：把数据访问逐步改造成它现有的 mysql/pg plugin 风格  
 C. **双阶段**：第一阶段保留 Prisma 保真迁移，第二阶段再逐步抽到 `sitin-next` 的 plugin / business package 体系里
+
+### Assistant (11:10:00)
+在你已经选了 **C：完全融合重构** 的前提下，**我推荐后端数据层也走 C：双阶段**。  
+也就是先保留 Prisma 做“语义保真迁移”，等业务跑稳后，再逐步抽成 `sitin-next` 现有的 plugin / business package 体系。  
+原因很简单：你现在已经同时在做“架构重建”，如果数据层再一步到位重写，风险会叠加，最容易把查询语义、权限边界和返回结构搞漂。
+
+真正要防的不是“技术不够统一”，而是“过早统一导致业务失真”。  
+尤其 Minerva 这类后台，危险点不在页面能不能渲染，而在：
+- 筛选条件有没有偷偷变语义
+- RBAC 判定有没有细微漂移
+- Prisma 查询映射到 plugin 层后，字段/NULL/分页/count 有没有变化
+- 老数据表的脏语义有没有被“顺手优化”掉
+
+所以我建议你把迁移拆成这条主线：
+
+1. **先保留共享契约语义**  
+   把 `minerva-schemas` 先变成 `sitin-next` 里的共享 contract package，作为唯一真相源。
+
+2. **后端先做语义等价层**  
+   在 `sitin-next` 里新建 Minerva 领域的 Fastify/biz 模块，但底层第一阶段仍可通过 Prisma 访问数据库，先保证接口行为和查询结果一致。
+
+3. **前端再重落位**  
+   不保留 Umi 工程壳，只迁页面、状态、权限判断和 API 调用语义，落到 `sitin-next` 的前端体系里。
+
+4. **最后才抽数据访问层**  
+   等接口和页面都稳定，再把 Prisma 查询逐步下沉/替换成 `sitin-next` 的 plugin 风格实现。
+
+我现在只问一个关键确认：
+
+你要不要把 **“第一阶段保留 Prisma，第二阶段再抽象到 sitin-next plugin 体系”** 定为迁移原则？  
+A. 定为原则  
+B. 不要，直接一步改成 plugin 体系
