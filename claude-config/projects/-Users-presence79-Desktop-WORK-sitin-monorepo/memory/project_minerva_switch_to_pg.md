@@ -1,11 +1,11 @@
 ---
-name: project_minerva_switch_to_pg
-description: Minerva 迁移到 sitin-next 时数据库从 MySQL 切换到 PostgreSQL，复用 server-plugin-pg
+name: project_minerva_already_on_pg
+description: Minerva 当前数据库已经是 PostgreSQL（不是 MySQL），迁移只需 Prisma → raw SQL
 type: project
 originSessionId: 124ca926-8ad3-4ab1-958d-844733aea12d
 ---
-Minerva 迁移到 sitin-next 时，数据库从 MySQL (Prisma) 切换到 PostgreSQL (raw SQL via server-plugin-pg)，与 DMS 统一数据库技术栈。
+Minerva-server 的 Prisma schema 里 `datasource.provider = "postgresql"`，数据库本来就是 PG，不是 MySQL。
 
-**Why:** 用户于 2026-04-16 明确拍板选择切 PG，目标是架构统一，减少驱动维护成本。
+**Why:** 2026-04-16 通过实际读取 schema.prisma 确认，之前所有讨论中提到的 "MySQL → PG 迁移" 都是基于错误假设。
 
-**How to apply:** Phase 2 重建后端骨架时，直接基于 `@heyhru/server-plugin-pg` 构建数据访问层，不需要新建 server-plugin-mysql。迁移过程中需要额外考虑 MySQL → PG 的数据迁移工作（数据类型映射、JSON 字段处理、分区表策略等）。
+**How to apply:** 迁移范围从 "MySQL → PG + Prisma → raw SQL" 缩小为仅 "Prisma → raw SQL"（同一个 PG 库）。不需要做数据迁移、类型映射或停机切库。直接用 `server-plugin-pg` 连接现有 PG 数据库即可。

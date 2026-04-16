@@ -37,4 +37,4 @@
 - [老后端服务位置](reference_old_backend.md) — dora-service 和 presence-server-gateway 的本地路径
 - [Minerva 迁移到 sitin-next 采用完全融合重构](minerva_to_sitin_next_full_rebuild_target.md) — 只迁业务逻辑和契约，不保留旧的 Minerva 结构
 - [Minerva 数据层直接融入 sitin-next plugin 体系](minerva_to_sitin_next_direct_plugin_data_layer.md) — 不走 Prisma 过渡层，第一阶段直接按 plugin / business package 形态落地
-- [Minerva 数据库切换到 PostgreSQL](project_minerva_switch_to_pg.md) — 从 MySQL 切 PG，复用 server-plugin-pg，与 DMS 统一技术栈
+- [Minerva 数据库本来就是 PG](project_minerva_switch_to_pg.md) — 不是 MySQL，迁移只需 Prisma → raw SQL，无需数据迁移
