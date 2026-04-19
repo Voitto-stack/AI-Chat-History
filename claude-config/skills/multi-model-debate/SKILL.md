@@ -1,6 +1,7 @@
 ---
 name: multi-model-debate
 description: "Run multi-model debate on complex decisions. Models debate from different angles (strategy/challenge/engineering/divergent), then Claude synthesizes the best approach. Use when user wants AI models to debate and find optimal solution."
+user-invocable: true
 allowed-tools: Bash, Read, WebSearch, WebFetch
 ---
 

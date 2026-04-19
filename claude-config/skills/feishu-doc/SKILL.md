@@ -1,6 +1,7 @@
 ---
 name: feishu-doc
 description: Read, create, and send Feishu/Lark documents. Use when the user shares a Feishu document URL, asks to read content, create new documents, or send messages to Feishu groups.
+user-invocable: true
 ---
 
 ## Feishu Document Operations
