@@ -1,1 +1,1 @@
-- [Simple UI fixes: no brainstorming](feedback_simple_ui_fix_no_brainstorming.md) — For narrow style bugs, diagnose and patch directly.
+- [使用中文交流](feedback_use_chinese.md) — 所有对话和文档说明必须用中文
