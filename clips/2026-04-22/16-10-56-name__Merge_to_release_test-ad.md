@@ -1,0 +1,196 @@
+---
+date: 2026-04-22T16:10:56+08:00
+source: clipboard
+chars: 7327
+---
+
+name: Merge to release/test-admin
+
+on:
+  push:
+    branches:
+      - 'feature/admin'
+
+jobs:
+  merge:
+    name: Merge ${{ github.ref_name }} → release/test-admin
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Merge into release/test-admin
+        id: merge
+        run: |
+          SOURCE_BRANCH="${{ github.ref_name }}"
+          TARGET_BRANCH="release/test-admin"
+
+          git checkout $TARGET_BRANCH
+          git merge --no-ff origin/$SOURCE_BRANCH \
+            -m "chore: merge $SOURCE_BRANCH into $TARGET_BRANCH [auto]"
+          git push origin $TARGET_BRANCH
+
+          echo "status=success" >> $GITHUB_OUTPUT
+
+      - name: Detect changed apps
+        id: detect
+        run: |
+          # Allowed app packages (directory names under packages/)
+          ALLOWED_APPS="app-minerva-server app-minerva-web app-social-proxy-server"
+
+          # Get changed files from this push
+          if [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ]; then
+            CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
+          else
+            CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})
+          fi
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+
+          # Extract apps that have changes (must be in allow list)
+          DEPLOY_APPS=""
+          for APP in $ALLOWED_APPS; do
+            if echo "$CHANGED_FILES" | grep -q "^packages/${APP}/"; then
+              DEPLOY_APPS="${DEPLOY_APPS} ${APP}"
+            fi
+          done
+          DEPLOY_APPS=$(echo "$DEPLOY_APPS" | xargs)
+
+          echo "Apps to deploy: ${DEPLOY_APPS:-none}"
+          echo "apps=$DEPLOY_APPS" >> $GITHUB_OUTPUT
+
+      - name: Trigger Jenkins deployment
+        if: steps.merge.outputs.status == 'success' && steps.detect.outputs.apps != ''
+        env:
+          JENKINS_URL: https://jenkins.sitin.ai
+          JENKINS_USER: shangbin
+          JENKINS_TOKEN: ${{ secrets.JENKINS_TOKEN }}
+          JOB_NAME: frontend_dev_sitin_webapp
+        run: |
+          set -e
+          COOKIE_JAR="/tmp/jenkins-cookies.txt"
+
+          # Step 1: Fetch crumb (maintain session with cookie jar)
+          echo "::group::Fetch Jenkins crumb"
+          HTTP_CODE=$(curl -s -o /tmp/crumb.json -w "%{http_code}" \
+            -c "$COOKIE_JAR" \
+            --user "${JENKINS_USER}:${JENKINS_TOKEN}" \
+            "${JENKINS_URL}/crumbIssuer/api/json")
+          echo "Crumb API HTTP status: $HTTP_CODE"
+
+          CRUMB=""
+          CRUMB_FIELD=""
+          if [ "$HTTP_CODE" = "200" ]; then
+            CRUMB=$(jq -r '.crumb' /tmp/crumb.json)
+            CRUMB_FIELD=$(jq -r '.crumbRequestField' /tmp/crumb.json)
+            if [ -n "$CRUMB" ] && [ "$CRUMB" != "null" ]; then
+              echo "Crumb obtained successfully"
+            else
+              CRUMB=""
+            fi
+          else
+            echo "::warning::Crumb fetch returned HTTP $HTTP_CODE, proceeding without crumb (API token auth)"
+          fi
+          echo "::endgroup::"
+
+          # Step 2: Trigger Jenkins build for each changed app
+          IFS=' ' read -ra APPS <<< "${{ steps.detect.outputs.apps }}"
+          for APP in "${APPS[@]}"; do
+            echo "::group::Trigger Jenkins build for $APP"
+            CURL_ARGS=(
+              -s -o /tmp/jenkins-build.txt -w "%{http_code}"
+              -b "$COOKIE_JAR"
+              -X POST "${JENKINS_URL}/job/${JOB_NAME}/buildWithParameters"
+              --user "${JENKINS_USER}:${JENKINS_TOKEN}"
+              --data-urlencode "GIT_BRANCH=origin/release/test-admin"
+              --data-urlencode "Environment=development"
+              --data-urlencode "Apps=${APP}"
+              --data-urlencode "ABTest=VersionA"
+              --data-urlencode "noCache=true"
+            )
+            if [ -n "$CRUMB" ]; then
+              CURL_ARGS+=(-H "${CRUMB_FIELD}: ${CRUMB}")
+            fi
+            BUILD_HTTP=$(curl "${CURL_ARGS[@]}")
+            echo "Build trigger HTTP status: $BUILD_HTTP"
+
+            if [ "$BUILD_HTTP" -lt 200 ] || [ "$BUILD_HTTP" -ge 400 ]; then
+              echo "::error::Jenkins build trigger failed for $APP with HTTP $BUILD_HTTP"
+              cat /tmp/jenkins-build.txt | head -50
+              exit 1
+            fi
+            echo "Jenkins build triggered successfully for $APP (HTTP $BUILD_HTTP)"
+            echo "::endgroup::"
+          done
+
+      - name: Notify Feishu on success
+        if: steps.merge.outputs.status == 'success'
+        env:
+          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
+          SOURCE_BRANCH: ${{ github.ref_name }}
+          ACTOR: ${{ github.actor }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+          COMMIT_SHA: ${{ github.sha }}
+          COMMIT_URL: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
+        run: |
+          PAYLOAD=$(jq -n \
+            --arg branch "$SOURCE_BRANCH" \
+            --arg actor "$ACTOR" \
+            --arg msg "$COMMIT_MSG" \
+            --arg sha "${COMMIT_SHA:0:7}" \
+            --arg url "$COMMIT_URL" \
+            '{
+              msg_type: "interactive",
+              card: {
+                schema: "2.0",
+                body: {
+                  elements: [{
+                    tag: "markdown",
+                    content: ("**✅ Auto-merge succeeded**\n\n**Source branch**: `" + $branch + "`\n**Target branch**: `release/test-admin`\n**Triggered by**: " + $actor + "\n**Commit message**: " + $msg + "\n**Commit link**: [" + $sha + "](" + $url + ")")
+                  }]
+                }
+              }
+            }')
+          CLEAN_URL=$(echo "$FEISHU_WEBHOOK_URL" | tr -d '[:space:]')
+          curl -X POST "$CLEAN_URL" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD"
+
+      - name: Notify Feishu on failure
+        if: failure()
+        env:
+          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
+          SOURCE_BRANCH: ${{ github.ref_name }}
+          ACTOR: ${{ github.actor }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          PAYLOAD=$(jq -n \
+            --arg branch "$SOURCE_BRANCH" \
+            --arg actor "$ACTOR" \
+            --arg url "$RUN_URL" \
+            '{
+              msg_type: "interactive",
+              card: {
+                schema: "2.0",
+                body: {
+                  elements: [{
+                    tag: "markdown",
+                    content: ("**❌ Auto-merge failed**\n\n**Source branch**: `" + $branch + "`\n**Target branch**: `release/test-admin`\n**Triggered by**: " + $actor + "\n**Possible reason**: merge conflict, manual resolution needed\n**Details**: [View Actions log](" + $url + ")")
+                  }]
+                }
+              }
+            }')
+          CLEAN_URL=$(echo "$FEISHU_WEBHOOK_URL" | tr -d '[:space:]')
+          curl -X POST "$CLEAN_URL" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD"
+
