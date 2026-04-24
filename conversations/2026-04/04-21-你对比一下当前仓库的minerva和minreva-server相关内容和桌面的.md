@@ -1,294 +1,281 @@
 ---
-title: 你对比一下当前仓库的minerva和minreva-server相关内容和桌面的
-date: 2026-04-21T10:46:38+08:00
+title: 这是什么问题： app-minerva-server git:(feature/
+date: 2026-04-22T14:54:52+08:00
 session_id: 47dcc28c-6715-4481-b855-3fdd7e7f838d
 project: /Users/presence79/Desktop/WORK/sitin-next
 source: claude-code-capture
-messages: 18
+messages: 38
 ---
 
-# 你对比一下当前仓库的minerva和minreva-server相关内容和桌面的
+# 这是什么问题： app-minerva-server git:(feature/
 
-### User (10:46:38)
+### User (14:54:52)
 
-你对比一下当前仓库的minerva和minreva-server相关内容和桌面的sitin-monorepo的release/migrate分支，对比一下功能，代码是否还有什么差异，也可以看下那个分支的提交记录哈
+这是什么问题： app-minerva-server git:(feature/migrate-minerva-from-monorepo) ✗ git push origin feature/migrate-minerva-from-monorepo
+Enumerating objects: 6, done.
+Counting objects: 100% (6/6), done.
+Delta compression using up to 16 threads
+Compressing objects: 100% (4/4), done.
+Writing objects: 100% (5/5), 2.60 KiB | 665.00 KiB/s, done.
+Total 5 (delta 1), reused 0 (delta 0), pack-reused 0
+remote: Resolving deltas: 100% (1/1), completed with 1 local object.
+To https://github.com/presence-io/sitin-next.git
+ ! [remote rejected]   feature/migrate-minerva-from-monorepo -> feature/migrate-minerva-from-monorepo (refusing to allow a Personal Access Token to create or update workflow `.github/workflows/merge-to-release-test.yml` without `workflow` scope)
+error: failed to push some refs to 'https://github.com/presence-io/sitin-next.git'
+➜  app-minerva-server git:(feature/migrate-minerva-from-monorepo) ✗ 
 
-### Assistant (10:46:53)
+### Assistant (14:57:39)
 
-我来对比一下当前仓库的 minerva 相关内容和桌面 sitin-monorepo 的 release/migrate 分支。
+你的 Personal Access Token (PAT) 没有 `workflow` 权限，而这次提交包含了 `.github/workflows/` 下的文件变更。
 
-### Assistant (10:48:35)
+两个解决方案：
 
-找到了！让我检查 sitin-monorepo 的 release/migrate 分支。
+**方案 1（推荐）：用 SSH 推送**
+```bash
+git remote set-url origin git@github.com:presence-io/sitin-next.git
+git push origin feature/migrate-minerva-from-monorepo
+```
 
-### Assistant (10:49:35)
+**方案 2：更新 PAT 权限**
+去 GitHub → Settings → Developer settings → Personal access tokens，给你的 token 勾上 `workflow` scope，然后重新推送。
 
-.
+方案 1 最快，不需要改 token。
 
-### Assistant (10:49:53)
+### User (15:02:01)
 
-.
+用方式1吧
 
-### Assistant (10:50:25)
+### User (15:15:19)
 
-.
+你看下这个merge-to-release脚本，看看为什么我现在推送到远端的这个migrate-minerva-from-monorepo分支没有自动合入release/test分支
 
-### Assistant (10:50:56)
+### Assistant (15:21:49)
 
-.
+问题找到了。你之前推送失败了：
 
-### Assistant (10:52:16)
+```
+! [remote rejected] feature/migrate-minerva-from-monorepo -> feature/migrate-minerva-from-monorepo 
+(refusing to allow a Personal Access Token to create or update workflow ... without `workflow` scope)
+```
 
-.
+**这次推送根本没成功**，所以 workflow 没被触发。原因是你这次提交包含了 `.github/workflows/merge-to-release-test.yml` 文件的变更，GitHub 要求 PAT 必须有 `workflow` scope 才能推送包含 workflow 文件的提交。
 
-### Assistant (10:52:46)
+workflow 配置本身没问题——触发条件是 `push` 到 `feature/**` 分支，你的分支 `feature/migrate-minerva-from-monorepo` 完全匹配。
 
-.
+**解决**：用 SSH 推送（绕过 PAT 限制）：
 
-### Assistant (10:53:12)
+```bash
+git remote set-url origin git@github.com:presence-io/sitin-next.git
+git push origin feature/migrate-minerva-from-monorepo
+```
 
-.
+推成功后 workflow 就会自动触发，合并到 `release/test` 并触发 Jenkins 构建。
 
-### Assistant (10:53:37)
+### User (15:23:51)
 
-.
+我推送成功了的
 
-### Assistant (10:54:02)
+### Assistant (15:26:09)
 
-.
 
-### Assistant (10:55:27)
 
-.
+让我检查一下 GitHub Actions 的运行状态。
 
-### Assistant (10:56:10)
+### Assistant (15:32:51)
 
-.
+没有 gh CLI。那直接分析 workflow 配置。
 
-### Assistant (10:56:57)
+你推送成功了但 workflow 没触发，看这一行：
 
-.
+```yaml
+on:
+  push:
+    branches:
+      - 'feature/**'
+```
 
-### Assistant (10:57:24)
+这个 workflow 文件本身必须**已经存在于 `feature/migrate-minerva-from-monorepo` 分支上**才会被触发。如果这个 workflow 文件是**这次提交才新增的**，那第一次推送时 GitHub 还没有注册这个 workflow，所以不会触发。
 
-.
+但更可能的原因是：**你之前用 HTTPS PAT 推送被拒绝了（因为 workflow scope），后来改用 SSH 推送成功了，但 `.github/workflows/` 文件的变更可能没包含在推送的提交里**。
 
-### Assistant (10:58:09)
+让我确认远端是否有这个文件：
 
-.
+### Assistant (15:39:15)
 
-### Assistant (10:58:36)
+文件在远端存在。再检查远端是否有 `release/test` 分支：
 
-.
-
-### Assistant (10:59:05)
-
-.
-
-### Assistant (11:01:42)
-
-.
-
-### Assistant (11:02:11)
-
-.
-
-### Assistant (11:02:53)
-
-.
-
-### Assistant (11:03:30)
-
-.
-
-### Assistant (11:04:16)
-
-.
-
-### Assistant (11:06:05)
-
-.
-
-### Assistant (11:06:43)
-
-.
-
-### Assistant (11:07:18)
-
-.
-
-### Assistant (11:07:59)
-
-.
-
-### Assistant (11:08:37)
-
-.
-
-### Assistant (11:09:15)
-
-.
-
-### Assistant (11:09:52)
-
-.
-
-### Assistant (11:10:28)
-
-.
-
-### Assistant (11:10:58)
-
-.
-
-### User (11:16:15)
+### User (15:42:25)
 
 [Request interrupted by user]
 
-### User (11:16:22)
+### User (15:43:06)
 
-<local-command-stdout>Set model to [1mOpus 4.7 (1M context)[22m with [1mmax[22m effort</local-command-stdout>
+破案了，远端是release/test-admin分支
 
-### User (11:16:25)
+### User (15:50:18)
 
-继续
+你判断下现在的脚本是不是只有minerva相关的内容提交才会触发合入release/test-admin分支的脚本
 
-### Assistant (11:17:08)
+### Assistant (15:55:41)
+
+**不是的，不只是 minerva 相关内容才触发。**
+
+当前脚本的逻辑是：
+
+1. **触发条件**（第 3-6 行）：任何 `feature/**` 分支有 push 就触发
+2. **合并**（第 25-36 行）：**无条件**把该 feature 分支合入 `release/test-admin`，不管改了什么
+3. **Jenkins 部署**（第 38-127 行）：只有当变更文件命中 `ALLOWED_APPS` 列表中的包目录时，才触发对应应用的 Jenkins 构建
+
+所以：
+- **合入 `release/test-admin`**：所有 `feature/**` 分支推送都会触发，跟改了什么内容无关
+- **触发 Jenkins 部署**：只有当变更文件在 `packages/app-minerva-server/`、`packages/app-minerva-web/`、`packages/app-social-proxy-server/` 等目录下时才会触发
+
+如果你想**只有 minerva 相关的提交才合入**，需要在触发条件加 `paths` 过滤，或者在 merge step 前加条件判断。需要我改吗？
+
+### User (15:56:38)
+
+只有这些相关的是需要合入test-admin的，你看看怎么做[Image #2] ，用最快的速度回答
+
+### Assistant (16:01:01)
+
+只需要把触发分支从 `feature/**` 改为 `feature/admin`，这样只有 admin 相关的需求分支才会触发合入。
+
+### Assistant (16:05:07)
+
+同时把 `ALLOWED_APPS` 缩小到只有 admin 相关的三个应用，避免误触发其他应用的 Jenkins 部署。
+
+### Assistant (16:09:38)
+
+改完了。逻辑：
+
+- **触发**：只有 `feature/admin` 分支 push 才触发
+- **合入**：自动合入 `release/test-admin`
+- **部署**：只检测 `app-minerva-server`、`app-minerva-web`、`app-social-proxy-server` 三个包的变更并触发 Jenkins
+
+### User (16:18:06)
+
+那你现在用最快的速度回答我：我现在提交和feature/admin相关的内容可以触发自动合并到release/test-admin中吗
+
+### Assistant (16:20:06)
+
+还需要确认一件事。
+
+### Assistant (16:25:08)
+
+两个分支都存在。但还有一个关键问题——**这个 workflow 文件必须在 `feature/admin` 分支上也存在才会触发**。
+
+### Assistant (16:28:49)
+
+**不能。** `feature/admin` 分支上还没有 `.github/workflows/merge-to-release-test.yml` 这个文件。GitHub Actions 的 `push` 触发是读取**被推送分支上的 workflow 文件**，文件不在那个分支上就不会触发。
+
+你需要先把这个 workflow 文件合入 `feature/admin` 分支（从当前分支 cherry-pick 或 merge），之后往 `feature/admin` 推送才会自动合入 `release/test-admin`。
+
+### User (16:30:12)
+
+我已经改成 branches:
+      - 'feature/admin/**'了
+
+### Assistant (16:32:51)
+
+那 `feature/admin/**` 匹配的是 `feature/admin/xxx` 这样的子分支（比如 `feature/admin/fix-login`），**不匹配** `feature/admin` 本身。
+
+你需要两个都加上：
+
+```yaml
+branches:
+  - 'feature/admin'
+  - 'feature/admin/**'
+```
+
+或者如果你只往 `feature/admin` 推送（不创建子分支），直接用 `feature/admin` 就够了。
+
+你的工作流程是哪种？只用 `feature/admin` 一个分支，还是会创建 `feature/admin/xxx` 子分支？
+
+### User (16:39:58)
+
+这种分支不可以吗feature/admin-migrate
+
+### Assistant (16:41:49)
+
+`feature/admin/**` 不匹配 `feature/admin-migrate`。
+
+`**` 匹配的是 `/` 后面的路径，所以 `feature/admin/**` 只匹配 `feature/admin/xxx` 这种带斜杠的子路径。
+
+如果你想匹配所有 admin 相关分支（`feature/admin`、`feature/admin-migrate`、`feature/admin/xxx`），改成：
+
+```yaml
+branches:
+  - 'feature/admin*'
+  - 'feature/admin/**'
+```
+
+- `feature/admin*` → 匹配 `feature/admin`、`feature/admin-migrate`、`feature/admin-xxx`
+- `feature/admin/**` → 匹配 `feature/admin/fix-login`、`feature/admin/xxx/yyy`
+
+### User (16:53:45)
+
+你看看新老项目和聊天接管相关的内容，看看新项目这里[Image #3]自定义消息可以展开吗 ，你看下老项目这里怎么处理的，解析了哪些自定义消息，处理方式是什么
+
+### Assistant (16:56:29)
 
 
 
-好，继续深入对比。让我用 diff 来比较两边的实际代码差异。
+让我先对比两边聊天接管相关的代码。
 
-### Assistant (12:18:30)
+### User (16:59:18)
 
+[Request interrupted by user for tool use]
 
+### User (16:59:19)
 
-好，接下来对比 minerva 前端部分。
+别忘了老项目是这个presence-server-admin-console
 
-### Assistant (14:00:25)
+### Assistant (17:51:06)
 
+## 结论
 
+**新项目的自定义消息无法展开**，原因是新旧项目 TUIKit 的处理方式完全不同：
 
-## 完整差异报告
+### 老项目（presence-server-admin-console）
+- 内置了自定义 TUIKit，自己实现了 `renderCustomElementPayload()` 函数
+- **左侧列表**：读取 `payload.description` 显示具体文本（如 `phone_call_message`）
+- **右侧气泡**：按类型分支渲染 — 通话卡片、视频/语音取消、Giphy 动图、Greeting 等，未知类型展示完整 JSON
 
-两个仓库的对比结果如下：
+### 新项目（app-minerva-web）
+- 使用官方 npm 包 `@tencentcloud/chat-uikit-react`，没有自定义渲染
+- **左侧列表**：固定显示 `[Custom Messages]`
+- **右侧气泡**：官方 UIKit 只识别 `Hyperlink`、`group_create`、`chatbotPlugin` 三种，其余全部 fallback 显示 `[custom message]`
 
----
+### 老项目处理的自定义消息类型
 
-### 一、minerva-server（后端）
+| 类型 | 判断方式 | 渲染结果 |
+|------|---------|---------|
+| 音视频通话邀请 | `businessID === "av_call"` | CallCard 组件（含按钮） |
+| videoCall 入口 | `data.includes("videoCall")` | 提示文本 |
+| 视频取消/拒绝 | `type=video, status=cancelled/declined` | 图标 + 状态文字 |
+| 语音取消 | `type=audio, status=cancelled` | 图标 + 时长 |
+| Giphy 动图 | `description === "Giphy"` | `<img>` 图片 |
+| Greeting | `description === "Greeting"` | 文本展示 |
+| 其他 | fallback | 展示完整 JSON |
 
-**结论：正式代码（路由注册、Prisma schema、services、middlewares、utils）完全一致。**
+要修复的话，需要给新项目的 `<MessageList>` 传入自定义 Message 渲染组件，移植老项目的分支渲染逻辑。需要我处理吗？
 
-642f3384 和 8441b694 的所有后端变更均已同步。
+### User (17:52:14)
 
-**唯一问题 — 新仓库有 4 个孤立的死代码文件**：
+处理，注意别把样式整的不好看了
 
-| 文件 | 说明 |
-|------|------|
-| `routes/guild/brain.ts` | 旧仓库已删除，新仓库残留但未注册路由 |
-| `routes/guild/experiments.ts` | 同上，且引用已删除的 `prisma.unionExperiment` 模型 |
-| `routes/guild/templates.ts` | 同上，引用已删除的 `prisma.unionTemplate` 模型 |
-| `routes/guild/templates-review.ts` | 同上 |
+### User (17:53:56)
 
-这 4 个文件不影响运行（未注册到 `index.ts`），但引用了不存在的 Prisma 模型，如果被误注册会报错。**建议删除**。
+处理，注意别把样式整的不好看了
 
----
-
-### 二、minerva 前端（web）
-
-**结论：功能代码完全一致。**
-
-- 24 个页面目录一一对应，无缺失无多余
-- Guild/MessageTemplates 新页面已同步，旧 Guild/Templates 已删除
-- API 文件、组件、常量全部逐字节相同
-- 路由配置功能一致
-
-**微小差异**：
-1. `.umirc.ts` 第 296 行有一个缩进格式问题（`{` 缺少前置空格），不影响功能
-2. 旧仓库有两个**未提交的本地改动**（CallFeed 和 UserTestVideo 的视频尺寸从 320px→520px、object-fit 从 cover→contain），新仓库基于已提交版本是正确的
-
----
-
-### 三、minerva-schemas（共享 schema）
-
-**结论：新仓库（sitin-next）的 contract-minerva 实际上比旧仓库更旧一个版本。**
-
-旧仓库 release/migrate 分支做了以下变更，**新仓库尚未同步**：
-
-| 变更 | 说明 |
-|------|------|
-| `guild/` 目录新增 | 旧仓库新增了 `guild/index.ts` + `guild/message-template.ts`，抽离消息模板 schema |
-| `index.ts` 新增 `export * from "./guild"` | 导出 guild 模块 |
-| `union/ai-service.ts` 新增字段 | ModelConfig 增加 `maxTokens`/`temperature`/`timeoutMs`；Playground 增加 `confidence` |
-| `union/brain.ts` 新增字段 | 全面引入 `confidence` 置信度字段（response、decision log、查询过滤） |
-| `union/simulator.ts` 新增 | Fast Forward API schema + decision 增加 `confidence` |
-| `union/device.ts` 新增 | `scheduledAt` 字段 |
-
-但新仓库反方向也有变更：保留了 `union/template.ts`（完整的 A/B 实验系统 schema），这在旧仓库已被 642f3384 删除。
-
-**这是最需要关注的差异** — schema 包两边不一致，需要决定以哪边为准进行同步。
-
----
-
-### 总结
-
-| 模块 | 状态 | 需要动作 |
-|------|------|---------|
-| minerva-server | 基本一致 | 删除 4 个死代码文件 |
-| minerva 前端 | 完全一致 | 可选：修复 .umirc.ts 缩进 |
-| minerva-schemas | **不一致** | 需要同步 — 旧仓库有新的 guild schema + confidence 字段，新仓库有已废弃的 template.ts |
-
-### User (14:19:43)
-
-上面的情况，目前minerva相关部分可以进行上线吗，算初步迁移完吗
-
-### Assistant (14:21:51)
+### Assistant (17:58:33)
 
 
 
-根据对比结果，minerva 的迁移**基本完成，但还不能直接上线**。具体判断如下：
+先看一下新项目当前的 ChatConsole 代码和老项目的渲染逻辑。
 
----
+### Assistant (18:03:29)
 
-### 可以上线的部分
-
-- **minerva 前端**：代码完全一致，功能无差异，可以上线
-- **minerva-server 主体**：路由、服务层、中间件、工具类、Prisma schema 全部一致，核心功能可以运行
-
-### 阻碍上线的问题
-
-**1. contract-minerva（minerva-schemas）不一致 — 高优先级**
-
-这是最关键的问题。旧仓库 release/migrate 分支的 schemas 有以下变更未同步到新仓库：
-
-- `guild/` 模块（message-template schema 前缀从 `union*` 改为 `guild*`）
-- `confidence` 置信度字段（brain、ai-service、simulator 多处新增）
-- ModelConfig 新增 `maxTokens`/`temperature`/`timeoutMs`
-- simulator Fast Forward API
-- device `scheduledAt` 字段
-
-反过来，新仓库还保留了已废弃的 `union/template.ts`（A/B 实验系统），旧仓库已删除。
-
-**如果 server 代码引用了这些新 schema 字段，运行时会报类型错误或缺少校验。** 不过目前 server 代码两边是一致的，所以实际运行应该不会崩溃 — schema 包主要用于 Zod 校验，字段缺失只影响请求校验的严格度。
-
-**2. 4 个死代码文件 — 低优先级**
-
-`brain.ts`、`experiments.ts`、`templates.ts`、`templates-review.ts` 未注册路由，不影响运行，但属于代码卫生问题。
-
----
-
-### 结论
-
-| 问题 | 能否先上线 | 理由 |
-|------|-----------|------|
-| schema 不一致 | 能跑，但有隐患 | server 代码两边一致，schema 差异暂时不会导致运行时错误，但后续有人改代码时会踩坑 |
-| 死代码文件 | 不影响 | 未注册路由 |
-
-**算初步迁移完成**，代码搬过来了、能跑。但要正式上线建议先做两件事：
-
-1. **同步 contract-minerva**：以旧仓库 release/migrate 为准，把 guild schema 重命名 + confidence 字段同步过来，删除废弃的 `union/template.ts`
-2. **删除 4 个死代码文件**
-
-这两步工作量不大，需要我现在帮你处理吗？
+现在看老项目的自定义消息渲染逻辑。
 
 *...conversation truncated for brevity...*
